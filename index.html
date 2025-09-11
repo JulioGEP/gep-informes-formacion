@@ -4,9 +4,31 @@
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>GEP | Informes de formación (v1)</title>
+
+    <!-- Pico.css para estilos limpios sin configuración -->
+    <link
+      rel="stylesheet"
+      href="https://unpkg.com/@picocss/pico@2.0.6/css/pico.min.css"
+    />
+    <style>
+      :root { --maxw: 980px; }
+      main { max-width: var(--maxw); margin: 0 auto; padding: 24px; }
+      .grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+      .muted { color: #555; }
+      textarea { min-height: 80px; }
+      .stack > * + * { margin-top: .75rem; }
+      .full { width: 100%; }
+      .monos { font-family: ui-monospace, SFMono-Regular, Menlo, monospace; }
+      .label { font-weight: 600; }
+      .card { padding: 1rem; border: 1px solid #eaeaea; border-radius: .75rem; background: #fff; }
+      .section-title { margin-top: 1.25rem; margin-bottom: .5rem; }
+    </style>
+
+    <script type="module" crossorigin src="/assets/index-DhB2dZPS.js"></script>
   </head>
   <body>
-    <div id="root"></div>
-    <script type="module" src="/src/main.jsx"></script>
+    <main>
+      <div id="root"></div>
+    </main>
   </body>
 </html>
