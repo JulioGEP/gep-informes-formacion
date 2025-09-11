@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import React, { useState } from 'react'
 import axios from 'axios'
 
 const DEAL_DIR_INCOMPANY = '8b2a7570f5ba8aa4754f061cd9dc92fd778376a7'
@@ -15,9 +15,7 @@ export default function Formulario({ onPreview }){
     productos: [],
     idioma: 'ES',
     escalas: { participacion: 8, compromiso: 8, superacion: 8 },
-    comentarios: {
-      c11:'', c12:'', c13:'', c14:'', c15:'', c16:'', c17:''
-    }
+    comentarios: { c11:'', c12:'', c13:'', c14:'', c15:'', c16:'', c17:'' }
   })
 
   const fetchDeal = async () => {
@@ -51,13 +49,7 @@ export default function Formulario({ onPreview }){
 
   const handlePreview = async (e)=>{
     e.preventDefault()
-
-    const payload = {
-      dealId,
-      formador,
-      datos
-    }
-
+    const payload = { dealId, formador, datos }
     try{
       const { data } = await axios.post('/.netlify/functions/generateReport', payload)
       const borrador = data?.borrador || ''
@@ -75,25 +67,37 @@ export default function Formulario({ onPreview }){
         <label> Nº Presupuesto (Deal ID)
           <input value={dealId} onChange={e=>setDealId(e.target.value)} required />
         </label>
-        <button type="button" onClick={fetchDeal} disabled={loading}>Autocompletar desde Pipedrive</button>
+        <button type="button" onClick={fetchDeal} disabled={loading}>
+          Autocompletar desde Pipedrive
+        </button>
       </fieldset>
 
       <fieldset style={{border:'1px solid #eee', padding:12}}>
         <legend>Datos de la formación</legend>
         <label> Formador
-          <input value={formador.nombre} onChange={e=>setFormador({...formador, nombre: e.target.value})} required />
+          <input value={formador.nombre}
+                 onChange={e=>setFormador({...formador, nombre: e.target.value})}
+                 required />
         </label>
         <label> Email formador
-          <input type="email" value={formador.email} onChange={e=>setFormador({...formador, email: e.target.value})} required />
+          <input type="email" value={formador.email}
+                 onChange={e=>setFormador({...formador, email: e.target.value})}
+                 required />
         </label>
         <label> Fecha
-          <input type="date" value={datos.fecha} onChange={e=>setDatos({...datos, fecha: e.target.value})} required />
+          <input type="date" value={datos.fecha}
+                 onChange={e=>setDatos({...datos, fecha: e.target.value})}
+                 required />
         </label>
         <label> Nº alumnos
-          <input type="number" value={datos.alumnos} onChange={e=>setDatos({...datos, alumnos: e.target.value})} required />
+          <input type="number" value={datos.alumnos}
+                 onChange={e=>setDatos({...datos, alumnos: e.target.value})}
+                 required />
         </label>
         <label> Duración (h)
-          <input type="number" step="0.5" value={datos.duracion} onChange={e=>setDatos({...datos, duracion: e.target.value})} required />
+          <input type="number" step="0.5" value={datos.duracion}
+                 onChange={e=>setDatos({...datos, duracion: e.target.value})}
+                 required />
         </label>
         <label> Idioma
           <select value={datos.idioma} onChange={e=>setDatos({...datos, idioma: e.target.value})}>
@@ -128,19 +132,24 @@ export default function Formulario({ onPreview }){
 
       <fieldset style={{border:'1px solid #eee', padding:12}}>
         <legend>Productos (formaciones asociadas)</legend>
-        <textarea rows={4} value={datos.productos.map(p=>`${p.product?.code || ''} - ${p.product?.name || ''}`).join('\n')} readOnly></textarea>
+        <textarea rows={4}
+          value={datos.productos.map(p=>`${p.product?.code || ''} - ${p.product?.name || ''}`).join('\n')}
+          readOnly />
       </fieldset>
 
       <fieldset style={{border:'1px solid #eee', padding:12}}>
         <legend>Valoraciones (8–10)</legend>
         <label> Participación
-          <input type="number" min="0" max="10" value={datos.escalas.participacion} onChange={e=>setDatos({...datos, escalas:{...datos.escalas, participacion: Number(e.target.value)}})} />
+          <input type="number" min="0" max="10" value={datos.escalas.participacion}
+                 onChange={e=>setDatos({...datos, escalas:{...datos.escalas, participacion: Number(e.target.value)}})} />
         </label>
         <label> Compromiso
-          <input type="number" min="0" max="10" value={datos.escalas.compromiso} onChange={e=>setDatos({...datos, escalas:{...datos.escalas, compromiso: Number(e.target.value)}})} />
+          <input type="number" min="0" max="10" value={datos.escalas.compromiso}
+                 onChange={e=>setDatos({...datos, escalas:{...datos.escalas, compromiso: Number(e.target.value)}})} />
         </label>
         <label> Superación
-          <input type="number" min="0" max="10" value={datos.escalas.superacion} onChange={e=>setDatos({...datos, escalas:{...datos.escalas, superacion: Number(e.target.value)}})} />
+          <input type="number" min="0" max="10" value={datos.escalas.superacion}
+                 onChange={e=>setDatos({...datos, escalas:{...datos.escalas, superacion: Number(e.target.value)}})} />
         </label>
       </fieldset>
 
@@ -148,7 +157,9 @@ export default function Formulario({ onPreview }){
         <legend>Comentarios del formador (opcionales)</legend>
         {['c11','c12','c13','c14','c15','c16','c17'].map(k=> (
           <label key={k}> {k.toUpperCase()}
-            <textarea rows={2} value={datos.comentarios[k]} onChange={e=>setDatos({...datos, comentarios:{...datos.comentarios, [k]: e.target.value}})} />
+            <textarea rows={2}
+              value={datos.comentarios[k]}
+              onChange={e=>setDatos({...datos, comentarios:{...datos.comentarios, [k]: e.target.value}})} />
           </label>
         ))}
       </fieldset>
