@@ -1,0 +1,36 @@
+# ── Node / build outputs
+node_modules/
+dist/
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+
+# ── Env / secrets (NO subas tus claves)
+.env
+.env.*
+!.env.example
+
+# ── Netlify (archivos generados en local)
+.netlify/
+.netlify/functions-serve/
+
+# ── Cobertura / pruebas (si las usas)
+coverage/
+.vitest/
+
+# ── Sistemas operativos
+.DS_Store
+Thumbs.db
+
+# ── Editores/IDE
+.idea/
+.vscode/*
+!.vscode/extensions.json
+!.vscode/settings.json
+
+# ── Varias caches
+*.cache
+.cache/
+parcel-cache/
