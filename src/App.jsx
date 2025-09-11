@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import React, { useState } from 'react'
 import Formulario from './components/Formulario.jsx'
 import Preview from './components/Preview.jsx'
 
