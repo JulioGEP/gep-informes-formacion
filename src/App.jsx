@@ -1,17 +1,23 @@
 import React, { useState } from 'react'
 import Formulario from './components/Formulario.jsx'
 import Preview from './components/Preview.jsx'
+import logoUrl from './assets/logo-gep.png'
 
 export default function App(){
   const [draft, setDraft] = useState(null)
 
   return (
     <div>
-      <header className="mb-4">
-        <h1 className="h3 mb-1">GEP Group — Informes de formación</h1>
-        <p className="text-secondary mb-0">
-          Rellena el formulario, genera el borrador, edítalo y descárgalo en PDF.
-        </p>
+      <header className="d-flex align-items-center gap-3 mb-4">
+        <img
+          src={logoUrl}
+          alt="GEP Group"
+          style={{ width: 44, height: 'auto' }}
+        />
+        <div>
+          <h1 className="h4 mb-0">Informes de formación</h1>
+          <small className="text-secondary">GEP Group</small>
+        </div>
       </header>
 
       {!draft && <Formulario onPreview={setDraft} />}
