@@ -25,7 +25,11 @@ export default function Preview({ draft, onBack }){
     <div style={{display:'grid', gap:12}}>
       <button onClick={onBack}>← Volver al formulario</button>
       <h2>Vista previa (editable)</h2>
-      <textarea style={{width:'100%', minHeight: '60vh'}} value={texto} onChange={e=>setTexto(e.target.value)} />
+      <textarea
+        style={{width:'100%', minHeight: '60vh'}}
+        value={texto}
+        onChange={e=>setTexto(e.target.value)}
+      />
       <button onClick={descargarPDF}>Generar PDF</button>
       <small>En esta v1, el formador descargará el PDF y lo enviará manualmente por correo.</small>
     </div>
