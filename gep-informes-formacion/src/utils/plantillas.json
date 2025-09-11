@@ -1,0 +1,15 @@
+{
+  "form-extincion-incendios": {
+    "nombre": "Extinci\u00f3n de Incendios",
+    "parte_teorica": [
+      "Tri\u00e1ngulo del fuego y clases de fuego",
+      "Agentes extintores y compatibilidades",
+      "Equipos de primera intervenci\u00f3n (BIE, extintores)"
+    ],
+    "parte_practica": [
+      "Puesta en marcha y uso de extintores",
+      "Pr\u00e1cticas en escenarios controlados",
+      "Simulacros operativos b\u00e1sicos"
+    ]
+  }
+}
