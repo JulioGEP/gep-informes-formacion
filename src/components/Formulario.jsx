@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react'
 import axios from 'axios'
-import plantillasMap from '../utils/plantillas.json' // { clave: { nombre, parte_teorica[], parte_practica[] }, ... }
+import plantillasMap from '../utils/plantillas.json'
 
 const DEAL_DIR_INCOMPANY = '8b2a7570f5ba8aa4754f061cd9dc92fd778376a7'
 const ORG_CIF = '6d39d015a33921753410c1bab0b067ca93b8cf2c'
@@ -9,15 +9,14 @@ export default function Formulario({ onPreview }){
   const [loading, setLoading] = useState(false)
   const [dealId, setDealId] = useState('7164')
 
-  const [formador, setFormador] = useState({ nombre:'' }) // (Quitamos email)
+  // Email eliminado
+  const [formador, setFormador] = useState({ nombre:'' })
   const [datos, setDatos] = useState({
-    fecha: '', alumnos: '', duracion: '', sesiones: 1,   // sesiones añadido
+    fecha: '', alumnos: '', duracion: '', sesiones: 1,
     sede: '', cliente: '', cif: '', direccionOrg: '', contacto: '', owner: '',
     productos: [],
     idioma: 'ES',
-    // Cambiamos la etiqueta general de escalas, pero mantenemos 3 métricas (1–10)
-    escalas: { participacion: 8, compromiso: 8, superacion: 8 },
-    // Renombramos 11–17 como nos pides
+    escalas: { participacion: 8, compromiso: 8, superacion: 8 }, // 1–10
     comentarios: {
       c11:'', // Puntos fuertes de los alumnos a destacar
       c12:'', // Incidencias: Referentes a la asistencia
@@ -27,11 +26,9 @@ export default function Formulario({ onPreview }){
       c16:'', // Recomendaciones: Del entorno de Trabajo
       c17:''  // Recomendaciones: De Materiales
     },
-    // selector de plantillas (por si no vienen productos)
     plantillasSeleccionadas: []
   })
 
-  // Preparamos opciones del selector a partir del JSON de plantillas
   const [opcionesPlantillas, setOpcionesPlantillas] = useState([])
   useEffect(()=>{
     const arr = Object.entries(plantillasMap).map(([key, val]) => ({
@@ -87,188 +84,244 @@ export default function Formulario({ onPreview }){
   }
 
   return (
-    <form onSubmit={handlePreview} className="stack">
-      <article className="card">
-        <h3>Identificación</h3>
-        <div className="grid-2">
-          <label> Nº Presupuesto
-            <input className="full" value={dealId} onChange={e=>setDealId(e.target.value)} required />
-          </label>
-          <div style={{display:'flex', alignItems:'end'}}>
-            <button type="button" onClick={fetchDeal} disabled={loading}>
-              {loading ? 'Cargando…' : 'Rellenar'}
-            </button>
+    <form onSubmit={handlePreview} className="d-grid gap-3">
+
+      {/* Identificación */}
+      <div className="card card-soft">
+        <div className="card-body">
+          <h5 className="card-title">Identificación</h5>
+          <div className="row g-3 align-items-end">
+            <div className="col-md">
+              <label className="form-label">Nº Presupuesto</label>
+              <input
+                className="form-control"
+                value={dealId}
+                onChange={e=>setDealId(e.target.value)}
+                required
+              />
+            </div>
+            <div className="col-md-auto">
+              <button type="button" className="btn btn-primary" onClick={fetchDeal} disabled={loading}>
+                {loading ? 'Cargando…' : 'Rellenar'}
+              </button>
+            </div>
           </div>
         </div>
-      </article>
+      </div>
 
-      <article className="card">
-        <h3>Datos de la formación</h3>
-        <div className="grid-2">
-          <label> Formador/a
-            <input className="full"
-              value={formador.nombre}
-              onChange={e=>setFormador({...formador, nombre: e.target.value})}
-              required />
-          </label>
-
-          <label> Fecha
-            <input className="full" type="date"
-              value={datos.fecha}
-              onChange={e=>setDatos({...datos, fecha: e.target.value})}
-              required />
-          </label>
-
-          <label> Nº alumnos
-            <input className="full" type="number"
-              value={datos.alumnos}
-              onChange={e=>setDatos({...datos, alumnos: e.target.value})}
-              required />
-          </label>
-
-          <label> Duración (h)
-            <input className="full" type="number" step="0.5"
-              value={datos.duracion}
-              onChange={e=>setDatos({...datos, duracion: e.target.value})}
-              required />
-          </label>
-
-          <label> Sesiones
-            <input className="full" type="number" min="1"
-              value={datos.sesiones}
-              onChange={e=>setDatos({...datos, sesiones: Number(e.target.value)})}
-              required />
-          </label>
-
-          <label> Idioma
-            <select className="full" value={datos.idioma} onChange={e=>setDatos({...datos, idioma: e.target.value})}>
-              <option value="ES">Castellano</option>
-              <option value="CA">Català</option>
-              <option value="EN">English</option>
-            </select>
-          </label>
+      {/* Datos de la formación */}
+      <div className="card card-soft">
+        <div className="card-body">
+          <h5 className="card-title">Datos de la formación</h5>
+          <div className="row g-3">
+            <div className="col-md-6">
+              <label className="form-label">Formador/a</label>
+              <input
+                className="form-control"
+                value={formador.nombre}
+                onChange={e=>setFormador({...formador, nombre: e.target.value})}
+                required
+              />
+            </div>
+            <div className="col-md-3">
+              <label className="form-label">Fecha</label>
+              <input
+                type="date"
+                className="form-control"
+                value={datos.fecha}
+                onChange={e=>setDatos({...datos, fecha: e.target.value})}
+                required
+              />
+            </div>
+            <div className="col-md-3">
+              <label className="form-label">Sesiones</label>
+              <input
+                type="number"
+                min="1"
+                className="form-control"
+                value={datos.sesiones}
+                onChange={e=>setDatos({...datos, sesiones: Number(e.target.value)})}
+                required
+              />
+            </div>
+            <div className="col-md-3">
+              <label className="form-label">Nº alumnos</label>
+              <input
+                type="number"
+                className="form-control"
+                value={datos.alumnos}
+                onChange={e=>setDatos({...datos, alumnos: e.target.value})}
+                required
+              />
+            </div>
+            <div className="col-md-3">
+              <label className="form-label">Duración (h)</label>
+              <input
+                type="number"
+                step="0.5"
+                className="form-control"
+                value={datos.duracion}
+                onChange={e=>setDatos({...datos, duracion: e.target.value})}
+                required
+              />
+            </div>
+            <div className="col-md-3">
+              <label className="form-label">Idioma</label>
+              <select
+                className="form-select"
+                value={datos.idioma}
+                onChange={e=>setDatos({...datos, idioma: e.target.value})}
+              >
+                <option value="ES">Castellano</option>
+                <option value="CA">Català</option>
+                <option value="EN">English</option>
+              </select>
+            </div>
+          </div>
         </div>
-      </article>
+      </div>
 
-      <article className="card">
-        <h3>Datos del cliente</h3>
-        <p className="muted">Formato solicitado</p>
-
-        <div className="stack">
-          <div>
-            <div className="label">Cliente:</div>
+      {/* Datos del cliente (formato solicitado) */}
+      <div className="card card-soft">
+        <div className="card-body">
+          <h5 className="card-title">Datos del cliente</h5>
+          <div className="mb-3">
+            <div className="fw-semibold">Cliente:</div>
             <div>{datos.cliente || <em>(pendiente)</em>}</div>
             <div className="monos">{datos.cif || <em>(CIF)</em>}</div>
             <div>{datos.direccionOrg || <em>(Dirección organización)</em>}</div>
           </div>
 
-          <div className="section-title label">Dirección de la formación</div>
-          <div>{datos.sede || <em>(Sede / Dirección Incompany)</em>}</div>
-
-          <div><span className="label">Persona de contacto:</span> {datos.contacto || <em>(pendiente)</em>}</div>
-          <div><span className="label">Comercial:</span> {datos.owner || <em>(pendiente)</em>}</div>
-        </div>
-
-        <details className="section-title">
-          <summary>Editar campos (si es necesario)</summary>
-          <div className="grid-2">
-            <label> Cliente
-              <input className="full" value={datos.cliente} onChange={e=>setDatos({...datos, cliente: e.target.value})} />
-            </label>
-            <label> CIF
-              <input className="full" value={datos.cif} onChange={e=>setDatos({...datos, cif: e.target.value})} />
-            </label>
-            <label> Dirección (Organización)
-              <input className="full" value={datos.direccionOrg} onChange={e=>setDatos({...datos, direccionOrg: e.target.value})} />
-            </label>
-            <label> Dirección de la formación
-              <input className="full" value={datos.sede} onChange={e=>setDatos({...datos, sede: e.target.value})} />
-            </label>
-            <label> Persona de contacto
-              <input className="full" value={datos.contacto} onChange={e=>setDatos({...datos, contacto: e.target.value})} />
-            </label>
-            <label> Comercial
-              <input className="full" value={datos.owner} onChange={e=>setDatos({...datos, owner: e.target.value})} />
-            </label>
+          <div className="mb-3">
+            <div className="fw-semibold">Dirección de la formación</div>
+            <div>{datos.sede || <em>(Sede / Dirección Incompany)</em>}</div>
           </div>
-        </details>
-      </article>
 
-      <article className="card">
-        <h3>Plantillas de formación</h3>
-        <p className="muted">
-          Selecciona uno o varios títulos. Se añadirán sus “Parte teórica” y “Parte práctica” al borrador.
-        </p>
-        <label> Elegir plantilla(s)
-          <select multiple className="full" value={datos.plantillasSeleccionadas} onChange={onChangePlantillas}>
+          <div className="row g-3">
+            <div className="col-md">
+              <div><span className="fw-semibold">Persona de contacto:</span> {datos.contacto || <em>(pendiente)</em>}</div>
+            </div>
+            <div className="col-md">
+              <div><span className="fw-semibold">Comercial:</span> {datos.owner || <em>(pendiente)</em>}</div>
+            </div>
+          </div>
+
+          <details className="mt-3">
+            <summary className="mb-2">Editar campos (si es necesario)</summary>
+            <div className="row g-3">
+              <div className="col-md-6">
+                <label className="form-label">Cliente</label>
+                <input className="form-control" value={datos.cliente} onChange={e=>setDatos({...datos, cliente: e.target.value})} />
+              </div>
+              <div className="col-md-6">
+                <label className="form-label">CIF</label>
+                <input className="form-control" value={datos.cif} onChange={e=>setDatos({...datos, cif: e.target.value})} />
+              </div>
+              <div className="col-md-6">
+                <label className="form-label">Dirección (Organización)</label>
+                <input className="form-control" value={datos.direccionOrg} onChange={e=>setDatos({...datos, direccionOrg: e.target.value})} />
+              </div>
+              <div className="col-md-6">
+                <label className="form-label">Dirección de la formación</label>
+                <input className="form-control" value={datos.sede} onChange={e=>setDatos({...datos, sede: e.target.value})} />
+              </div>
+              <div className="col-md-6">
+                <label className="form-label">Persona de contacto</label>
+                <input className="form-control" value={datos.contacto} onChange={e=>setDatos({...datos, contacto: e.target.value})} />
+              </div>
+              <div className="col-md-6">
+                <label className="form-label">Comercial</label>
+                <input className="form-control" value={datos.owner} onChange={e=>setDatos({...datos, owner: e.target.value})} />
+              </div>
+            </div>
+          </details>
+        </div>
+      </div>
+
+      {/* Plantillas (selección manual) */}
+      <div className="card card-soft">
+        <div className="card-body">
+          <h5 className="card-title">Plantillas de formación</h5>
+          <p className="text-secondary mb-2">
+            Selecciona uno o varios títulos. Se añadirán sus “Parte teórica” y “Parte práctica” al borrador.
+          </p>
+          <label className="form-label">Elegir plantilla(s)</label>
+          <select multiple className="form-select" value={datos.plantillasSeleccionadas} onChange={onChangePlantillas} size={Math.min(8, Math.max(3, opcionesPlantillas.length))}>
             {opcionesPlantillas.map(op => (
               <option key={op.key} value={op.key}>{op.titulo}</option>
             ))}
           </select>
-        </label>
-      </article>
-
-      <article className="card">
-        <h3>Valora la formación del 1 al 10</h3>
-        <div className="grid-2">
-          <label> Participación
-            <input className="full" type="number" min="1" max="10"
-              value={datos.escalas.participacion}
-              onChange={e=>setDatos({...datos, escalas:{...datos.escalas, participacion: Number(e.target.value)}})} />
-          </label>
-          <label> Compromiso
-            <input className="full" type="number" min="1" max="10"
-              value={datos.escalas.compromiso}
-              onChange={e=>setDatos({...datos, escalas:{...datos.escalas, compromiso: Number(e.target.value)}})} />
-          </label>
-          <label> Superación
-            <input className="full" type="number" min="1" max="10"
-              value={datos.escalas.superacion}
-              onChange={e=>setDatos({...datos, escalas:{...datos.escalas, superacion: Number(e.target.value)}})} />
-          </label>
         </div>
-      </article>
+      </div>
 
-      <article className="card">
-        <h3>Comentarios del formador</h3>
-        <label> Puntos fuertes de los alumnos a destacar
-          <textarea value={datos.comentarios.c11}
+      {/* Valoraciones (1–10) */}
+      <div className="card card-soft">
+        <div className="card-body">
+          <h5 className="card-title">Valora la formación del 1 al 10</h5>
+          <div className="row g-3">
+            <div className="col-md-4">
+              <label className="form-label">Participación</label>
+              <input type="number" min="1" max="10" className="form-control"
+                value={datos.escalas.participacion}
+                onChange={e=>setDatos({...datos, escalas:{...datos.escalas, participacion: Number(e.target.value)}})} />
+            </div>
+            <div className="col-md-4">
+              <label className="form-label">Compromiso</label>
+              <input type="number" min="1" max="10" className="form-control"
+                value={datos.escalas.compromiso}
+                onChange={e=>setDatos({...datos, escalas:{...datos.escalas, compromiso: Number(e.target.value)}})} />
+            </div>
+            <div className="col-md-4">
+              <label className="form-label">Superación</label>
+              <input type="number" min="1" max="10" className="form-control"
+                value={datos.escalas.superacion}
+                onChange={e=>setDatos({...datos, escalas:{...datos.escalas, superacion: Number(e.target.value)}})} />
+            </div>
+          </div>
+        </div>
+      </div>
+
+      {/* Comentarios renombrados */}
+      <div className="card card-soft">
+        <div className="card-body">
+          <h5 className="card-title">Comentarios del formador</h5>
+
+          <label className="form-label">Puntos fuertes de los alumnos a destacar</label>
+          <textarea className="form-control" value={datos.comentarios.c11}
             onChange={e=>setDatos({...datos, comentarios:{...datos.comentarios, c11: e.target.value}})} />
-        </label>
-        <label> Incidencias: Referentes a la asistencia
-          <textarea value={datos.comentarios.c12}
-            onChange={e=>setDatos({...datos, comentarios:{...datos.comentarios, c12: e.target.value}})} />
-        </label>
-        <label> Incidencias: Referentes a la Puntualidad
-          <textarea value={datos.comentarios.c13}
-            onChange={e=>setDatos({...datos, comentarios:{...datos.comentarios, c13: e.target.value}})} />
-        </label>
-        <label> Incidencias: Accidentes
-          <textarea value={datos.comentarios.c14}
-            onChange={e=>setDatos({...datos, comentarios:{...datos.comentarios, c14: e.target.value}})} />
-        </label>
-        <label> Recomendaciones: Formaciones Futuras
-          <textarea value={datos.comentarios.c15}
-            onChange={e=>setDatos({...datos, comentarios:{...datos.comentarios, c15: e.target.value}})} />
-        </label>
-        <label> Recomendaciones: Del entorno de Trabajo
-          <textarea value={datos.comentarios.c16}
-            onChange={e=>setDatos({...datos, comentarios:{...datos.comentarios, c16: e.target.value}})} />
-        </label>
-        <label> Recomendaciones: De Materiales
-          <textarea value={datos.comentarios.c17}
-            onChange={e=>setDatos({...datos, comentarios:{...datos.comentarios, c17: e.target.value}})} />
-        </label>
-      </article>
 
-      <footer className="card">
-        <div className="grid-2">
-          <button type="submit" disabled={loading}>Generar borrador</button>
-          <button type="button" className="secondary" onClick={()=>window.scrollTo({ top: 0, behavior:'smooth' })}>
-            Subir arriba
-          </button>
+          <label className="form-label mt-3">Incidencias: Referentes a la asistencia</label>
+          <textarea className="form-control" value={datos.comentarios.c12}
+            onChange={e=>setDatos({...datos, comentarios:{...datos.comentarios, c12: e.target.value}})} />
+
+          <label className="form-label mt-3">Incidencias: Referentes a la Puntualidad</label>
+          <textarea className="form-control" value={datos.comentarios.c13}
+            onChange={e=>setDatos({...datos, comentarios:{...datos.comentarios, c13: e.target.value}})} />
+
+          <label className="form-label mt-3">Incidencias: Accidentes</label>
+          <textarea className="form-control" value={datos.comentarios.c14}
+            onChange={e=>setDatos({...datos, comentarios:{...datos.comentarios, c14: e.target.value}})} />
+
+          <label className="form-label mt-3">Recomendaciones: Formaciones Futuras</label>
+          <textarea className="form-control" value={datos.comentarios.c15}
+            onChange={e=>setDatos({...datos, comentarios:{...datos.comentarios, c15: e.target.value}})} />
+
+          <label className="form-label mt-3">Recomendaciones: Del entorno de Trabajo</label>
+          <textarea className="form-control" value={datos.comentarios.c16}
+            onChange={e=>setDatos({...datos, comentarios:{...datos.comentarios, c16: e.target.value}})} />
+
+          <label className="form-label mt-3">Recomendaciones: De Materiales</label>
+          <textarea className="form-control" value={datos.comentarios.c17}
+            onChange={e=>setDatos({...datos, comentarios:{...datos.comentarios, c17: e.target.value}})} />
         </div>
-      </footer>
+      </div>
+
+      <div className="d-flex gap-2">
+        <button type="submit" className="btn btn-success" disabled={loading}>Generar borrador</button>
+        <button type="button" className="btn btn-outline-secondary" onClick={()=>window.scrollTo({ top: 0, behavior:'smooth' })}>
+          Subir arriba
+        </button>
+      </div>
     </form>
   )
 }
