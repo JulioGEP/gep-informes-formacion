@@ -1,5 +1,5 @@
 // src/components/Form.jsx
-import React, { useEffect, useMemo, useState } from 'react'
+import React, { useEffect, useMemo, useRef, useState } from 'react'
 import plantillasBase from '../utils/plantillas.json'
 
 const fileToDataURL = (file) =>
@@ -10,8 +10,12 @@ const fileToDataURL = (file) =>
     reader.readAsDataURL(file)
   })
 
+const triesKey = (dealId) => `aiAttempts:${dealId || 'sin'}`
+const htmlKey  = (dealId) => `aiHtml:${dealId || 'sin'}`
+
 export default function Form({ initial, onNext }) {
   const [dealId, setDealId] = useState(initial?.dealId || '')
+  const prevDealIdRef = useRef(dealId)
 
   const [datos, setDatos] = useState({
     cliente: initial?.datos?.cliente || '',
@@ -35,6 +39,17 @@ export default function Form({ initial, onNext }) {
   const [imagenes, setImagenes] = useState(initial?.imagenes || [])
   const [selTitulo, setSelTitulo] = useState(datos.formacionTitulo || '')
   const [loadingDeal, setLoadingDeal] = useState(false)
+
+  // Si cambia el dealId, limpiar contador/HTML del anterior para empezar de cero
+  useEffect(() => {
+    if (prevDealIdRef.current !== dealId) {
+      try {
+        localStorage.removeItem(triesKey(prevDealIdRef.current))
+        sessionStorage.removeItem(htmlKey(prevDealIdRef.current))
+      } catch {}
+      prevDealIdRef.current = dealId
+    }
+  }, [dealId])
 
   useEffect(() => {
     if (!selTitulo) return
@@ -195,7 +210,7 @@ export default function Form({ initial, onNext }) {
                   Object.keys(plantillasBase)
                     .sort((a,b)=>a.localeCompare(b,'es',{sensitivity:'base'}))
                     .map(t => <option key={t} value={t}>{t}</option>)
-                , [plantillasBase])}
+                , [])}
               </select>
             </div>
           </div>
