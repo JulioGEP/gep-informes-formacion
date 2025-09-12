@@ -2,7 +2,6 @@ import React, { useState } from 'react'
 import Form from './components/Form.jsx'
 import Preview from './components/Preview.jsx'
 import 'bootstrap/dist/css/bootstrap.min.css'
-import './main.css'
 
 export default function App() {
   const [view, setView] = useState('form') // 'form' | 'preview'
