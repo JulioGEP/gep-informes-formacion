@@ -3,7 +3,6 @@ import { Document, Page, Text, View, StyleSheet, Font, Image, pdf } from '@react
 import headerImg from '../assets/pdf/header.png'
 import footerImg from '../assets/pdf/footer.png'
 
-// Registra Poppins (asegúrate de subir los TTF a src/assets/fonts)
 Font.register({
   family: 'Poppins',
   fonts: [
@@ -31,7 +30,13 @@ const styles = StyleSheet.create({
   footerLine: {
     position: 'absolute', bottom: 8, left: 42, right: 42,
     fontSize: 9, color: '#777', flexDirection: 'row', justifyContent: 'space-between'
-  }
+  },
+
+  // Imágenes de apoyo
+  imagesGrid: { marginTop: 6, flexDirection: 'row', flexWrap: 'wrap' },
+  imgCard: { width: '45%', marginRight: '5%', marginBottom: 8, borderWidth: 1, borderColor: '#ddd', padding: 6, borderRadius: 4 },
+  img: { width: '100%', height: 160, objectFit: 'cover' },
+  imgCaption: { fontSize: 9, marginTop: 4, color: '#555' }
 })
 
 function DatosGenerales({ datos, formador, formacionTitulo }) {
@@ -83,28 +88,42 @@ function Analisis({ analysisText, notaLibre }) {
   )
 }
 
-export default async function PdfReport({ logoUrl, datos, formador, formacionTitulo, analysisText, notaLibre }) {
+function ImagenesApoyo({ imagenes }) {
+  if (!imagenes || !imagenes.length) return null
+  return (
+    <View wrap>
+      <Text style={styles.h2}>Imágenes de apoyo</Text>
+      <View style={styles.imagesGrid}>
+        {imagenes.map((img, idx) => (
+          <View key={idx} style={styles.imgCard} wrap={false}>
+            {/* @react-pdf soporta dataURL (base64) */}
+            <Image src={img.dataUrl} style={styles.img} />
+            <Text style={styles.imgCaption}>{img.name || `Imagen ${idx+1}`}</Text>
+          </View>
+        ))}
+      </View>
+    </View>
+  )
+}
+
+export default async function PdfReport({ logoUrl, datos, formador, formacionTitulo, analysisText, notaLibre, imagenes }) {
   const Doc = (
     <Document>
       <Page size="A4" style={styles.page} wrap>
-
-        {/* Cabecera con imagen completa */}
         <View style={styles.headerWrap} fixed>
           <Image src={headerImg} style={styles.headerImage} />
         </View>
 
-        {/* Título principal (bajo cabecera) */}
         <View style={{ marginTop: 6, marginBottom: 8 }}>
           <Text style={styles.h1}>Informes de formación</Text>
           <Text style={styles.small}>GEP Group</Text>
         </View>
 
-        {/* Cuerpo */}
         <DatosGenerales datos={datos} formador={formador} formacionTitulo={formacionTitulo} />
         <ContenidoFormacion datos={datos} />
         <Analisis analysisText={analysisText} notaLibre={notaLibre} />
+        <ImagenesApoyo imagenes={imagenes} />
 
-        {/* Pie con imagen y paginación */}
         <View style={styles.footerWrap} fixed>
           <Image src={footerImg} style={styles.footerImage} />
         </View>
