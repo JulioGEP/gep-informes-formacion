@@ -10,13 +10,14 @@ export async function handler(event) {
       `Superación: ${interpret(datos?.escalas?.superacion)}.`
     ].join('\n');
 
-    // Mostrar las plantillas seleccionadas como títulos de formación (si no hay productos filtrados)
-    const titulosPlantillas = (datos?.plantillasSeleccionadas || []).join(', ');
+    // Listas de contenidos ya unificadas (teórica/práctica)
+    const list = (arr=[]) => arr.map(i => `- ${i}`).join('\n');
+    const bloqueContenidos =
+`Parte Teórica
+${list(datos?.contenidoTeorica || [])}
 
-    // Productos form-* (si los hubiera)
-    const formacionesProductos = (datos?.productos||[])
-      .map(p=>`- ${p.product?.code || ''} · ${p.product?.name || ''}`)
-      .join('\n');
+Parte Práctica
+${list(datos?.contenidoPractica || [])}`;
 
     const idioma = (datos?.idioma || 'ES');
     const base = {
@@ -31,8 +32,8 @@ Fecha: ${datos?.fecha || ''}
 Sesiones: ${datos?.sesiones || 1}
 Alumnos: ${datos?.alumnos || ''}
 Duración: ${datos?.duracion || ''} h
-Formador/a: ${formador?.nombre || ''}`,
-        guia: 'Redacta con estilo formal técnico (PCI/PRL), preciso, sin florituras. Tono objetivo y claro. Estructura en secciones.'
+Formador/a: ${formador?.nombre || ''}
+Formación: ${datos?.formacionTitulo || '(no especificada)'}`
       },
       CA: {
         titulo: 'Informe de formació',
@@ -45,8 +46,8 @@ Data: ${datos?.fecha || ''}
 Sessions: ${datos?.sesiones || 1}
 Alumnes: ${datos?.alumnos || ''}
 Durada: ${datos?.duracion || ''} h
-Formador/a: ${formador?.nombre || ''}`,
-        guia: 'Redacta amb estil formal tècnic (PCI/PRL), precís i sense floritures. To objectiu i clar. Estructura en seccions.'
+Formador/a: ${formador?.nombre || ''}
+Formació: ${datos?.formacionTitulo || '(no especificada)'}`
       },
       EN: {
         titulo: 'Training report',
@@ -59,23 +60,11 @@ Date: ${datos?.fecha || ''}
 Sessions: ${datos?.sesiones || 1}
 Trainees: ${datos?.alumnos || ''}
 Duration: ${datos?.duracion || ''} h
-Trainer: ${formador?.nombre || ''}`,
-        guia: 'Write in a formal technical tone (fire safety/OSH), precise, no fluff. Objective and clear. Structure into sections.'
+Trainer: ${formador?.nombre || ''}
+Course: ${datos?.formacionTitulo || '(unspecified)'}`
       }
     }[idioma];
 
-    // Bloque de “Desarrollo y contenidos”: productos form-* o, si no hay, los títulos de plantillas seleccionadas
-    const bloqueFormaciones =
-      (formacionesProductos && formacionesProductos.length > 0)
-      ? `Formaciones (productos del presupuesto):
-${formacionesProductos}`
-      : (titulosPlantillas
-          ? `Formaciones (selección manual de plantillas):
-- ${titulosPlantillas.split(',').join('\n- ')}`
-          : '- (no especificadas)'
-        );
-
-    // Comentarios renombrados
     const comentariosLargos = [
       ['Puntos fuertes de los alumnos a destacar', datos?.comentarios?.c11],
       ['Incidencias: Referentes a la asistencia', datos?.comentarios?.c12],
@@ -84,26 +73,23 @@ ${formacionesProductos}`
       ['Recomendaciones: Formaciones Futuras', datos?.comentarios?.c15],
       ['Recomendaciones: Del entorno de Trabajo', datos?.comentarios?.c16],
       ['Recomendaciones: De Materiales', datos?.comentarios?.c17],
-    ].filter(([,v]) => v && String(v).trim().length > 0)
-     .map(([t,v]) => `- ${t}: ${v}`)
-     .join('\n');
+    ]
+    .filter(([,v]) => v && String(v).trim().length > 0)
+    .map(([t,v]) => `- ${t}: ${v}`)
+    .join('\n');
 
     const seedTexto = `# ${base.titulo}
 
 ${base.resumen}
 
-## Alcance y objetivos
-Presupuesto (Nº): ${dealId}
-${bloqueFormaciones}
-
 ## Valora la formación del 1 al 10
 ${interpretaciones}
 
+## Contenido de la formación
+${bloqueContenidos}
+
 ## Observaciones y recomendaciones del formador
 ${comentariosLargos || '- Sin observaciones adicionales.'}
-
-## Desarrollo y contenidos
-(Se completará automáticamente con “Parte teórica / Parte práctica” según la plantilla de cada formación en versiones posteriores. Para esta versión, se incorporan los elementos seleccionados en el formulario).
 
 ## Clausulado legal
 Documento confidencial. Uso interno del cliente y GEP Group. Tratamiento de datos conforme al RGPD y normativa aplicable.`;
