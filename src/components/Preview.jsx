@@ -3,14 +3,13 @@ import { jsPDF } from 'jspdf'
 import logoUrl from '../assets/logo-gep.png'
 
 export default function Preview({ draft, onBack }){
-  const [notaLibre, setNotaLibre] = useState('') // para pequeños ajustes
+  const [notaLibre, setNotaLibre] = useState('')
   const printRef = useRef(null)
 
   const data = draft?.datos || {}
   const formador = draft?.formador || {}
   const formacionTitulo = data.formacionTitulo || (data.plantillasSeleccionadas?.[0] || 'Formación')
 
-  // HTML del informe con Bootstrap
   const informeHTML = useMemo(() => (
     <div className="print-area">
       <div className="d-flex align-items-center gap-3 mb-3">
@@ -90,7 +89,6 @@ export default function Preview({ draft, onBack }){
     </div>
   ), [data, formador, formacionTitulo, notaLibre])
 
-  // Descargar como PDF (renderizando el HTML con Bootstrap) y añadir cabecera en todas las páginas
   const descargarPDF = async () => {
     const pdf = new jsPDF({ unit: 'pt', format: 'a4' })
     const headerH = 70
@@ -101,10 +99,9 @@ export default function Preview({ draft, onBack }){
         const total = doc.getNumberOfPages()
         for (let i = 1; i <= total; i++) {
           doc.setPage(i)
-          // Cabecera con logo/título en cada página
           doc.setDrawColor(220)
           doc.addImage(logoUrl, 'PNG', 56, 40, 44, 44, undefined, 'FAST')
-          doc.setFont('helvetica','bold') // (si luego integras Poppins, se cambia aquí)
+          doc.setFont('helvetica','bold') // luego cambiaremos a Poppins
           doc.setFontSize(12)
           doc.text('Informes de formación', 56 + 44 + 10, 56)
           doc.setFont('helvetica','normal')
@@ -113,14 +110,11 @@ export default function Preview({ draft, onBack }){
           doc.text('GEP Group', 56 + 44 + 10, 56 + 16)
           doc.setTextColor(0)
           doc.line(56, 56 + headerH, 595 - 56, 56 + headerH)
-
-          // Pie de página
           doc.setFontSize(9)
           doc.setTextColor(140)
           doc.text(`Página ${i} de ${total}`, 595 - 56 - 80, 842 - 30)
           doc.setTextColor(0)
         }
-
         const fileName = `GEP Group – ${draft.dealId} – ${data.cliente || 'Cliente'} – ${formacionTitulo} – ${data.fecha || ''}.pdf`
         doc.save(fileName)
       }
@@ -129,16 +123,10 @@ export default function Preview({ draft, onBack }){
 
   return (
     <div className="d-grid gap-3">
-      {/* Botón de volver → “Mejorar documento” (solo aquí) */}
       <button className="btn btn-link p-0 w-auto" onClick={onBack}>← Mejorar documento</button>
-
-      {/* Vista previa Bootstrap */}
       <div className="card">
         <div className="card-body">
-          {/* Contenedor imprimible */}
           <div ref={printRef}>{informeHTML}</div>
-
-          {/* Ajustes finales (opcional) */}
           <div className="mt-3">
             <label className="form-label">Ajustes finales (opcional)</label>
             <textarea
@@ -148,9 +136,8 @@ export default function Preview({ draft, onBack }){
               onChange={e => setNotaLibre(e.target.value)}
             />
           </div>
-
           <div className="d-flex gap-2 mt-3">
-            <button className="btn btn-success" onClick={descar garPDF}>Descargar PDF</button>
+            <button className="btn btn-success" onClick={descargarPDF}>Descargar PDF</button>
           </div>
         </div>
       </div>
