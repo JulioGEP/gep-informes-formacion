@@ -1,33 +1,22 @@
+// src/App.jsx
 import React, { useState } from 'react'
-import Formulario from './components/Formulario.jsx'
+import Form from './components/Form.jsx'
 import Preview from './components/Preview.jsx'
-import logoUrl from './assets/logo-gep.png'
 
-export default function App(){
-  const [lastPayload, setLastPayload] = useState(null)
+export default function App() {
+  const [step, setStep] = useState(0)
   const [draft, setDraft] = useState(null)
 
-  const handlePreview = (payloadConBorrador) => {
-    setLastPayload({
-      dealId: payloadConBorrador.dealId,
-      formador: payloadConBorrador.formador,
-      datos: payloadConBorrador.datos
-    })
-    setDraft(payloadConBorrador)
+  const handleNext = (data) => {
+    setDraft(data)
+    setStep(1)
   }
+  const handleBack = () => setStep(0)
 
   return (
-    <div>
-      <header className="d-flex align-items-center gap-3 mb-4">
-        <img src={logoUrl} alt="GEP Group" style={{ width: 64, height: 'auto' }} />
-        <div>
-          <h1 className="h4 mb-0">Informes de formación</h1>
-          <small className="text-secondary">GEP Group</small>
-        </div>
-      </header>
-
-      {!draft && <Formulario onPreview={handlePreview} initial={lastPayload} />}
-      {draft && <Preview draft={draft} onBack={() => setDraft(null)} />}
+    <div className="container my-4">
+      {step === 0 && <Form initial={draft} onNext={handleNext} />}
+      {step === 1 && <Preview draft={draft} onBack={handleBack} />}
     </div>
   )
 }
