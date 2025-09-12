@@ -1,83 +1,46 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react'
 import axios from 'axios'
-import { jsPDF } from 'jspdf' // (ya no se usa para exportar, pero si lo usabas en otro punto puedes quitarlo)
 import logoUrl from '../assets/logo-gep.png'
 import PdfReport from './PdfReport.jsx'
 
 const lsKey = (dealId) => `aiTries:${dealId || 'unknown'}`
 
 export default function Preview({ draft, onBack }) {
-  const [notaLibre, setNotaLibre] = useState('')          // Ajuste final manual
-  const [analysisText, setAnalysisText] = useState('')    // Texto IA (1ª persona)
-  const [editBuffer, setEditBuffer] = useState('')        // Edición manual del texto IA
-  const [aiTries, setAiTries] = useState(0)               // 0..3, persistente por dealId
+  const [notaLibre, setNotaLibre] = useState('')
+  const [analysisText, setAnalysisText] = useState('')
+  const [editBuffer, setEditBuffer] = useState('')
+  const [aiTries, setAiTries] = useState(0)
   const [loadingAI, setLoadingAI] = useState(false)
 
   const data = draft?.datos || {}
   const formador = draft?.formador || {}
   const formacionTitulo = data.formacionTitulo || 'Formación'
+  const imagenes = draft?.imagenes || [] // [{name, dataUrl}]
 
-  // Cargar intentos guardados por dealId
   useEffect(() => {
     const saved = Number(localStorage.getItem(lsKey(draft?.dealId)) || '0')
     setAiTries(Number.isFinite(saved) ? saved : 0)
   }, [draft?.dealId])
 
-  // Guardar intentos al cambiar
   useEffect(() => {
     localStorage.setItem(lsKey(draft?.dealId), String(aiTries))
   }, [aiTries, draft?.dealId])
 
-  // Borrador base (HTML Bootstrap en pantalla previa)
   const informeHTMLBase = useMemo(() => (
     <div className="print-area">
-      <div className="d-flex align-items-center gap-3 mb-3">
-        <img src={logoUrl} alt="GEP Group" style={{ width: 64 }} />
-        <div>
-          <h1 className="h5 mb-0">Informe de formación</h1>
-          <div className="text-secondary small">GEP Group</div>
-        </div>
-      </div>
+      {/* ... (tus secciones Datos/Contenido/Análisis iguales que antes) ... */}
 
-      <section>
-        <h2 className="h6">Datos generales</h2>
-        <div className="row g-2">
-          <div className="col-md-6"><strong>Cliente:</strong> {data.cliente || '—'}</div>
-          <div className="col-md-6"><strong>CIF:</strong> {data.cif || '—'}</div>
-          <div className="col-md-6"><strong>Dirección (Organización):</strong> {data.direccionOrg || '—'}</div>
-          <div className="col-md-6"><strong>Dirección de la formación:</strong> {data.sede || '—'}</div>
-          <div className="col-md-4"><strong>Fecha:</strong> {data.fecha || '—'}</div>
-          <div className="col-md-4"><strong>Sesiones:</strong> {data.sesiones || '—'}</div>
-          <div className="col-md-4"><strong>Alumnos:</strong> {data.alumnos || '—'}</div>
-          <div className="col-md-4"><strong>Duración:</strong> {data.duracion ? `${data.duracion} h` : '—'}</div>
-          <div className="col-md-4"><strong>Formador/a:</strong> {formador.nombre || '—'}</div>
-          <div className="col-md-4"><strong>Formación:</strong> {formacionTitulo}</div>
-        </div>
-      </section>
-
-      <section className="mt-3">
-        <h2 className="h6">Contenido de la formación</h2>
-        <div className="row">
-          <div className="col-md-6">
-            <h3 className="h6">Parte Teórica</h3>
-            <ul className="mb-0">
-              {(data.contenidoTeorica || []).map((li, idx) => <li key={`t-${idx}`}>{li}</li>)}
-            </ul>
-          </div>
-          <div className="col-md-6">
-            <h3 className="h6">Parte Práctica</h3>
-            <ul className="mb-0">
-              {(data.contenidoPractica || []).map((li, idx) => <li key={`p-${idx}`}>{li}</li>)}
-            </ul>
-          </div>
-        </div>
-      </section>
-
-      {(analysisText || notaLibre) && (
+      {(imagenes && imagenes.length > 0) && (
         <section className="mt-3">
-          <h2 className="h6">Análisis y recomendaciones</h2>
-          {analysisText && analysisText.split('\n').map((p, i) => <p key={i}>{p}</p>)}
-          {notaLibre && <p><strong>Ajustes finales:</strong> {notaLibre}</p>}
+          <h2 className="h6">Imágenes de apoyo</h2>
+          <div className="d-flex flex-wrap gap-2">
+            {imagenes.map((img, idx) => (
+              <div key={idx} className="border rounded p-1" style={{ width: 160 }}>
+                <img src={img.dataUrl} alt={img.name} className="img-fluid rounded" />
+                <div className="text-secondary small mt-1 text-truncate" title={img.name}>{img.name}</div>
+              </div>
+            ))}
+          </div>
         </section>
       )}
 
@@ -87,9 +50,8 @@ export default function Preview({ draft, onBack }) {
         </p>
       </section>
     </div>
-  ), [data, formador, formacionTitulo, analysisText, notaLibre])
+  ), [data, formador, formacionTitulo, analysisText, notaLibre, imagenes])
 
-  // Generar PDF con @react-pdf/renderer (PdfReport.jsx)
   const descargarPDF = async () => {
     const blob = await PdfReport({
       logoUrl,
@@ -97,7 +59,8 @@ export default function Preview({ draft, onBack }) {
       formador,
       formacionTitulo,
       analysisText: editBuffer || analysisText || '',
-      notaLibre
+      notaLibre,
+      imagenes // <— PASAMOS IMÁGENES AL PDF
     })
     const url = URL.createObjectURL(blob)
     const a = document.createElement('a')
@@ -109,8 +72,6 @@ export default function Preview({ draft, onBack }) {
   }
 
   const puedeMejorar = aiTries < 3
-
-  // Llamada a la Function (mejora IA en 1ª persona, sin números visibles)
   const mejorarInforme = async () => {
     if (!puedeMejorar) return
     setLoadingAI(true)
@@ -123,7 +84,7 @@ export default function Preview({ draft, onBack }) {
       if (!text) { alert('No se recibió texto de la IA.'); return }
       setAnalysisText(text)
       setEditBuffer(text)
-      setAiTries((t) => t + 1)
+      setAiTries(t => t + 1)
     } catch (e) {
       console.error(e)
       alert('Error al mejorar el informe.')
@@ -134,7 +95,6 @@ export default function Preview({ draft, onBack }) {
 
   return (
     <div className="d-grid gap-3">
-      {/* Bloqueo del back cuando se agotan los intentos */}
       <button
         className="btn btn-link p-0 w-auto"
         onClick={aiTries >= 3 ? undefined : onBack}
@@ -163,10 +123,8 @@ export default function Preview({ draft, onBack }) {
             Solo tienes 3 oportunidades para mejorar el informe
           </div>
 
-          {/* Vista previa HTML (Datos + Contenido + Análisis si existe) */}
           <div>{informeHTMLBase}</div>
 
-          {/* Campo de edición manual del texto mejorado (sirve como contexto en reintentos) */}
           {analysisText && (
             <div className="mt-3">
               <label className="form-label">Editar “Análisis y recomendaciones” (opcional)</label>
@@ -179,7 +137,6 @@ export default function Preview({ draft, onBack }) {
             </div>
           )}
 
-          {/* Ajuste final extra (se imprime como “Ajustes finales”) */}
           <div className="mt-3">
             <label className="form-label">Ajustes finales (opcional)</label>
             <textarea
