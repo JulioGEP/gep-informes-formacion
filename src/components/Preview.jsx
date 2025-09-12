@@ -92,8 +92,6 @@ export default function Preview({ draft, onBack }) {
         <h2 className="h5 mb-0">Borrador del informe</h2>
         <div className="d-flex gap-2">
           <button className="btn btn-secondary" onClick={onBack}>Volver al formulario</button>
-
-          {/* Mostrar "Mejorar informe" si aún hay intentos; después aparece Descargar PDF */}
           {tries < maxTries && (
             <button className="btn btn-warning" onClick={mejorarInforme} disabled={aiBusy}>
               {aiBusy ? 'Mejorando…' : `Mejorar informe (${tries}/${maxTries})`}
@@ -111,7 +109,7 @@ export default function Preview({ draft, onBack }) {
         <div className="text-muted small">Solo tienes 3 oportunidades para mejorar el informe.</div>
       )}
 
-      {/* Datos generales + contenido + valoración (resumen) */}
+      {/* Datos generales */}
       <div className="card">
         <div className="card-body">
           <h5 className="card-title mb-3">Datos generales</h5>
@@ -148,25 +146,30 @@ export default function Preview({ draft, onBack }) {
             </div>
           </div>
 
-          <hr className="my-4" />
-          <h5 className="card-title mb-3">Valoración y observaciones</h5>
-          <div className="row g-3">
-            <div className="col-md-4"><strong>Participación:</strong> {datos?.escalas?.participacion || '—'}</div>
-            <div className="col-md-4"><strong>Compromiso:</strong> {datos?.escalas?.compromiso || '—'}</div>
-            <div className="col-md-4"><strong>Superación:</strong> {datos?.escalas?.superacion || '—'}</div>
-            <div className="col-md-6"><strong>Puntos fuertes:</strong> <div>{datos?.comentarios?.c11 || '—'}</div></div>
-            <div className="col-md-6"><strong>Asistencia:</strong> <div>{datos?.comentarios?.c12 || '—'}</div></div>
-            <div className="col-md-6"><strong>Puntualidad:</strong> <div>{datos?.comentarios?.c13 || '—'}</div></div>
-            <div className="col-md-6"><strong>Accidentes:</strong> <div>{datos?.comentarios?.c14 || '—'}</div></div>
-            <div className="col-md-4"><strong>Formaciones futuras:</strong> <div>{datos?.comentarios?.c15 || '—'}</div></div>
-            <div className="col-md-4"><strong>Entorno de trabajo:</strong> <div>{datos?.comentarios?.c16 || '—'}</div></div>
-            <div className="col-md-4"><strong>Materiales:</strong> <div>{datos?.comentarios?.c17 || '—'}</div></div>
-          </div>
+          {/* Si hay IA, ocultamos lo escrito por el formador (valoraciones y comentarios) */}
+          {!aiHtml && (
+            <>
+              <hr className="my-4" />
+              <h5 className="card-title mb-3">Valoración y observaciones</h5>
+              <div className="row g-3">
+                <div className="col-md-4"><strong>Participación:</strong> {datos?.escalas?.participacion || '—'}</div>
+                <div className="col-md-4"><strong>Compromiso:</strong> {datos?.escalas?.compromiso || '—'}</div>
+                <div className="col-md-4"><strong>Superación:</strong> {datos?.escalas?.superacion || '—'}</div>
+                <div className="col-md-6"><strong>Puntos fuertes:</strong> <div>{datos?.comentarios?.c11 || '—'}</div></div>
+                <div className="col-md-6"><strong>Asistencia:</strong> <div>{datos?.comentarios?.c12 || '—'}</div></div>
+                <div className="col-md-6"><strong>Puntualidad:</strong> <div>{datos?.comentarios?.c13 || '—'}</div></div>
+                <div className="col-md-6"><strong>Accidentes:</strong> <div>{datos?.comentarios?.c14 || '—'}</div></div>
+                <div className="col-md-4"><strong>Formaciones futuras:</strong> <div>{datos?.comentarios?.c15 || '—'}</div></div>
+                <div className="col-md-4"><strong>Entorno de trabajo:</strong> <div>{datos?.comentarios?.c16 || '—'}</div></div>
+                <div className="col-md-4"><strong>Materiales:</strong> <div>{datos?.comentarios?.c17 || '—'}</div></div>
+              </div>
+            </>
+          )}
 
           {aiHtml && (
             <>
               <hr className="my-4" />
-              <h5 className="card-title mb-3">Redacción mejorada (IA)</h5>
+              {/* Sin título tipo “Informe mejorado”: render directo */}
               <div className="border rounded p-3" dangerouslySetInnerHTML={{ __html: aiHtml }} />
             </>
           )}
