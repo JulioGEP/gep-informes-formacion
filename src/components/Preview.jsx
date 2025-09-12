@@ -1,20 +1,27 @@
+// src/components/Preview.jsx
 import React, { useEffect, useMemo, useState } from 'react'
 import { pdf } from '@react-pdf/renderer'
 import PdfReport from './PdfReport.jsx'
 
 const maxTries = 3
-const keyFor = (dealId) => `aiAttempts:${dealId || 'sin'}`
+const triesKey = (dealId) => `aiAttempts:${dealId || 'sin'}`
+const htmlKey  = (dealId) => `aiHtml:${dealId || 'sin'}`
 
 export default function Preview({ draft, onBack }) {
   const { datos, imagenes, formador, dealId } = draft || {}
-  const [aiHtml, setAiHtml] = useState(null)
-  const [aiBusy, setAiBusy] = useState(false)
-  const [tries, setTries] = useState(0)
+  const [aiHtml, setAiHtml]   = useState(null)
+  const [aiBusy, setAiBusy]   = useState(false)
+  const [tries, setTries]     = useState(0)
 
+  // Cargar estado persistido (intentos + html IA) al entrar en Preview
   useEffect(() => {
     try {
-      const saved = Number(localStorage.getItem(keyFor(dealId)) || '0')
-      setTries(isNaN(saved) ? 0 : saved)
+      const savedTries = Number(localStorage.getItem(triesKey(dealId)) || '0')
+      setTries(isNaN(savedTries) ? 0 : savedTries)
+    } catch {}
+    try {
+      const savedHtml = sessionStorage.getItem(htmlKey(dealId))
+      if (savedHtml) setAiHtml(savedHtml)
     } catch {}
   }, [dealId])
 
@@ -38,10 +45,14 @@ export default function Preview({ draft, onBack }) {
       })
       const data = await r.json()
       if (!r.ok) throw new Error(data?.error || 'Error IA')
-      setAiHtml(data.html || '')
+
+      const html = (data.html || '').trim()
+      setAiHtml(html)
+      try { sessionStorage.setItem(htmlKey(dealId), html) } catch {}
+
       const next = Math.min(tries + 1, maxTries)
       setTries(next)
-      try { localStorage.setItem(keyFor(dealId), String(next)) } catch {}
+      try { localStorage.setItem(triesKey(dealId), String(next)) } catch {}
     } catch (e) {
       console.error(e)
       alert('No se ha podido mejorar el informe.')
@@ -79,6 +90,8 @@ export default function Preview({ draft, onBack }) {
       a.download = `GEP Group – ${dealId || 'SinPresu'} – ${cliente || 'Cliente'} – ${titulo} – ${fecha || 'fecha'}.pdf`
       document.body.appendChild(a); a.click(); a.remove()
       URL.revokeObjectURL(url)
+
+      // Limpiar imágenes temporales tras descargar
       try { sessionStorage.removeItem('tmpImages') } catch {}
     } catch (e) {
       console.error('Error generando PDF:', e)
@@ -92,11 +105,16 @@ export default function Preview({ draft, onBack }) {
         <h2 className="h5 mb-0">Borrador del informe</h2>
         <div className="d-flex gap-2">
           <button className="btn btn-secondary" onClick={onBack}>Volver al formulario</button>
+
+          {/* El botón de mejorar debe estar SIEMPRE visible mientras queden intentos,
+              aunque ya exista aiHtml (para permitir 2ª y 3ª mejora). */}
           {tries < maxTries && (
             <button className="btn btn-warning" onClick={mejorarInforme} disabled={aiBusy}>
               {aiBusy ? 'Mejorando…' : `Mejorar informe (${tries}/${maxTries})`}
             </button>
           )}
+
+          {/* Descargar PDF solo si ya hay aiHtml (informe mejorado) */}
           {aiHtml && (
             <button className="btn btn-success" onClick={descargarPDF} disabled={!tieneContenido}>
               Descargar PDF
@@ -109,7 +127,6 @@ export default function Preview({ draft, onBack }) {
         <div className="text-muted small">Solo tienes 3 oportunidades para mejorar el informe.</div>
       )}
 
-      {/* Datos generales */}
       <div className="card">
         <div className="card-body">
           <h5 className="card-title mb-3">Datos generales</h5>
@@ -146,7 +163,7 @@ export default function Preview({ draft, onBack }) {
             </div>
           </div>
 
-          {/* Si hay IA, ocultamos lo escrito por el formador (valoraciones y comentarios) */}
+          {/* Si hay IA, ocultamos lo escrito por el formador (valoraciones/comentarios) */}
           {!aiHtml && (
             <>
               <hr className="my-4" />
@@ -169,7 +186,7 @@ export default function Preview({ draft, onBack }) {
           {aiHtml && (
             <>
               <hr className="my-4" />
-              {/* Sin título tipo “Informe mejorado”: render directo */}
+              {/* Render directo del HTML mejorado (sin título “Informe mejorado”) */}
               <div className="border rounded p-3" dangerouslySetInnerHTML={{ __html: aiHtml }} />
             </>
           )}
