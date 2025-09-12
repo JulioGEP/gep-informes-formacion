@@ -1,229 +1,106 @@
-import React, { useEffect, useMemo, useState } from 'react'
-import { pdf } from '@react-pdf/renderer'
-import PdfReport from './PdfReport.jsx'
+// src/components/Preview.jsx
+import React from "react";
+import logoImg from "../assets/logo-gep.png";
 
-const maxTries = 3
-const triesKey = (dealId) => `aiAttempts:${dealId || 'sin'}`
-const htmlKey  = (dealId) => `aiHtml:${dealId || 'sin'}`
-
-export default function Preview({ draft, onBack }) {
-  const { datos, imagenes, formador, dealId } = draft || {}
-  const [aiHtml, setAiHtml] = useState(null)
-  const [aiBusy, setAiBusy] = useState(false)
-  const [tries, setTries] = useState(0)
-
-  // Cargar contador + html si hay dealId; si no hay, no aplicamos límite
-  useEffect(() => {
-    if (dealId) {
-      try {
-        const savedTries = Number(localStorage.getItem(triesKey(dealId)) || '0')
-        setTries(isNaN(savedTries) ? 0 : savedTries)
-      } catch {}
-      try {
-        const savedHtml = sessionStorage.getItem(htmlKey(dealId))
-        if (savedHtml) setAiHtml(savedHtml)
-      } catch {}
-    } else {
-      setTries(0)
-      setAiHtml(null)
-    }
-  }, [dealId])
-
-  const resetLocalForDeal = () => {
-    try {
-      localStorage.removeItem(triesKey(dealId))
-      sessionStorage.removeItem(htmlKey(dealId))
-    } catch {}
-    setTries(0); setAiHtml(null)
-  }
-
-  const tieneContenido = useMemo(() => {
-    if (!datos) return false
-    return (
-      (datos.formacionTitulo && (datos.contenidoTeorica?.length || datos.contenidoPractica?.length)) ||
-      Object.values(datos?.comentarios || {}).some(v => (v || '').trim() !== '') ||
-      (Array.isArray(imagenes) && imagenes.length > 0)
-    )
-  }, [datos, imagenes])
-
-  const mejorarInforme = async () => {
-    // Si no hay dealId, permitimos igual (sin persistir contador); si hay, comprobamos límite
-    if (dealId && tries >= maxTries) return
-    setAiBusy(true)
-    try {
-      const r = await fetch('/.netlify/functions/generateReport', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ formador, datos }),
-      })
-      const data = await r.json()
-      if (!r.ok) throw new Error(data?.error || 'Error IA')
-
-      const html = (data.html || '').trim()
-      setAiHtml(html)
-      if (dealId) {
-        try { sessionStorage.setItem(htmlKey(dealId), html) } catch {}
-        const next = Math.min(tries + 1, maxTries)
-        setTries(next)
-        try { localStorage.setItem(triesKey(dealId), String(next)) } catch {}
-      }
-    } catch (e) {
-      console.error(e)
-      alert('No se ha podido mejorar el informe.')
-    } finally {
-      setAiBusy(false)
-    }
-  }
-
-  const stripHtml = (html) => (html || '')
-    .replace(/<br\s*\/?>/gi, '\n')
-    .replace(/<\/p>/gi, '\n\n')
-    .replace(/<[^>]+>/g, '')
-    .replace(/&nbsp;/g, ' ')
-    .trim()
-
-  const descargarPDF = async () => {
-    try {
-      const aiText = aiHtml ? stripHtml(aiHtml) : ''
-      const blob = await pdf(
-        <PdfReport
-          dealId={dealId}
-          formador={formador}
-          datos={datos}
-          imagenes={imagenes}
-          aiText={aiText}
-        />
-      ).toBlob()
-
-      const url = URL.createObjectURL(blob)
-      const a = document.createElement('a')
-      const fecha = (datos?.fecha || '').slice(0, 10)
-      const cliente = (datos?.cliente || '').replace(/[^\w\s\-._]/g, '').trim()
-      const titulo = (datos?.formacionTitulo || 'Formación').replace(/[^\w\s\-._]/g, '').trim()
-      a.href = url
-      a.download = `GEP Group – ${dealId || 'SinPresu'} – ${cliente || 'Cliente'} – ${titulo} – ${fecha || 'fecha'}.pdf`
-      document.body.appendChild(a); a.click(); a.remove()
-      URL.revokeObjectURL(url)
-      try { sessionStorage.removeItem('tmpImages') } catch {}
-    } catch (e) {
-      console.error('Error generando PDF:', e)
-      alert('No se ha podido generar el PDF.')
-    }
-  }
-
-  const triesLabel = `${dealId ? tries : 0}/${maxTries}`
-  const quedanIntentos = dealId ? tries < maxTries : true
+const Preview = ({ data }) => {
+  const { titulo = "Informe de Formación", cliente = {}, formador = {}, resumen = "" } = data || {};
 
   return (
-    <div className="d-grid gap-4">
-      <div className="d-flex align-items-center justify-content-between">
-        <h2 className="h5 mb-0">Borrador del informe</h2>
-        <div className="d-flex gap-2">
-          <button className="btn btn-secondary" onClick={onBack}>Volver al formulario</button>
-
-          {quedanIntentos && (
-            <button className="btn btn-warning" onClick={mejorarInforme} disabled={aiBusy}>
-              {aiBusy ? 'Mejorando…' : `Mejorar informe (${triesLabel})`}
-            </button>
-          )}
-
-          {aiHtml && (
-            <button className="btn btn-success" onClick={descargarPDF} disabled={!tieneContenido}>
-              Descargar PDF
-            </button>
-          )}
+    <div style={styles.page}>
+      {/* Header web */}
+      <header style={styles.header}>
+        <img src={logoImg} alt="GEP Group" style={styles.logo} />
+        <div style={styles.headerRight}>
+          <h1 style={styles.h1}>{titulo}</h1>
+          <p style={styles.subtle}>GEP Group — Formación y Servicios</p>
         </div>
+      </header>
+
+      {/* Dos columnas */}
+      <div style={styles.row}>
+        <section style={styles.card}>
+          <h2 style={styles.h2}>Datos del cliente</h2>
+          <KV k="Nº Presupuesto" v={cliente.numeroPresupuesto} />
+          <KV k="Cliente" v={cliente.cliente} />
+          <KV k="CIF" v={cliente.cif} />
+          <KV k="Dirección" v={cliente.direccion} />
+          <KV k="Sede" v={cliente.sede} />
+          <KV k="Persona de contacto" v={cliente.contacto} />
+          <KV k="Comercial" v={cliente.comercial} />
+        </section>
+
+        <section style={styles.card}>
+          <h2 style={styles.h2}>Datos del formador</h2>
+          <KV k="Formador/a" v={nameLang(formador.nombre, formador.idioma)} />
+          <KV k="Fecha" v={formador.fecha} />
+          <KV k="Sesiones" v={formador.sesiones} />
+          <KV k="Nº alumnos" v={formador.alumnos} />
+          <KV k="Duración (h)" v={formador.duracionHoras} />
+        </section>
       </div>
 
-      {/* Enlace de prueba para desbloquear si te quedas “sin intentos” durante pruebas */}
-      {dealId && tries >= maxTries && (
-        <div className="text-muted small">
-          Has agotado las 3 mejoras para este presupuesto.{' '}
-          <button className="btn btn-link p-0 align-baseline" onClick={resetLocalForDeal}>
-            Reiniciar intentos (solo pruebas)
-          </button>
-        </div>
-      )}
-
-      <div className="card">
-        <div className="card-body">
-          <h5 className="card-title mb-3">Datos generales</h5>
-          <div className="row g-3">
-            <div className="col-md-4"><strong>Nº Presupuesto:</strong> {dealId || '—'}</div>
-            <div className="col-md-4"><strong>Cliente:</strong> {datos?.cliente || '—'}</div>
-            <div className="col-md-4"><strong>CIF:</strong> {datos?.cif || '—'}</div>
-            <div className="col-md-6"><strong>Dirección (Organización):</strong> {datos?.direccionOrg || '—'}</div>
-            <div className="col-md-6"><strong>Dirección de la formación (Sede):</strong> {datos?.sede || '—'}</div>
-            <div className="col-md-4"><strong>Persona de contacto:</strong> {datos?.contacto || '—'}</div>
-            <div className="col-md-4"><strong>Comercial:</strong> {datos?.comercial || '—'}</div>
-            <div className="col-md-4"><strong>Formador/a:</strong> {formador?.nombre || '—'} ({formador?.idioma || 'ES'})</div>
-            <div className="col-md-3"><strong>Fecha:</strong> {datos?.fecha || '—'}</div>
-            <div className="col-md-3"><strong>Sesiones:</strong> {datos?.sesiones || '—'}</div>
-            <div className="col-md-3"><strong>Nº de alumnos:</strong> {datos?.alumnos || '—'}</div>
-            <div className="col-md-3"><strong>Duración (h):</strong> {datos?.duracion || '—'}</div>
-          </div>
-
-          <hr className="my-4" />
-          <h5 className="card-title mb-3">Formación realizada</h5>
-          <p className="mb-2"><strong>Formación:</strong> {datos?.formacionTitulo || '—'}</p>
-          <div className="row g-4">
-            <div className="col-md-6">
-              <h6>Parte Teórica</h6>
-              <ul className="mb-0">
-                {(datos?.contenidoTeorica || []).map((p, i) => <li key={`t-${i}`}>{p || '—'}</li>)}
-              </ul>
-            </div>
-            <div className="col-md-6">
-              <h6>Parte Práctica</h6>
-              <ul className="mb-0">
-                {(datos?.contenidoPractica || []).map((p, i) => <li key={`p-${i}`}>{p || '—'}</li>)}
-              </ul>
-            </div>
-          </div>
-
-          {/* Ocultamos lo literal del formador si ya hay IA */}
-          {!aiHtml && (
-            <>
-              <hr className="my-4" />
-              <h5 className="card-title mb-3">Valoración y observaciones</h5>
-              <div className="row g-3">
-                <div className="col-md-4"><strong>Participación:</strong> {datos?.escalas?.participacion || '—'}</div>
-                <div className="col-md-4"><strong>Compromiso:</strong> {datos?.escalas?.compromiso || '—'}</div>
-                <div className="col-md-4"><strong>Superación:</strong> {datos?.escalas?.superacion || '—'}</div>
-                <div className="col-md-6"><strong>Puntos fuertes:</strong> <div>{datos?.comentarios?.c11 || '—'}</div></div>
-                <div className="col-md-6"><strong>Asistencia:</strong> <div>{datos?.comentarios?.c12 || '—'}</div></div>
-                <div className="col-md-6"><strong>Puntualidad:</strong> <div>{datos?.comentarios?.c13 || '—'}</div></div>
-                <div className="col-md-6"><strong>Accidentes:</strong> <div>{datos?.comentarios?.c14 || '—'}</div></div>
-                <div className="col-md-4"><strong>Formaciones futuras:</strong> <div>{datos?.comentarios?.c15 || '—'}</div></div>
-                <div className="col-md-4"><strong>Entorno de trabajo:</strong> <div>{datos?.comentarios?.c16 || '—'}</div></div>
-                <div className="col-md-4"><strong>Materiales:</strong> <div>{datos?.comentarios?.c17 || '—'}</div></div>
-              </div>
-            </>
-          )}
-
-          {aiHtml && (
-            <>
-              <hr className="my-4" />
-              <div className="border rounded p-3" dangerouslySetInnerHTML={{ __html: aiHtml }} />
-            </>
-          )}
-
-          {Array.isArray(imagenes) && imagenes.length > 0 && (
-            <>
-              <hr className="my-4" />
-              <h5 className="card-title mb-3">Imágenes de apoyo</h5>
-              <div className="d-flex flex-wrap gap-2">
-                {imagenes.map((img, i) => (
-                  <div key={i} className="border rounded p-1" style={{ width: 120 }}>
-                    <img src={img.dataUrl} alt={img.name} className="img-fluid rounded" />
-                    <div className="small text-truncate" title={img.name}>{img.name}</div>
-                  </div>
-                ))}
-              </div>
-            </>
-          )}
-        </div>
-      </div>
+      <section style={styles.section}>
+        <h3 style={styles.h3}>Resumen</h3>
+        <p style={styles.p}>{resumen || "—"}</p>
+      </section>
     </div>
-  )
-}
+  );
+};
+
+const KV = ({ k, v }) => (
+  <div style={styles.kv}>
+    <span style={styles.k}>{k}:</span>
+    <span style={styles.v}>{v || "—"}</span>
+  </div>
+);
+
+const nameLang = (n, i) => (n && i ? `${n} (${i})` : n || i || "");
+
+const GREY90 = "#4D4D4D";
+const BORDER = "#BDBDBD";
+
+const styles = {
+  page: { padding: 24, color: GREY90, fontFamily: "Inter, system-ui, sans-serif", fontSize: 14 },
+  header: {
+    position: "sticky", top: 0, background: "#fff",
+    display: "flex", alignItems: "center", gap: 14,
+    padding: "16px 0", borderBottom: `1px solid ${BORDER}`, marginBottom: 12, zIndex: 10,
+  },
+  logo: { width: 160, height: 46, objectFit: "contain" },
+  headerRight: { display: "flex", flexDirection: "column" },
+  h1: { fontSize: 18, margin: 0, fontWeight: 700 },
+  subtle: { fontSize: 13, margin: "4px 0 0 0" },
+
+  row: { display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12, alignItems: "stretch" },
+  card: {
+    background: "#fff",
+    border: `1px solid ${BORDER}`,
+    borderRadius: 8,
+    padding: 14,
+    minHeight: 320,
+    display: "flex",
+    flexDirection: "column",
+  },
+  h2: { fontSize: 16, margin: "0 0 10px 0" },
+
+  kv: {
+    display: "grid",
+    gridTemplateColumns: "180px 1fr",
+    gap: 8,
+    marginBottom: 8,
+  },
+  k: { fontWeight: 600 },
+  v: { },
+
+  section: {
+    marginTop: 14,
+    border: `1px solid ${BORDER}`,
+    borderRadius: 8,
+    padding: 14,
+    background: "#fff",
+  },
+  h3: { margin: "0 0 8px", fontSize: 16 },
+  p: { margin: 0, lineHeight: 1.5 },
+};
+
+export default Preview;
