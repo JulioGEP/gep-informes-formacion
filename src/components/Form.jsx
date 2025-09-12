@@ -1,4 +1,3 @@
-// src/components/Form.jsx
 import React, { useEffect, useMemo, useRef, useState } from 'react'
 import plantillasBase from '../utils/plantillas.json'
 
@@ -40,7 +39,7 @@ export default function Form({ initial, onNext }) {
   const [selTitulo, setSelTitulo] = useState(datos.formacionTitulo || '')
   const [loadingDeal, setLoadingDeal] = useState(false)
 
-  // Si cambia el dealId, limpiar contador/HTML del anterior para empezar de cero
+  // Reset de intentos/HTML si cambia el dealId
   useEffect(() => {
     if (prevDealIdRef.current !== dealId) {
       try {
@@ -51,6 +50,7 @@ export default function Form({ initial, onNext }) {
     }
   }, [dealId])
 
+  // Cargar plantilla al seleccionar formación
   useEffect(() => {
     if (!selTitulo) return
     const p = plantillasBase[selTitulo]
@@ -62,6 +62,7 @@ export default function Form({ initial, onNext }) {
     }))
   }, [selTitulo])
 
+  // Pipedrive
   const rellenarDesdePipedrive = async () => {
     if (!dealId) { alert('Introduce el Nº Presupuesto'); return }
     setLoadingDeal(true)
@@ -86,6 +87,7 @@ export default function Form({ initial, onNext }) {
     } finally { setLoadingDeal(false) }
   }
 
+  // Imágenes
   const addImagenes = async (e) => {
     const files = Array.from(e.target.files || [])
     if (!files.length) return
@@ -206,11 +208,7 @@ export default function Form({ initial, onNext }) {
               <label className="form-label">Formación</label>
               <select className="form-select" value={selTitulo} onChange={(e)=>setSelTitulo(e.target.value)}>
                 <option value="">— Selecciona —</option>
-                {useMemo(() =>
-                  Object.keys(plantillasBase)
-                    .sort((a,b)=>a.localeCompare(b,'es',{sensitivity:'base'}))
-                    .map(t => <option key={t} value={t}>{t}</option>)
-                , [])}
+                {opcionesOrdenadas.map(t => <option key={t} value={t}>{t}</option>)}
               </select>
             </div>
           </div>
