@@ -1,33 +1,34 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react'
 import axios from 'axios'
+import { jsPDF } from 'jspdf' // (ya no se usa para exportar, pero si lo usabas en otro punto puedes quitarlo)
 import logoUrl from '../assets/logo-gep.png'
 import PdfReport from './PdfReport.jsx'
 
 const lsKey = (dealId) => `aiTries:${dealId || 'unknown'}`
 
 export default function Preview({ draft, onBack }) {
-  const [notaLibre, setNotaLibre] = useState('')
-  const [analysisText, setAnalysisText] = useState('')  // texto IA (1ª persona)
-  const [editBuffer, setEditBuffer] = useState('')      // edición manual
-  const [aiTries, setAiTries] = useState(0)            // 0..3 (persistente por dealId)
+  const [notaLibre, setNotaLibre] = useState('')          // Ajuste final manual
+  const [analysisText, setAnalysisText] = useState('')    // Texto IA (1ª persona)
+  const [editBuffer, setEditBuffer] = useState('')        // Edición manual del texto IA
+  const [aiTries, setAiTries] = useState(0)               // 0..3, persistente por dealId
   const [loadingAI, setLoadingAI] = useState(false)
 
   const data = draft?.datos || {}
   const formador = draft?.formador || {}
-  const formacionTitulo = data?.formacionTitulo || 'Formación'
+  const formacionTitulo = data.formacionTitulo || 'Formación'
 
-  // Cargar contador de intentos al abrir
+  // Cargar intentos guardados por dealId
   useEffect(() => {
     const saved = Number(localStorage.getItem(lsKey(draft?.dealId)) || '0')
     setAiTries(Number.isFinite(saved) ? saved : 0)
   }, [draft?.dealId])
 
-  // Guardar contador al cambiar
+  // Guardar intentos al cambiar
   useEffect(() => {
     localStorage.setItem(lsKey(draft?.dealId), String(aiTries))
   }, [aiTries, draft?.dealId])
 
-  // Borrador base (HTML Bootstrap)
+  // Borrador base (HTML Bootstrap en pantalla previa)
   const informeHTMLBase = useMemo(() => (
     <div className="print-area">
       <div className="d-flex align-items-center gap-3 mb-3">
@@ -88,11 +89,30 @@ export default function Preview({ draft, onBack }) {
     </div>
   ), [data, formador, formacionTitulo, analysisText, notaLibre])
 
-  const containerRef = useRef(null)
+  // Generar PDF con @react-pdf/renderer (PdfReport.jsx)
+  const descargarPDF = async () => {
+    const blob = await PdfReport({
+      logoUrl,
+      datos: data,
+      formador,
+      formacionTitulo,
+      analysisText: editBuffer || analysisText || '',
+      notaLibre
+    })
+    const url = URL.createObjectURL(blob)
+    const a = document.createElement('a')
+    a.href = url
+    const fileName = `GEP Group – ${draft.dealId} – ${data.cliente || 'Cliente'} – ${formacionTitulo} – ${data.fecha || ''}.pdf`
+    a.download = fileName
+    a.click()
+    URL.revokeObjectURL(url)
+  }
 
-  // Llamada IA: genera/expande el texto en 1ª persona (sin números visibles)
+  const puedeMejorar = aiTries < 3
+
+  // Llamada a la Function (mejora IA en 1ª persona, sin números visibles)
   const mejorarInforme = async () => {
-    if (aiTries >= 3 || loadingAI) return
+    if (!puedeMejorar) return
     setLoadingAI(true)
     try {
       const previousText = editBuffer || analysisText || ''
@@ -100,54 +120,26 @@ export default function Preview({ draft, onBack }) {
         formador, datos: data, previousText
       })
       const text = (resp?.analysisText || '').trim()
-      if (!text) {
-        alert('No se recibió texto de la IA.')
-        return
-      }
+      if (!text) { alert('No se recibió texto de la IA.'); return }
       setAnalysisText(text)
       setEditBuffer(text)
-      setAiTries(t => t + 1)
+      setAiTries((t) => t + 1)
     } catch (e) {
       console.error(e)
-      alert('Error al mejorar el informe. Revisa consola.')
+      alert('Error al mejorar el informe.')
     } finally {
       setLoadingAI(false)
     }
   }
 
-  // Genera PDF con React-PDF (Poppins + header/footer)
-  const descargarPDF = async () => {
-    try {
-      const blob = await PdfReport({
-        logoUrl,
-        datos: data,
-        formador,
-        formacionTitulo,
-        analysisText: editBuffer || analysisText || '',
-        notaLibre
-      })
-      const url = URL.createObjectURL(blob)
-      const a = document.createElement('a')
-      a.href = url
-      const fileName = `GEP Group – ${draft.dealId} – ${data.cliente || 'Cliente'} – ${formacionTitulo} – ${data.fecha || ''}.pdf`
-      a.download = fileName
-      a.click()
-      URL.revokeObjectURL(url)
-    } catch (e) {
-      console.error(e)
-      alert('No se pudo generar el PDF.')
-    }
-  }
-
-  const puedeMejorar = aiTries < 3
-
   return (
     <div className="d-grid gap-3">
+      {/* Bloqueo del back cuando se agotan los intentos */}
       <button
         className="btn btn-link p-0 w-auto"
-        onClick={puedeMejorar ? onBack : undefined}
-        disabled={!puedeMejorar}
-        title={puedeMejorar ? '' : 'Has agotado las 3 mejoras; no es posible volver al formulario.'}
+        onClick={aiTries >= 3 ? undefined : onBack}
+        disabled={aiTries >= 3}
+        title={aiTries >= 3 ? 'Has agotado las 3 mejoras; no es posible volver al formulario.' : ''}
       >
         ← Modificar Informe
       </button>
@@ -171,10 +163,10 @@ export default function Preview({ draft, onBack }) {
             Solo tienes 3 oportunidades para mejorar el informe
           </div>
 
-          {/* Vista del informe (HTML Bootstrap) */}
-          <div ref={containerRef}>{informeHTMLBase}</div>
+          {/* Vista previa HTML (Datos + Contenido + Análisis si existe) */}
+          <div>{informeHTMLBase}</div>
 
-          {/* Edición libre del texto mejorado (sirve como contexto para siguientes mejoras) */}
+          {/* Campo de edición manual del texto mejorado (sirve como contexto en reintentos) */}
           {analysisText && (
             <div className="mt-3">
               <label className="form-label">Editar “Análisis y recomendaciones” (opcional)</label>
@@ -187,7 +179,7 @@ export default function Preview({ draft, onBack }) {
             </div>
           )}
 
-          {/* Ajuste final libre (se añade al PDF) */}
+          {/* Ajuste final extra (se imprime como “Ajustes finales”) */}
           <div className="mt-3">
             <label className="form-label">Ajustes finales (opcional)</label>
             <textarea
