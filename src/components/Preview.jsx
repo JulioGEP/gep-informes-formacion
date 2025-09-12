@@ -1,37 +1,37 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react'
-import { jsPDF } from 'jspdf'
-import logoUrl from '../assets/logo-gep.png'
 import axios from 'axios'
-import PdfReport from './PdfReport.jsx' // nuevo
+import logoUrl from '../assets/logo-gep.png'
+import PdfReport from './PdfReport.jsx'
 
 const lsKey = (dealId) => `aiTries:${dealId || 'unknown'}`
 
-export default function Preview({ draft, onBack }){
+export default function Preview({ draft, onBack }) {
   const [notaLibre, setNotaLibre] = useState('')
-  const [analysisText, setAnalysisText] = useState('')  // texto IA (primera persona)
-  const [aiTries, setAiTries] = useState(0)            // 0..3 persistente por dealId
-  const [loadingAI, setLoadingAI] = useState(false)
+  const [analysisText, setAnalysisText] = useState('')  // texto IA (1ª persona)
   const [editBuffer, setEditBuffer] = useState('')      // edición manual
+  const [aiTries, setAiTries] = useState(0)            // 0..3 (persistente por dealId)
+  const [loadingAI, setLoadingAI] = useState(false)
 
   const data = draft?.datos || {}
   const formador = draft?.formador || {}
-  const formacionTitulo = data.formacionTitulo || 'Formación'
+  const formacionTitulo = data?.formacionTitulo || 'Formación'
 
-  // Cargar intentos guardados por dealId
+  // Cargar contador de intentos al abrir
   useEffect(() => {
     const saved = Number(localStorage.getItem(lsKey(draft?.dealId)) || '0')
     setAiTries(Number.isFinite(saved) ? saved : 0)
   }, [draft?.dealId])
 
-  // Guardar intentos al cambiar
+  // Guardar contador al cambiar
   useEffect(() => {
     localStorage.setItem(lsKey(draft?.dealId), String(aiTries))
   }, [aiTries, draft?.dealId])
 
+  // Borrador base (HTML Bootstrap)
   const informeHTMLBase = useMemo(() => (
     <div className="print-area">
       <div className="d-flex align-items-center gap-3 mb-3">
-        <img src={logoUrl} alt="GEP Group" style={{width: 64}} />
+        <img src={logoUrl} alt="GEP Group" style={{ width: 64 }} />
         <div>
           <h1 className="h5 mb-0">Informe de formación</h1>
           <div className="text-secondary small">GEP Group</div>
@@ -59,11 +59,15 @@ export default function Preview({ draft, onBack }){
         <div className="row">
           <div className="col-md-6">
             <h3 className="h6">Parte Teórica</h3>
-            <ul className="mb-0">{(data.contenidoTeorica || []).map((li, idx) => <li key={`t-${idx}`}>{li}</li>)}</ul>
+            <ul className="mb-0">
+              {(data.contenidoTeorica || []).map((li, idx) => <li key={`t-${idx}`}>{li}</li>)}
+            </ul>
           </div>
           <div className="col-md-6">
             <h3 className="h6">Parte Práctica</h3>
-            <ul className="mb-0">{(data.contenidoPractica || []).map((li, idx) => <li key={`p-${idx}`}>{li}</li>)}</ul>
+            <ul className="mb-0">
+              {(data.contenidoPractica || []).map((li, idx) => <li key={`p-${idx}`}>{li}</li>)}
+            </ul>
           </div>
         </div>
       </section>
@@ -71,7 +75,7 @@ export default function Preview({ draft, onBack }){
       {(analysisText || notaLibre) && (
         <section className="mt-3">
           <h2 className="h6">Análisis y recomendaciones</h2>
-          {analysisText && analysisText.split('\n').map((p,i)=> <p key={i}>{p}</p>)}
+          {analysisText && analysisText.split('\n').map((p, i) => <p key={i}>{p}</p>)}
           {notaLibre && <p><strong>Ajustes finales:</strong> {notaLibre}</p>}
         </section>
       )}
@@ -84,31 +88,11 @@ export default function Preview({ draft, onBack }){
     </div>
   ), [data, formador, formacionTitulo, analysisText, notaLibre])
 
-  const refContainer = useRef(null)
+  const containerRef = useRef(null)
 
-  const descargarPDF = async () => {
-    // Cambiamos a React-PDF: generamos un blob y lo descargamos
-    const blob = await PdfReport({
-      logoUrl,
-      datos: data,
-      formador,
-      formacionTitulo,
-      analysisText: analysisText || editBuffer || '',
-      notaLibre
-    })
-    const url = URL.createObjectURL(blob)
-    const a = document.createElement('a')
-    a.href = url
-    const fileName = `GEP Group – ${draft.dealId} – ${data.cliente || 'Cliente'} – ${formacionTitulo} – ${data.fecha || ''}.pdf`
-    a.download = fileName
-    a.click()
-    URL.revokeObjectURL(url)
-  }
-
-  const puedeMejorar = aiTries < 3
-
+  // Llamada IA: genera/expande el texto en 1ª persona (sin números visibles)
   const mejorarInforme = async () => {
-    if (!puedeMejorar) return
+    if (aiTries >= 3 || loadingAI) return
     setLoadingAI(true)
     try {
       const previousText = editBuffer || analysisText || ''
@@ -116,21 +100,57 @@ export default function Preview({ draft, onBack }){
         formador, datos: data, previousText
       })
       const text = (resp?.analysisText || '').trim()
-      if (!text) { alert('No se recibió texto de la IA.'); return }
+      if (!text) {
+        alert('No se recibió texto de la IA.')
+        return
+      }
       setAnalysisText(text)
       setEditBuffer(text)
       setAiTries(t => t + 1)
     } catch (e) {
       console.error(e)
-      alert('Error al mejorar el informe.')
+      alert('Error al mejorar el informe. Revisa consola.')
     } finally {
       setLoadingAI(false)
     }
   }
 
+  // Genera PDF con React-PDF (Poppins + header/footer)
+  const descargarPDF = async () => {
+    try {
+      const blob = await PdfReport({
+        logoUrl,
+        datos: data,
+        formador,
+        formacionTitulo,
+        analysisText: editBuffer || analysisText || '',
+        notaLibre
+      })
+      const url = URL.createObjectURL(blob)
+      const a = document.createElement('a')
+      a.href = url
+      const fileName = `GEP Group – ${draft.dealId} – ${data.cliente || 'Cliente'} – ${formacionTitulo} – ${data.fecha || ''}.pdf`
+      a.download = fileName
+      a.click()
+      URL.revokeObjectURL(url)
+    } catch (e) {
+      console.error(e)
+      alert('No se pudo generar el PDF.')
+    }
+  }
+
+  const puedeMejorar = aiTries < 3
+
   return (
     <div className="d-grid gap-3">
-      <button className="btn btn-link p-0 w-auto" onClick={onBack}>← Modificar Informe</button>
+      <button
+        className="btn btn-link p-0 w-auto"
+        onClick={puedeMejorar ? onBack : undefined}
+        disabled={!puedeMejorar}
+        title={puedeMejorar ? '' : 'Has agotado las 3 mejoras; no es posible volver al formulario.'}
+      >
+        ← Modificar Informe
+      </button>
 
       <div className="card">
         <div className="card-body">
@@ -151,10 +171,10 @@ export default function Preview({ draft, onBack }){
             Solo tienes 3 oportunidades para mejorar el informe
           </div>
 
-          {/* Vista (HTML Bootstrap) */}
-          <div ref={refContainer}>{informeHTMLBase}</div>
+          {/* Vista del informe (HTML Bootstrap) */}
+          <div ref={containerRef}>{informeHTMLBase}</div>
 
-          {/* Edición libre del texto mejorado (aporta “previousText” en reintentos) */}
+          {/* Edición libre del texto mejorado (sirve como contexto para siguientes mejoras) */}
           {analysisText && (
             <div className="mt-3">
               <label className="form-label">Editar “Análisis y recomendaciones” (opcional)</label>
@@ -162,10 +182,21 @@ export default function Preview({ draft, onBack }){
                 className="form-control"
                 style={{ minHeight: 140 }}
                 value={editBuffer}
-                onChange={e=>setEditBuffer(e.target.value)}
+                onChange={(e) => setEditBuffer(e.target.value)}
               />
             </div>
           )}
+
+          {/* Ajuste final libre (se añade al PDF) */}
+          <div className="mt-3">
+            <label className="form-label">Ajustes finales (opcional)</label>
+            <textarea
+              className="form-control"
+              placeholder="Añade una frase o matiz adicional que quieras incorporar al informe…"
+              value={notaLibre}
+              onChange={(e) => setNotaLibre(e.target.value)}
+            />
+          </div>
         </div>
       </div>
     </div>
