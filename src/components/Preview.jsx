@@ -1,4 +1,3 @@
-// src/components/Preview.jsx
 import React, { useEffect, useMemo, useState } from 'react'
 import { pdf } from '@react-pdf/renderer'
 import PdfReport from './PdfReport.jsx'
@@ -13,7 +12,7 @@ export default function Preview({ draft, onBack }) {
   const [aiBusy, setAiBusy] = useState(false)
   const [tries, setTries] = useState(0)
 
-  // Cargar contador + html si hay dealId; si no hay, no aplicamos el límite
+  // Cargar contador + html si hay dealId; si no hay, no aplicamos límite
   useEffect(() => {
     if (dealId) {
       try {
@@ -25,11 +24,18 @@ export default function Preview({ draft, onBack }) {
         if (savedHtml) setAiHtml(savedHtml)
       } catch {}
     } else {
-      // Sin dealId => no aplicamos límite ni html persistido
       setTries(0)
       setAiHtml(null)
     }
   }, [dealId])
+
+  const resetLocalForDeal = () => {
+    try {
+      localStorage.removeItem(triesKey(dealId))
+      sessionStorage.removeItem(htmlKey(dealId))
+    } catch {}
+    setTries(0); setAiHtml(null)
+  }
 
   const tieneContenido = useMemo(() => {
     if (!datos) return false
@@ -105,7 +111,6 @@ export default function Preview({ draft, onBack }) {
     }
   }
 
-  // Mostrar contador si hay dealId; si no, mostrar “(0/3)” para guiar
   const triesLabel = `${dealId ? tries : 0}/${maxTries}`
   const quedanIntentos = dealId ? tries < maxTries : true
 
@@ -130,8 +135,14 @@ export default function Preview({ draft, onBack }) {
         </div>
       </div>
 
-      {quedanIntentos && (
-        <div className="text-muted small">Solo tienes 3 oportunidades para mejorar el informe.</div>
+      {/* Enlace de prueba para desbloquear si te quedas “sin intentos” durante pruebas */}
+      {dealId && tries >= maxTries && (
+        <div className="text-muted small">
+          Has agotado las 3 mejoras para este presupuesto.{' '}
+          <button className="btn btn-link p-0 align-baseline" onClick={resetLocalForDeal}>
+            Reiniciar intentos (solo pruebas)
+          </button>
+        </div>
       )}
 
       <div className="card">
