@@ -7,7 +7,7 @@ const ORG_CIF = '6d39d015a33921753410c1bab0b067ca93b8cf2c'
 
 export default function Formulario({ onPreview, initial }){
   const [loading, setLoading] = useState(false)
-  const [dealId, setDealId] = useState('Número de Presupuesto')
+  const [dealId, setDealId] = useState('7164')
 
   const [formador, setFormador] = useState({ nombre:'' })
   const [datos, setDatos] = useState({
@@ -18,11 +18,10 @@ export default function Formulario({ onPreview, initial }){
     escalas: { participacion: 8, compromiso: 8, superacion: 8 },
     comentarios: { c11:'', c12:'', c13:'', c14:'', c15:'', c16:'', c17:'' },
     formacionKey: '', formacionTitulo: '',
-    contenidoTeorica: [], contenidoPractica: [],
-    extrasTeorica: '', extrasPractica: ''
+    contenidoTeorica: [], contenidoPractica: []
   })
 
-  // Si venimos del borrador, recuperamos datos
+  // Restaurar al volver del borrador
   useEffect(() => {
     if (initial) {
       setDealId(initial.dealId ?? dealId)
@@ -70,7 +69,7 @@ export default function Formulario({ onPreview, initial }){
     }))
   }
 
-  // Helpers para editar/eliminar puntos
+  // Editar/eliminar/añadir puntos
   const updatePoint = (tipo, idx, value) => {
     setDatos(prev => {
       const arr = [...prev[tipo]]
@@ -90,17 +89,7 @@ export default function Formulario({ onPreview, initial }){
 
   const handlePreview = async (e)=>{
     e.preventDefault()
-    const extraT = datos.extrasTeorica.split('\n').map(s=>s.trim()).filter(Boolean)
-    const extraP = datos.extrasPractica.split('\n').map(s=>s.trim()).filter(Boolean)
-    const payload = {
-      dealId,
-      formador,
-      datos: {
-        ...datos,
-        contenidoTeorica: [...(datos.contenidoTeorica||[]), ...extraT],
-        contenidoPractica: [...(datos.contenidoPractica||[]), ...extraP]
-      }
-    }
+    const payload = { dealId, formador, datos }
     try{
       const { data } = await axios.post('/.netlify/functions/generateReport', payload)
       onPreview({ ...payload, borrador: data?.borrador || '' })
@@ -130,7 +119,7 @@ export default function Formulario({ onPreview, initial }){
         </div>
       </div>
 
-      {/* 👉 Datos del cliente (AHORA ARRIBA) */}
+      {/* Datos del cliente (arriba) */}
       <div className="card card-soft">
         <div className="card-body">
           <h5 className="card-title">Datos del cliente</h5>
@@ -188,7 +177,7 @@ export default function Formulario({ onPreview, initial }){
         </div>
       </div>
 
-      {/* Datos de la formación (AHORA DEBAJO) */}
+      {/* Datos de la formación */}
       <div className="card card-soft">
         <div className="card-body">
           <h5 className="card-title">Datos de la formación</h5>
@@ -230,7 +219,7 @@ export default function Formulario({ onPreview, initial }){
         </div>
       </div>
 
-      {/* Formación realizada y CONTENIDO EDITABLE */}
+      {/* Formación realizada (con edición de puntos) */}
       <div className="card card-soft">
         <div className="card-body">
           <h5 className="card-title">Formación realizada</h5>
@@ -243,8 +232,8 @@ export default function Formulario({ onPreview, initial }){
               <label className="form-label">Formación</label>
               <select className="form-select" value={datos.formacionKey} onChange={onChangeFormacion}>
                 <option value="">— Selecciona —</option>
-                {opcionesFormacion.map(op => (
-                  <option key={op.key} value={op.key}>{op.titulo}</option>
+                {Object.entries(plantillasMap).map(([key, val]) => (
+                  <option key={key} value={key}>{val?.nombre || key}</option>
                 ))}
               </select>
             </div>
@@ -255,7 +244,7 @@ export default function Formulario({ onPreview, initial }){
               <h6 className="fw-semibold mb-2">Contenido de la formación</h6>
 
               <div className="row g-4">
-                {/* Parte Teórica (editable) */}
+                {/* Parte Teórica */}
                 <div className="col-md-6">
                   <div className="d-flex justify-content-between align-items-center">
                     <div className="fw-semibold">Parte Teórica</div>
@@ -265,17 +254,19 @@ export default function Formulario({ onPreview, initial }){
                     {(datos.contenidoTeorica || []).map((li, idx)=> (
                       <li key={`t-${idx}`} className="d-flex gap-2 align-items-center mb-2">
                         <span>•</span>
-                        <input className="form-control" value={li} onChange={e=>updatePoint('contenidoTeorica', idx, e.target.value)} />
+                        <input
+                          className="form-control"
+                          placeholder="Escribe el punto…"
+                          value={li}
+                          onChange={e=>updatePoint('contenidoTeorica', idx, e.target.value)}
+                        />
                         <button type="button" className="btn btn-sm btn-outline-danger" onClick={()=>removePoint('contenidoTeorica', idx)}>×</button>
                       </li>
                     ))}
                   </ul>
-                  <label className="form-label">Añadir puntos (uno por línea)</label>
-                  <textarea className="form-control" value={datos.extrasTeorica}
-                            onChange={e=>setDatos({...datos, extrasTeorica: e.target.value})} />
                 </div>
 
-                {/* Parte Práctica (editable) */}
+                {/* Parte Práctica */}
                 <div className="col-md-6">
                   <div className="d-flex justify-content-between align-items-center">
                     <div className="fw-semibold">Parte Práctica</div>
@@ -285,14 +276,16 @@ export default function Formulario({ onPreview, initial }){
                     {(datos.contenidoPractica || []).map((li, idx)=> (
                       <li key={`p-${idx}`} className="d-flex gap-2 align-items-center mb-2">
                         <span>•</span>
-                        <input className="form-control" value={li} onChange={e=>updatePoint('contenidoPractica', idx, e.target.value)} />
+                        <input
+                          className="form-control"
+                          placeholder="Escribe el punto…"
+                          value={li}
+                          onChange={e=>updatePoint('contenidoPractica', idx, e.target.value)}
+                        />
                         <button type="button" className="btn btn-sm btn-outline-danger" onClick={()=>removePoint('contenidoPractica', idx)}>×</button>
                       </li>
                     ))}
                   </ul>
-                  <label className="form-label">Añadir puntos (uno por línea)</label>
-                  <textarea className="form-control" value={datos.extrasPractica}
-                            onChange={e=>setDatos({...datos, extrasPractica: e.target.value})} />
                 </div>
               </div>
             </div>
