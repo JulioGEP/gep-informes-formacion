@@ -1,48 +1,103 @@
+// netlify/functions/getDeal.js
+// ─────────────────────────────────────────────────────────────
+// Devuelve datos del deal para autocompletar el formulario.
+// Requiere variables de entorno en Netlify:
+//  - PIPEDRIVE_API_TOKEN  (tu token)
+//  - PIPEDRIVE_API_URL    (opcional; por defecto https://api.pipedrive.com/v1)
+// ─────────────────────────────────────────────────────────────
+
+const BASE = process.env.PIPEDRIVE_API_URL || 'https://api.pipedrive.com/v1';
+const TOKEN = process.env.PIPEDRIVE_API_TOKEN;
+
+// Claves proporcionadas por ti
+const DEAL_DIRECCION_INCOMPANY = '8b2a7570f5ba8aa4754f061cd9dc92fd778376a7'; // custom field deal
+const ORG_CIF = '6d39d015a33921753410c1bab0b067ca93b8cf2c'; // custom field org CIF
+
+const cors = {
+  'Access-Control-Allow-Origin': '*',
+  'Access-Control-Allow-Headers': 'content-type',
+};
+
 export async function handler(event) {
+  if (event.httpMethod === 'OPTIONS') {
+    return { statusCode: 204, headers: cors };
+  }
+  if (event.httpMethod !== 'POST') {
+    return { statusCode: 405, headers: cors, body: 'Method Not Allowed' };
+  }
   try {
-    const dealId = event.queryStringParameters?.dealId
-      || (event.body ? JSON.parse(event.body).dealId : null);
-    if (!dealId) {
-      return { statusCode: 400, body: JSON.stringify({ error: 'dealId requerido' }) };
+    if (!TOKEN) throw new Error('Missing PIPEDRIVE_API_TOKEN');
+    const { dealId } = JSON.parse(event.body || '{}');
+    if (!dealId) throw new Error('dealId is required');
+
+    // 1) Deal
+    const dealRes = await fetch(`${BASE}/deals/${encodeURIComponent(dealId)}?api_token=${TOKEN}`);
+    const dealJson = await dealRes.json();
+    if (!dealJson?.success || !dealJson?.data) {
+      throw new Error('Deal not found');
+    }
+    const deal = dealJson.data;
+
+    const orgId = deal.org_id?.value || deal.org_id || null;
+    const personId = deal.person_id?.value || deal.person_id || null;
+    const ownerId = deal.owner_id?.value || deal.owner_id || null;
+
+    const sede = deal[DEAL_DIRECCION_INCOMPANY] || '';
+
+    // 2) Organización
+    let cliente = '';
+    let direccionOrg = '';
+    let cif = '';
+    if (orgId) {
+      const orgRes = await fetch(`${BASE}/organizations/${orgId}?api_token=${TOKEN}`);
+      const orgJson = await orgRes.json();
+      if (orgJson?.success && orgJson?.data) {
+        cliente = orgJson.data.name || '';
+        direccionOrg = orgJson.data.address || '';
+        cif = orgJson.data[ORG_CIF] || '';
+      }
     }
 
-    const API = process.env.PIPEDRIVE_API_URL || 'https://api.pipedrive.com/v1';
-    const TOKEN = process.env.PIPEDRIVE_API_TOKEN;
-    if (!TOKEN) {
-      return { statusCode: 500, body: JSON.stringify({ error: 'Falta PIPEDRIVE_API_TOKEN' }) };
+    // 3) Persona de contacto
+    let contacto = '';
+    if (personId) {
+      const pRes = await fetch(`${BASE}/persons/${personId}?api_token=${TOKEN}`);
+      const pJson = await pRes.json();
+      if (pJson?.success && pJson?.data) {
+        contacto = pJson.data.name || '';
+      }
     }
 
-    const q = async (path) => {
-      const url = `${API}${path}${path.includes('?') ? '&' : '?'}api_token=${TOKEN}`;
-      const r = await fetch(url);
-      return r.json();
+    // 4) Comercial (owner del deal)
+    let comercial = '';
+    if (ownerId) {
+      const uRes = await fetch(`${BASE}/users/${ownerId}?api_token=${TOKEN}`);
+      const uJson = await uRes.json();
+      if (uJson?.success && uJson?.data) {
+        comercial = uJson.data.name || '';
+      }
+    }
+
+    const payload = {
+      cliente,
+      cif,
+      direccionOrg,
+      sede,
+      contacto,
+      comercial,
     };
-
-    const dealResp = await q(`/deals/${dealId}`);
-    const deal = dealResp?.data;
-    if (!deal) {
-      return { statusCode: 404, body: JSON.stringify({ error: 'Deal no encontrado' }) };
-    }
-
-    const org = deal.org_id ? (await q(`/organizations/${deal.org_id.value || deal.org_id}`))?.data : null;
-    const person = deal.person_id ? (await q(`/persons/${deal.person_id.value || deal.person_id}`))?.data : null;
-    const owner = deal.user_id ? (await q(`/users/${deal.user_id.value || deal.user_id}`))?.data : null;
-
-    const prodsResp = await q(`/deals/${dealId}/products`);
-    const items = prodsResp?.data || [];
-
-    const productosFiltrados = items.filter(it => {
-      const p = it.product || {};
-      const cat = p.category;
-      const code = (p.code || '').toLowerCase();
-      return cat === 'Formación' && code.startsWith('form-');
-    });
 
     return {
       statusCode: 200,
-      body: JSON.stringify({ deal, organization: org, person, owner, productosFiltrados })
+      headers: { 'Content-Type': 'application/json', ...cors },
+      body: JSON.stringify(payload),
     };
-  } catch (e) {
-    return { statusCode: 500, body: JSON.stringify({ error: 'Error en getDeal', details: String(e) }) };
+  } catch (err) {
+    console.error('[getDeal] error:', err);
+    return {
+      statusCode: 500,
+      headers: { 'Content-Type': 'application/json', ...cors },
+      body: JSON.stringify({ error: err.message || 'Unknown error' }),
+    };
   }
 }
