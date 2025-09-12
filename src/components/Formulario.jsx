@@ -7,7 +7,7 @@ const ORG_CIF = '6d39d015a33921753410c1bab0b067ca93b8cf2c'
 
 export default function Formulario({ onPreview, initial }){
   const [loading, setLoading] = useState(false)
-  const [dealId, setDealId] = useState('7164')
+  const [dealId, setDealId] = useState('Número de Presupuesto')
 
   const [formador, setFormador] = useState({ nombre:'' })
   const [datos, setDatos] = useState({
@@ -15,18 +15,14 @@ export default function Formulario({ onPreview, initial }){
     sede: '', cliente: '', cif: '', direccionOrg: '', contacto: '', owner: '',
     productos: [],
     idioma: 'ES',
-    escalas: { participacion: 8, compromiso: 8, superacion: 8 }, // 1–10
+    escalas: { participacion: 8, compromiso: 8, superacion: 8 },
     comentarios: { c11:'', c12:'', c13:'', c14:'', c15:'', c16:'', c17:'' },
-    // Formación seleccionada + contenidos auto
-    formacionKey: '',
-    formacionTitulo: '',
-    contenidoTeorica: [],
-    contenidoPractica: [],
-    extrasTeorica: '',
-    extrasPractica: ''
+    formacionKey: '', formacionTitulo: '',
+    contenidoTeorica: [], contenidoPractica: [],
+    extrasTeorica: '', extrasPractica: ''
   })
 
-  // Cargar initial state si venimos del borrador
+  // Si venimos del borrador, recuperamos datos
   useEffect(() => {
     if (initial) {
       setDealId(initial.dealId ?? dealId)
@@ -34,9 +30,8 @@ export default function Formulario({ onPreview, initial }){
       setDatos(prev => ({ ...prev, ...(initial.datos || {}) }))
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [initial?.dealId])  // solo cuando cambia el payload de vuelta
+  }, [initial?.dealId])
 
-  // Opciones para el selector de formación
   const opcionesFormacion = Object.entries(plantillasMap).map(([key, val]) => ({
     key, titulo: val?.nombre || key, teorica: val?.parte_teorica || [], practica: val?.parte_practica || []
   }))
@@ -45,12 +40,8 @@ export default function Formulario({ onPreview, initial }){
     setLoading(true)
     try{
       const { data } = await axios.get('/.netlify/functions/getDeal', { params: { dealId } })
-      const d = data?.deal
-      const org = data?.organization
-      const person = data?.person
-      const owner = data?.owner
+      const d = data?.deal, org = data?.organization, person = data?.person, owner = data?.owner
       const productos = data?.productosFiltrados || []
-
       setDatos(prev=>({
         ...prev,
         sede: d?.[DEAL_DIR_INCOMPANY] || '',
@@ -64,9 +55,7 @@ export default function Formulario({ onPreview, initial }){
     }catch(e){
       console.error(e)
       alert('No se pudo cargar el presupuesto. Puedes continuar y rellenar a mano.')
-    }finally{
-      setLoading(false)
-    }
+    }finally{ setLoading(false) }
   }
 
   const onChangeFormacion = (e) => {
@@ -81,13 +70,28 @@ export default function Formulario({ onPreview, initial }){
     }))
   }
 
+  // Helpers para editar/eliminar puntos
+  const updatePoint = (tipo, idx, value) => {
+    setDatos(prev => {
+      const arr = [...prev[tipo]]
+      arr[idx] = value
+      return { ...prev, [tipo]: arr }
+    })
+  }
+  const removePoint = (tipo, idx) => {
+    setDatos(prev => {
+      const arr = prev[tipo].filter((_, i) => i !== idx)
+      return { ...prev, [tipo]: arr }
+    })
+  }
+  const addPoint = (tipo) => {
+    setDatos(prev => ({ ...prev, [tipo]: [...prev[tipo], ''] }))
+  }
+
   const handlePreview = async (e)=>{
     e.preventDefault()
-
-    // Parse extras (uno por línea)
     const extraT = datos.extrasTeorica.split('\n').map(s=>s.trim()).filter(Boolean)
     const extraP = datos.extrasPractica.split('\n').map(s=>s.trim()).filter(Boolean)
-
     const payload = {
       dealId,
       formador,
@@ -97,11 +101,9 @@ export default function Formulario({ onPreview, initial }){
         contenidoPractica: [...(datos.contenidoPractica||[]), ...extraP]
       }
     }
-
     try{
       const { data } = await axios.post('/.netlify/functions/generateReport', payload)
-      const borrador = data?.borrador || ''
-      onPreview({ ...payload, borrador })
+      onPreview({ ...payload, borrador: data?.borrador || '' })
     }catch(err){
       console.error(err)
       alert('Error generando borrador. Revisa consola.')
@@ -110,7 +112,6 @@ export default function Formulario({ onPreview, initial }){
 
   return (
     <form onSubmit={handlePreview} className="d-grid gap-3">
-
       {/* Identificación */}
       <div className="card card-soft">
         <div className="card-body">
@@ -129,52 +130,11 @@ export default function Formulario({ onPreview, initial }){
         </div>
       </div>
 
-      {/* Datos de la formación */}
-      <div className="card card-soft">
-        <div className="card-body">
-          <h5 className="card-title">Datos de la formación</h5>
-          <div className="row g-3">
-            <div className="col-md-6">
-              <label className="form-label">Formador/a</label>
-              <input className="form-control" value={formador.nombre}
-                     onChange={e=>setFormador({...formador, nombre: e.target.value})} required />
-            </div>
-            <div className="col-md-3">
-              <label className="form-label">Fecha</label>
-              <input type="date" className="form-control" value={datos.fecha}
-                     onChange={e=>setDatos({...datos, fecha: e.target.value})} required />
-            </div>
-            <div className="col-md-3">
-              <label className="form-label">Sesiones</label>
-              <input type="number" min="1" className="form-control" value={datos.sesiones}
-                     onChange={e=>setDatos({...datos, sesiones: Number(e.target.value)})} required />
-            </div>
-            <div className="col-md-3">
-              <label className="form-label">Nº alumnos</label>
-              <input type="number" className="form-control" value={datos.alumnos}
-                     onChange={e=>setDatos({...datos, alumnos: e.target.value})} required />
-            </div>
-            <div className="col-md-3">
-              <label className="form-label">Duración (h)</label>
-              <input type="number" step="0.5" className="form-control" value={datos.duracion}
-                     onChange={e=>setDatos({...datos, duracion: e.target.value})} required />
-            </div>
-            <div className="col-md-3">
-              <label className="form-label">Idioma</label>
-              <select className="form-select" value={datos.idioma} onChange={e=>setDatos({...datos, idioma: e.target.value})}>
-                <option value="ES">Castellano</option>
-                <option value="CA">Català</option>
-                <option value="EN">English</option>
-              </select>
-            </div>
-          </div>
-        </div>
-      </div>
-
-      {/* Datos del cliente (formato solicitado) */}
+      {/* 👉 Datos del cliente (AHORA ARRIBA) */}
       <div className="card card-soft">
         <div className="card-body">
           <h5 className="card-title">Datos del cliente</h5>
+
           <div className="mb-3">
             <div className="fw-semibold">Cliente:</div>
             <div>{datos.cliente || <em>(pendiente)</em>}</div>
@@ -228,7 +188,49 @@ export default function Formulario({ onPreview, initial }){
         </div>
       </div>
 
-      {/* Formación realizada */}
+      {/* Datos de la formación (AHORA DEBAJO) */}
+      <div className="card card-soft">
+        <div className="card-body">
+          <h5 className="card-title">Datos de la formación</h5>
+          <div className="row g-3">
+            <div className="col-md-6">
+              <label className="form-label">Formador/a</label>
+              <input className="form-control" value={formador.nombre}
+                     onChange={e=>setFormador({...formador, nombre: e.target.value})} required />
+            </div>
+            <div className="col-md-3">
+              <label className="form-label">Fecha</label>
+              <input type="date" className="form-control" value={datos.fecha}
+                     onChange={e=>setDatos({...datos, fecha: e.target.value})} required />
+            </div>
+            <div className="col-md-3">
+              <label className="form-label">Sesiones</label>
+              <input type="number" min="1" className="form-control" value={datos.sesiones}
+                     onChange={e=>setDatos({...datos, sesiones: Number(e.target.value)})} required />
+            </div>
+            <div className="col-md-3">
+              <label className="form-label">Nº alumnos</label>
+              <input type="number" className="form-control" value={datos.alumnos}
+                     onChange={e=>setDatos({...datos, alumnos: e.target.value})} required />
+            </div>
+            <div className="col-md-3">
+              <label className="form-label">Duración (h)</label>
+              <input type="number" step="0.5" className="form-control" value={datos.duracion}
+                     onChange={e=>setDatos({...datos, duracion: e.target.value})} required />
+            </div>
+            <div className="col-md-3">
+              <label className="form-label">Idioma</label>
+              <select className="form-select" value={datos.idioma} onChange={e=>setDatos({...datos, idioma: e.target.value})}>
+                <option value="ES">Castellano</option>
+                <option value="CA">Català</option>
+                <option value="EN">English</option>
+              </select>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      {/* Formación realizada y CONTENIDO EDITABLE */}
       <div className="card card-soft">
         <div className="card-body">
           <h5 className="card-title">Formación realizada</h5>
@@ -248,24 +250,45 @@ export default function Formulario({ onPreview, initial }){
             </div>
           </div>
 
-          {/* Contenido de la formación (preview) */}
           {datos.formacionKey && (
             <div className="mt-3">
-              <h6 className="fw-semibold mb-1">Contenido de la formación</h6>
-              <div className="row g-3">
+              <h6 className="fw-semibold mb-2">Contenido de la formación</h6>
+
+              <div className="row g-4">
+                {/* Parte Teórica (editable) */}
                 <div className="col-md-6">
-                  <div className="fw-semibold">Parte Teórica</div>
-                  <ul className="mb-2">
-                    {(datos.contenidoTeorica || []).map((li, idx)=> <li key={idx}>{li}</li>)}
+                  <div className="d-flex justify-content-between align-items-center">
+                    <div className="fw-semibold">Parte Teórica</div>
+                    <button type="button" className="btn btn-sm btn-outline-primary" onClick={()=>addPoint('contenidoTeorica')}>Añadir punto</button>
+                  </div>
+                  <ul className="list-unstyled mt-2">
+                    {(datos.contenidoTeorica || []).map((li, idx)=> (
+                      <li key={`t-${idx}`} className="d-flex gap-2 align-items-center mb-2">
+                        <span>•</span>
+                        <input className="form-control" value={li} onChange={e=>updatePoint('contenidoTeorica', idx, e.target.value)} />
+                        <button type="button" className="btn btn-sm btn-outline-danger" onClick={()=>removePoint('contenidoTeorica', idx)}>×</button>
+                      </li>
+                    ))}
                   </ul>
                   <label className="form-label">Añadir puntos (uno por línea)</label>
                   <textarea className="form-control" value={datos.extrasTeorica}
                             onChange={e=>setDatos({...datos, extrasTeorica: e.target.value})} />
                 </div>
+
+                {/* Parte Práctica (editable) */}
                 <div className="col-md-6">
-                  <div className="fw-semibold">Parte Práctica</div>
-                  <ul className="mb-2">
-                    {(datos.contenidoPractica || []).map((li, idx)=> <li key={idx}>{li}</li>)}
+                  <div className="d-flex justify-content-between align-items-center">
+                    <div className="fw-semibold">Parte Práctica</div>
+                    <button type="button" className="btn btn-sm btn-outline-primary" onClick={()=>addPoint('contenidoPractica')}>Añadir punto</button>
+                  </div>
+                  <ul className="list-unstyled mt-2">
+                    {(datos.contenidoPractica || []).map((li, idx)=> (
+                      <li key={`p-${idx}`} className="d-flex gap-2 align-items-center mb-2">
+                        <span>•</span>
+                        <input className="form-control" value={li} onChange={e=>updatePoint('contenidoPractica', idx, e.target.value)} />
+                        <button type="button" className="btn btn-sm btn-outline-danger" onClick={()=>removePoint('contenidoPractica', idx)}>×</button>
+                      </li>
+                    ))}
                   </ul>
                   <label className="form-label">Añadir puntos (uno por línea)</label>
                   <textarea className="form-control" value={datos.extrasPractica}
@@ -277,7 +300,7 @@ export default function Formulario({ onPreview, initial }){
         </div>
       </div>
 
-      {/* Valoraciones 1–10 */}
+      {/* Valoraciones */}
       <div className="card card-soft">
         <div className="card-body">
           <h5 className="card-title">Valora la formación del 1 al 10</h5>
@@ -304,7 +327,7 @@ export default function Formulario({ onPreview, initial }){
         </div>
       </div>
 
-      {/* Comentarios renombrados */}
+      {/* Comentarios */}
       <div className="card card-soft">
         <div className="card-body">
           <h5 className="card-title">Comentarios del formador</h5>
@@ -339,7 +362,6 @@ export default function Formulario({ onPreview, initial }){
         </div>
       </div>
 
-      {/* Acciones */}
       <div className="d-flex gap-2">
         <button type="submit" className="btn btn-success" disabled={loading}>Generar borrador</button>
       </div>
