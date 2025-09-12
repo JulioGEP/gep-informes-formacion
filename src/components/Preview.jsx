@@ -9,20 +9,26 @@ const htmlKey  = (dealId) => `aiHtml:${dealId || 'sin'}`
 
 export default function Preview({ draft, onBack }) {
   const { datos, imagenes, formador, dealId } = draft || {}
-  const [aiHtml, setAiHtml]   = useState(null)
-  const [aiBusy, setAiBusy]   = useState(false)
-  const [tries, setTries]     = useState(0)
+  const [aiHtml, setAiHtml] = useState(null)
+  const [aiBusy, setAiBusy] = useState(false)
+  const [tries, setTries] = useState(0)
 
-  // Cargar estado persistido (intentos + html IA) al entrar en Preview
+  // Cargar contador + html si hay dealId; si no hay, no aplicamos el límite
   useEffect(() => {
-    try {
-      const savedTries = Number(localStorage.getItem(triesKey(dealId)) || '0')
-      setTries(isNaN(savedTries) ? 0 : savedTries)
-    } catch {}
-    try {
-      const savedHtml = sessionStorage.getItem(htmlKey(dealId))
-      if (savedHtml) setAiHtml(savedHtml)
-    } catch {}
+    if (dealId) {
+      try {
+        const savedTries = Number(localStorage.getItem(triesKey(dealId)) || '0')
+        setTries(isNaN(savedTries) ? 0 : savedTries)
+      } catch {}
+      try {
+        const savedHtml = sessionStorage.getItem(htmlKey(dealId))
+        if (savedHtml) setAiHtml(savedHtml)
+      } catch {}
+    } else {
+      // Sin dealId => no aplicamos límite ni html persistido
+      setTries(0)
+      setAiHtml(null)
+    }
   }, [dealId])
 
   const tieneContenido = useMemo(() => {
@@ -30,12 +36,13 @@ export default function Preview({ draft, onBack }) {
     return (
       (datos.formacionTitulo && (datos.contenidoTeorica?.length || datos.contenidoPractica?.length)) ||
       Object.values(datos?.comentarios || {}).some(v => (v || '').trim() !== '') ||
-      imagenes?.length > 0
+      (Array.isArray(imagenes) && imagenes.length > 0)
     )
   }, [datos, imagenes])
 
   const mejorarInforme = async () => {
-    if (tries >= maxTries) return
+    // Si no hay dealId, permitimos igual (sin persistir contador); si hay, comprobamos límite
+    if (dealId && tries >= maxTries) return
     setAiBusy(true)
     try {
       const r = await fetch('/.netlify/functions/generateReport', {
@@ -48,11 +55,12 @@ export default function Preview({ draft, onBack }) {
 
       const html = (data.html || '').trim()
       setAiHtml(html)
-      try { sessionStorage.setItem(htmlKey(dealId), html) } catch {}
-
-      const next = Math.min(tries + 1, maxTries)
-      setTries(next)
-      try { localStorage.setItem(triesKey(dealId), String(next)) } catch {}
+      if (dealId) {
+        try { sessionStorage.setItem(htmlKey(dealId), html) } catch {}
+        const next = Math.min(tries + 1, maxTries)
+        setTries(next)
+        try { localStorage.setItem(triesKey(dealId), String(next)) } catch {}
+      }
     } catch (e) {
       console.error(e)
       alert('No se ha podido mejorar el informe.')
@@ -90,14 +98,16 @@ export default function Preview({ draft, onBack }) {
       a.download = `GEP Group – ${dealId || 'SinPresu'} – ${cliente || 'Cliente'} – ${titulo} – ${fecha || 'fecha'}.pdf`
       document.body.appendChild(a); a.click(); a.remove()
       URL.revokeObjectURL(url)
-
-      // Limpiar imágenes temporales tras descargar
       try { sessionStorage.removeItem('tmpImages') } catch {}
     } catch (e) {
       console.error('Error generando PDF:', e)
       alert('No se ha podido generar el PDF.')
     }
   }
+
+  // Mostrar contador si hay dealId; si no, mostrar “(0/3)” para guiar
+  const triesLabel = `${dealId ? tries : 0}/${maxTries}`
+  const quedanIntentos = dealId ? tries < maxTries : true
 
   return (
     <div className="d-grid gap-4">
@@ -106,15 +116,12 @@ export default function Preview({ draft, onBack }) {
         <div className="d-flex gap-2">
           <button className="btn btn-secondary" onClick={onBack}>Volver al formulario</button>
 
-          {/* El botón de mejorar debe estar SIEMPRE visible mientras queden intentos,
-              aunque ya exista aiHtml (para permitir 2ª y 3ª mejora). */}
-          {tries < maxTries && (
+          {quedanIntentos && (
             <button className="btn btn-warning" onClick={mejorarInforme} disabled={aiBusy}>
-              {aiBusy ? 'Mejorando…' : `Mejorar informe (${tries}/${maxTries})`}
+              {aiBusy ? 'Mejorando…' : `Mejorar informe (${triesLabel})`}
             </button>
           )}
 
-          {/* Descargar PDF solo si ya hay aiHtml (informe mejorado) */}
           {aiHtml && (
             <button className="btn btn-success" onClick={descargarPDF} disabled={!tieneContenido}>
               Descargar PDF
@@ -123,7 +130,7 @@ export default function Preview({ draft, onBack }) {
         </div>
       </div>
 
-      {tries < maxTries && (
+      {quedanIntentos && (
         <div className="text-muted small">Solo tienes 3 oportunidades para mejorar el informe.</div>
       )}
 
@@ -163,7 +170,7 @@ export default function Preview({ draft, onBack }) {
             </div>
           </div>
 
-          {/* Si hay IA, ocultamos lo escrito por el formador (valoraciones/comentarios) */}
+          {/* Ocultamos lo literal del formador si ya hay IA */}
           {!aiHtml && (
             <>
               <hr className="my-4" />
@@ -186,12 +193,11 @@ export default function Preview({ draft, onBack }) {
           {aiHtml && (
             <>
               <hr className="my-4" />
-              {/* Render directo del HTML mejorado (sin título “Informe mejorado”) */}
               <div className="border rounded p-3" dangerouslySetInnerHTML={{ __html: aiHtml }} />
             </>
           )}
 
-          {imagenes?.length > 0 && (
+          {Array.isArray(imagenes) && imagenes.length > 0 && (
             <>
               <hr className="my-4" />
               <h5 className="card-title mb-3">Imágenes de apoyo</h5>
