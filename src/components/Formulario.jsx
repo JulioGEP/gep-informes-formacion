@@ -7,7 +7,7 @@ const ORG_CIF = '6d39d015a33921753410c1bab0b067ca93b8cf2c'
 
 export default function Formulario({ onPreview, initial }){
   const [loading, setLoading] = useState(false)
-  const [dealId, setDealId] = useState('7164')
+  const [dealId, setDealId] = useState('Añade el número de presupuesto')
 
   const [formador, setFormador] = useState({ nombre:'' })
   const [datos, setDatos] = useState({
