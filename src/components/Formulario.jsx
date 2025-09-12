@@ -1,8 +1,4 @@
-import React, { useEffect, useMemo, useState } from 'react'
-import plantillasBase from '../utils/plantillas.json'
-import { getMergedPlantillas, upsertPlantilla } from '../utils/plantillasStore'
-
-// Utilidad: leer Fimport React, { useEffect, useState } from 'react'
+import React, { useEffect, useState } from 'react'
 import plantillasBase from '../utils/plantillas.json'
 
 // Utilidad: leer File -> DataURL (para mostrar/mandar a PDF)
