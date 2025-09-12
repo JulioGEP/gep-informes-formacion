@@ -137,7 +137,7 @@ export default function Preview({ draft, onBack }){
             />
           </div>
           <div className="d-flex gap-2 mt-3">
-            <button className="btn btn-success" onClick={descar garPDF}>Descargar PDF</button>
+            <button className="btn btn-success" onClick={descargarPDF}>Descargar PDF</button>
           </div>
         </div>
       </div>
