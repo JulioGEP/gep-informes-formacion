@@ -1,4 +1,5 @@
-import React, { useEffect, useState } from 'react'
+// src/components/Form.jsx
+import React, { useEffect, useMemo, useState } from 'react'
 import plantillasBase from '../utils/plantillas.json'
 
 const fileToDataURL = (file) =>
@@ -190,7 +191,11 @@ export default function Form({ initial, onNext }) {
               <label className="form-label">Formación</label>
               <select className="form-select" value={selTitulo} onChange={(e)=>setSelTitulo(e.target.value)}>
                 <option value="">— Selecciona —</option>
-                {opcionesOrdenadas.map(t => <option key={t} value={t}>{t}</option>)}
+                {useMemo(() =>
+                  Object.keys(plantillasBase)
+                    .sort((a,b)=>a.localeCompare(b,'es',{sensitivity:'base'}))
+                    .map(t => <option key={t} value={t}>{t}</option>)
+                , [plantillasBase])}
               </select>
             </div>
           </div>
@@ -261,7 +266,6 @@ export default function Form({ initial, onNext }) {
               </div>
             </div>
 
-            {/* Comentarios */}
             <div className="col-md-6">
               <label className="form-label">Puntos fuertes de los alumnos a destacar</label>
               <textarea className="form-control" value={datos.comentarios.c11}
@@ -298,7 +302,6 @@ export default function Form({ initial, onNext }) {
                 onChange={(e)=>setDatos(d=>({...d, comentarios:{...d.comentarios, c17:e.target.value}}))} />
             </div>
 
-            {/* Imágenes */}
             <div className="col-12">
               <label className="form-label">Imágenes de apoyo (opcional)</label>
               <input type="file" accept="image/*" multiple className="form-control" onChange={addImagenes} />
