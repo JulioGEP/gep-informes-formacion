@@ -1,10 +1,50 @@
+// src/components/Preview.jsx
 import React, { useEffect, useMemo, useState } from 'react'
 import { pdf } from '@react-pdf/renderer'
 import PdfReport from './PdfReport.jsx'
+import logoImg from '../assets/logo-gep.png'
 
 const maxTries = 3
 const triesKey = (dealId) => `aiAttempts:${dealId || 'sin'}`
 const htmlKey  = (dealId) => `aiHtml:${dealId || 'sin'}`
+
+/**
+ * Caja editable para el HTML de la IA:
+ * - Inicializa con sessionStorage o initialHtml.
+ * - Guarda cambios en sessionStorage.
+ * - Notifica al padre (setAiHtml) para que el PDF use lo editado.
+ */
+function EditableHtml({ dealId, initialHtml, onChange }) {
+  const [html, setHtml] = React.useState(() => {
+    try {
+      const saved = sessionStorage.getItem(htmlKey(dealId))
+      return saved ?? (initialHtml || '')
+    } catch {
+      return initialHtml || ''
+    }
+  })
+
+  // Si cambia initialHtml (p.ej., tras pulsar "Mejorar informe"), sincroniza
+  useEffect(() => {
+    setHtml((prev) => (initialHtml != null && initialHtml !== prev ? initialHtml : prev))
+  }, [initialHtml])
+
+  useEffect(() => {
+    try { sessionStorage.setItem(htmlKey(dealId), html) } catch {}
+    onChange?.(html)
+  }, [dealId, html, onChange])
+
+  return (
+    <div
+      contentEditable
+      suppressContentEditableWarning
+      className="form-control"
+      style={{ minHeight: 220, lineHeight: 1.5, overflow: 'auto' }}
+      onInput={(e) => setHtml(e.currentTarget.innerHTML)}
+      dangerouslySetInnerHTML={{ __html: html }}
+    />
+  )
+}
 
 export default function Preview({ draft, onBack }) {
   const { datos, imagenes, formador, dealId } = draft || {}
@@ -116,6 +156,22 @@ export default function Preview({ draft, onBack }) {
 
   return (
     <div className="d-grid gap-4">
+      {/* Header igual que en el Form */}
+      <div
+        className="border-bottom pb-2 d-flex align-items-center gap-3 sticky-top bg-white"
+        style={{ top: 0, zIndex: 10 }}
+      >
+        <img
+          src={logoImg}
+          alt="GEP Group"
+          style={{ width: 180, height: 52, objectFit: 'contain', display: 'block' }}
+        />
+        <div className="flex-grow-1">
+          <h1 className="h5 mb-0">Informe de Formación</h1>
+          <small className="text-muted">GEP Group — Formación y Servicios</small>
+        </div>
+      </div>
+
       <div className="d-flex align-items-center justify-content-between">
         <h2 className="h5 mb-0">Borrador del informe</h2>
         <div className="d-flex gap-2">
@@ -181,7 +237,7 @@ export default function Preview({ draft, onBack }) {
             </div>
           </div>
 
-          {/* Ocultamos lo literal del formador si ya hay IA */}
+          {/* Si no hay IA, mostramos lo literal del formulario */}
           {!aiHtml && (
             <>
               <hr className="my-4" />
@@ -204,7 +260,8 @@ export default function Preview({ draft, onBack }) {
           {aiHtml && (
             <>
               <hr className="my-4" />
-              <div className="border rounded p-3" dangerouslySetInnerHTML={{ __html: aiHtml }} />
+              {/* AHORA EDITABLE: guarda en sessionStorage y actualiza aiHtml */}
+              <EditableHtml dealId={dealId} initialHtml={aiHtml} onChange={setAiHtml} />
             </>
           )}
 
@@ -224,6 +281,30 @@ export default function Preview({ draft, onBack }) {
           )}
         </div>
       </div>
+
+      <div className="d-flex gap-2 justify-content-end">
+        <button className="btn btn-secondary" onClick={onBack}>Volver al formulario</button>
+        {quedanIntentos && (
+          <button className="btn btn-warning" onClick={mejorarInforme} disabled={aiBusy}>
+            {aiBusy ? 'Mejorando…' : `Mejorar informe (${triesLabel})`}
+          </button>
+        )}
+        {aiHtml && (
+          <button className="btn btn-success" onClick={descargarPDF} disabled={!tieneContenido}>
+            Descargar PDF
+          </button>
+        )}
+      </div>
+
+      {/* Enlace de prueba para desbloquear si te quedas “sin intentos” durante pruebas */}
+      {dealId && tries >= maxTries && (
+        <div className="text-muted small">
+          Has agotado las 3 mejoras para este presupuesto.{' '}
+          <button className="btn btn-link p-0 align-baseline" onClick={resetLocalForDeal}>
+            Reiniciar intentos (solo pruebas)
+          </button>
+        </div>
+      )}
     </div>
   )
 }
