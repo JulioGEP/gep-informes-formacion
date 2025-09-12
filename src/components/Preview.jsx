@@ -13,7 +13,7 @@ export default function Preview({ draft, onBack }){
   const informeHTML = useMemo(() => (
     <div className="print-area">
       <div className="d-flex align-items-center gap-3 mb-3">
-        <img src={logoUrl} alt="GEP Group" style={{width: 44}} />
+        <img src={logoUrl} alt="GEP Group" style={{width: 64}} />
         <div>
           <h1 className="h5 mb-0">Informe de formación</h1>
           <div className="text-secondary small">GEP Group</div>
@@ -101,7 +101,7 @@ export default function Preview({ draft, onBack }){
           doc.setPage(i)
           doc.setDrawColor(220)
           doc.addImage(logoUrl, 'PNG', 56, 40, 44, 44, undefined, 'FAST')
-          doc.setFont('helvetica','bold') // luego cambiaremos a Poppins
+          doc.setFont('helvetica','bold')
           doc.setFontSize(12)
           doc.text('Informes de formación', 56 + 44 + 10, 56)
           doc.setFont('helvetica','normal')
@@ -123,7 +123,7 @@ export default function Preview({ draft, onBack }){
 
   return (
     <div className="d-grid gap-3">
-      <button className="btn btn-link p-0 w-auto" onClick={onBack}>← Mejorar documento</button>
+      <button className="btn btn-link p-0 w-auto" onClick={onBack}>← Modificar Informe</button>
       <div className="card">
         <div className="card-body">
           <div ref={printRef}>{informeHTML}</div>
@@ -137,7 +137,7 @@ export default function Preview({ draft, onBack }){
             />
           </div>
           <div className="d-flex gap-2 mt-3">
-            <button className="btn btn-success" onClick={descargarPDF}>Descargar PDF</button>
+            <button className="btn btn-success" onClick={descar garPDF}>Descargar PDF</button>
           </div>
         </div>
       </div>
