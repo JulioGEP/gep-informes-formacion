@@ -1,29 +1,12 @@
 import React from 'react'
-import {
-  Page, Text, View, Document, StyleSheet, Image, Font
-} from '@react-pdf/renderer'
-
-// Si tienes Poppins embebida más adelante podemos registrar las TTFs aquí.
-// Font.register({ family: 'Poppins', src: ... })
-
-// Asegúrate de que existan estos assets en src/assets/pdf/
+import { Page, Text, View, Document, StyleSheet, Image } from '@react-pdf/renderer'
 import headerPng from '../assets/pdf/header.png'
 import footerPng from '../assets/pdf/footer.png'
 
 const styles = StyleSheet.create({
-  page: {
-    paddingTop: 80,
-    paddingBottom: 80,
-    paddingHorizontal: 40,
-    fontSize: 10,
-    lineHeight: 1.45
-  },
-  header: {
-    position: 'absolute', top: 0, left: 0, right: 0, height: 70
-  },
-  footer: {
-    position: 'absolute', bottom: 0, left: 0, right: 0, height: 70
-  },
+  page: { paddingTop: 80, paddingBottom: 80, paddingHorizontal: 40, fontSize: 10, lineHeight: 1.45 },
+  header: { position: 'absolute', top: 0, left: 0, right: 0, height: 70 },
+  footer: { position: 'absolute', bottom: 0, left: 0, right: 0, height: 70 },
   h1: { fontSize: 16, marginBottom: 6 },
   h2: { fontSize: 12, marginTop: 10, marginBottom: 6 },
   row: { flexDirection: 'row', gap: 16, marginBottom: 4 },
@@ -32,37 +15,28 @@ const styles = StyleSheet.create({
   listItem: { marginLeft: 10, marginBottom: 2 },
   imgThumb: { width: 180, height: 120, objectFit: 'cover', marginRight: 8, marginBottom: 8, borderRadius: 4 }
 })
-
 const Label = ({ children }) => <Text style={{ fontWeight: 700 }}>{children}</Text>
 
-export default function PdfReport({ dealId, formador, datos, imagenes }) {
+export default function PdfReport({ dealId, formador, datos, imagenes, aiText }) {
+  const paragraphs = (aiText || '').split(/\n{2,}/).map(s => s.trim()).filter(Boolean)
+
   return (
     <Document>
       <Page size="A4" style={styles.page}>
-        {/* Header & Footer */}
         {headerPng ? <Image style={styles.header} src={headerPng} /> : null}
         {footerPng ? <Image style={styles.footer} src={footerPng} /> : null}
 
-        {/* Título */}
-        <View style={styles.box}>
-          <Text style={styles.h1}>Informe de formación</Text>
-        </View>
+        <View style={styles.box}><Text style={styles.h1}>Informe de formación</Text></View>
 
-        {/* Datos generales */}
         <View style={styles.box}>
           <Text style={styles.h2}>Datos generales</Text>
-
           <View style={styles.row}>
             <View style={styles.col}><Label>Nº Presupuesto: </Label><Text>{dealId || '—'}</Text></View>
             <View style={styles.col}><Label>Cliente: </Label><Text>{datos?.cliente || '—'}</Text></View>
             <View style={styles.col}><Label>CIF: </Label><Text>{datos?.cif || '—'}</Text></View>
           </View>
-          <View style={styles.row}>
-            <View style={styles.col}><Label>Dirección (Organización): </Label><Text>{datos?.direccionOrg || '—'}</Text></View>
-          </View>
-          <View style={styles.row}>
-            <View style={styles.col}><Label>Dirección de la formación (Sede): </Label><Text>{datos?.sede || '—'}</Text></View>
-          </View>
+          <View style={styles.row}><View style={styles.col}><Label>Dirección (Organización): </Label><Text>{datos?.direccionOrg || '—'}</Text></View></View>
+          <View style={styles.row}><View style={styles.col}><Label>Dirección de la formación (Sede): </Label><Text>{datos?.sede || '—'}</Text></View></View>
           <View style={styles.row}>
             <View style={styles.col}><Label>Persona de contacto: </Label><Text>{datos?.contacto || '—'}</Text></View>
             <View style={styles.col}><Label>Comercial: </Label><Text>{datos?.comercial || '—'}</Text></View>
@@ -78,27 +52,19 @@ export default function PdfReport({ dealId, formador, datos, imagenes }) {
           </View>
         </View>
 
-        {/* Contenidos */}
         <View style={styles.box}>
           <Text style={styles.h2}>Formación realizada</Text>
           <Text><Label>Formación: </Label>{datos?.formacionTitulo || '—'}</Text>
-
           <View style={{ marginTop: 6 }}>
             <Text style={{ fontWeight: 700, marginBottom: 2 }}>Parte Teórica</Text>
-            {(datos?.contenidoTeorica || []).map((p, i) => (
-              <Text key={`t-${i}`} style={styles.listItem}>• {p}</Text>
-            ))}
+            {(datos?.contenidoTeorica || []).map((p, i) => (<Text key={`t-${i}`} style={styles.listItem}>• {p}</Text>))}
           </View>
-
           <View style={{ marginTop: 6 }}>
             <Text style={{ fontWeight: 700, marginBottom: 2 }}>Parte Práctica</Text>
-            {(datos?.contenidoPractica || []).map((p, i) => (
-              <Text key={`p-${i}`} style={styles.listItem}>• {p}</Text>
-            ))}
+            {(datos?.contenidoPractica || []).map((p, i) => (<Text key={`p-${i}`} style={styles.listItem}>• {p}</Text>))}
           </View>
         </View>
 
-        {/* Valoración */}
         <View style={styles.box}>
           <Text style={styles.h2}>Valoración y observaciones</Text>
           <View style={styles.row}>
@@ -117,14 +83,18 @@ export default function PdfReport({ dealId, formador, datos, imagenes }) {
           </View>
         </View>
 
-        {/* Imágenes */}
+        {paragraphs.length > 0 && (
+          <View style={styles.box}>
+            <Text style={styles.h2}>Redacción mejorada</Text>
+            {paragraphs.map((p, i) => <Text key={i} style={{ marginBottom: 3 }}>{p}</Text>)}
+          </View>
+        )}
+
         {Array.isArray(imagenes) && imagenes.length > 0 && (
           <View style={styles.box}>
             <Text style={styles.h2}>Imágenes de apoyo</Text>
             <View style={{ flexDirection: 'row', flexWrap: 'wrap' }}>
-              {imagenes.map((img, i) => (
-                <Image key={i} src={img.dataUrl} style={styles.imgThumb} />
-              ))}
+              {imagenes.map((img, i) => (<Image key={i} src={img.dataUrl} style={styles.imgThumb} />))}
             </View>
           </View>
         )}
