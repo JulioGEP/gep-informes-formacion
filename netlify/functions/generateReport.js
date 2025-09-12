@@ -1,101 +1,88 @@
+// netlify/functions/generateReport.js
+const cors = {
+  'Access-Control-Allow-Origin': '*',
+  'Access-Control-Allow-Headers': 'content-type',
+};
+
 export async function handler(event) {
+  if (event.httpMethod === 'OPTIONS') return { statusCode: 204, headers: cors };
+  if (event.httpMethod !== 'POST') return { statusCode: 405, headers: cors, body: 'Method Not Allowed' };
+
   try {
-    const body = event.body ? JSON.parse(event.body) : {};
-    const { dealId, formador, datos } = body || {};
+    const API_KEY = process.env.OPENAI_API_KEY;
+    if (!API_KEY) throw new Error('Missing OPENAI_API_KEY');
 
-    const interpret = (n)=> n >= 8 ? 'alta' : (n >= 4 ? 'media' : 'baja');
-    const interpretaciones = [
-      `Participación: ${interpret(datos?.escalas?.participacion)}.`,
-      `Compromiso: ${interpret(datos?.escalas?.compromiso)}.`,
-      `Superación: ${interpret(datos?.escalas?.superacion)}.`
-    ].join('\n');
+    const { formador, datos } = JSON.parse(event.body || '{}');
+    const idioma = (formador?.idioma || 'ES').toUpperCase();
 
-    // Listas de contenidos ya unificadas (teórica/práctica)
-    const list = (arr=[]) => arr.map(i => `- ${i}`).join('\n');
-    const bloqueContenidos =
-`Parte Teórica
-${list(datos?.contenidoTeorica || [])}
+    // Construimos contexto
+    const ctx = `
+Deal: ${datos?.cliente || '-'} | CIF: ${datos?.cif || '-'}
+Sede: ${datos?.sede || '-'} | Fecha: ${datos?.fecha || '-'}
+Formador/a: ${formador?.nombre || '-'} | Idioma: ${idioma}
+Sesiones: ${datos?.sesiones || '-'} | Alumnos: ${datos?.alumnos || '-'} | Duración(h): ${datos?.duracion || '-'}
 
-Parte Práctica
-${list(datos?.contenidoPractica || [])}`;
+Formación: ${datos?.formacionTitulo || '-'}
 
-    const idioma = (datos?.idioma || 'ES');
-    const base = {
-      ES: {
-        titulo: 'Informe de formación',
-        resumen:
-`Cliente: ${datos?.cliente || ''}
-CIF: ${datos?.cif || ''}
-Dirección (Organización): ${datos?.direccionOrg || ''}
-Dirección de la formación: ${datos?.sede || ''}
-Fecha: ${datos?.fecha || ''}
-Sesiones: ${datos?.sesiones || 1}
-Alumnos: ${datos?.alumnos || ''}
-Duración: ${datos?.duracion || ''} h
-Formador/a: ${formador?.nombre || ''}
-Formación: ${datos?.formacionTitulo || '(no especificada)'}`
-      },
-      CA: {
-        titulo: 'Informe de formació',
-        resumen:
-`Client: ${datos?.cliente || ''}
-CIF: ${datos?.cif || ''}
-Adreça (Organització): ${datos?.direccionOrg || ''}
-Adreça de la formació: ${datos?.sede || ''}
-Data: ${datos?.fecha || ''}
-Sessions: ${datos?.sesiones || 1}
-Alumnes: ${datos?.alumnos || ''}
-Durada: ${datos?.duracion || ''} h
-Formador/a: ${formador?.nombre || ''}
-Formació: ${datos?.formacionTitulo || '(no especificada)'}`
-      },
-      EN: {
-        titulo: 'Training report',
-        resumen:
-`Client: ${datos?.cliente || ''}
-VAT: ${datos?.cif || ''}
-Address (Organization): ${datos?.direccionOrg || ''}
-Training address: ${datos?.sede || ''}
-Date: ${datos?.fecha || ''}
-Sessions: ${datos?.sesiones || 1}
-Trainees: ${datos?.alumnos || ''}
-Duration: ${datos?.duracion || ''} h
-Trainer: ${formador?.nombre || ''}
-Course: ${datos?.formacionTitulo || '(unspecified)'}`
-      }
-    }[idioma];
+Parte teórica:
+- ${(datos?.contenidoTeorica || []).join('\n- ')}
 
-    const comentariosLargos = [
-      ['Puntos fuertes de los alumnos a destacar', datos?.comentarios?.c11],
-      ['Incidencias: Referentes a la asistencia', datos?.comentarios?.c12],
-      ['Incidencias: Referentes a la Puntualidad', datos?.comentarios?.c13],
-      ['Incidencias: Accidentes', datos?.comentarios?.c14],
-      ['Recomendaciones: Formaciones Futuras', datos?.comentarios?.c15],
-      ['Recomendaciones: Del entorno de Trabajo', datos?.comentarios?.c16],
-      ['Recomendaciones: De Materiales', datos?.comentarios?.c17],
-    ]
-    .filter(([,v]) => v && String(v).trim().length > 0)
-    .map(([t,v]) => `- ${t}: ${v}`)
-    .join('\n');
+Parte práctica:
+- ${(datos?.contenidoPractica || []).join('\n- ')}
 
-    const seedTexto = `# ${base.titulo}
+Valoraciones (1-10) — usar solo cualitativos:
+Participación=${datos?.escalas?.participacion ?? 0}, Compromiso=${datos?.escalas?.compromiso ?? 0}, Superación=${datos?.escalas?.superacion ?? 0}
 
-${base.resumen}
+Comentarios:
+- Puntos fuertes: ${datos?.comentarios?.c11 || '-'}
+- Asistencia: ${datos?.comentarios?.c12 || '-'}
+- Puntualidad: ${datos?.comentarios?.c13 || '-'}
+- Accidentes: ${datos?.comentarios?.c14 || '-'}
+- Formaciones futuras: ${datos?.comentarios?.c15 || '-'}
+- Entorno de trabajo: ${datos?.comentarios?.c16 || '-'}
+- Materiales: ${datos?.comentarios?.c17 || '-'}
+`.trim();
 
-## Valora la formación del 1 al 10
-${interpretaciones}
+    const system = (idioma === 'EN')
+      ? 'You are a technical writer. Write in first person as the trainer, formal and concise, Spanish safety training terminology translated to English when needed. Temperature 0.3. No numeric scores.' 
+      : (idioma === 'CA')
+        ? 'Ets un redactor tècnic. Escriu en primera persona com a formador, to formal i precís. Temperatura 0.3. No mostris puntuacions numèriques.' 
+        : 'Eres un redactor técnico. Escribe en primera persona como el formador, tono formal y preciso. Temperatura 0.3. No muestres puntuaciones numéricas.';
 
-## Contenido de la formación
-${bloqueContenidos}
+    const prompt = `
+Redacta un INFORME TÉCNICO en primera persona (yo) basado en el contexto. 
+No muestres números de las escalas; interpreta en texto (“participación alta/ media/ baja”, etc.).
+Estructura:
+- Introducción breve (qué formación impartí, para quién y cuándo).
+- Desarrollo (cómo transcurrió, puntos teóricos y prácticos relevantes).
+- Incidencias (asistencia, puntualidad, accidentes si los hubo).
+- Evaluación cualitativa (participación, compromiso, superación) sin números.
+- Recomendaciones (mejoras del entorno, materiales, y/o formaciones futuras).
+Devuélvelo en HTML simple con <section>, <h3>, <p> y listas <ul><li>. Sin estilos inline.
 
-## Observaciones y recomendaciones del formador
-${comentariosLargos || '- Sin observaciones adicionales.'}
+Contexto:
+${ctx}
+`.trim();
 
-## Clausulado legal
-Documento confidencial. Uso interno del cliente y GEP Group. Tratamiento de datos conforme al RGPD y normativa aplicable.`;
+    const resp = await fetch('https://api.openai.com/v1/chat/completions', {
+      method: 'POST',
+      headers: { 'Authorization': `Bearer ${API_KEY}`, 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        model: 'gpt-4o-mini',
+        temperature: 0.3,
+        messages: [
+          { role: 'system', content: system },
+          { role: 'user', content: prompt }
+        ]
+      })
+    });
+    const json = await resp.json();
+    if (!resp.ok) throw new Error(json?.error?.message || 'OpenAI error');
 
-    return { statusCode: 200, body: JSON.stringify({ borrador: seedTexto }) };
-  } catch (e) {
-    return { statusCode: 500, body: JSON.stringify({ error: 'Error en generateReport', details: String(e) }) };
+    const html = json.choices?.[0]?.message?.content || '';
+    return { statusCode: 200, headers: { 'Content-Type': 'application/json', ...cors }, body: JSON.stringify({ html }) };
+  } catch (err) {
+    console.error('[generateReport] error:', err);
+    return { statusCode: 500, headers: { 'Content-Type': 'application/json', ...cors }, body: JSON.stringify({ error: err.message }) };
   }
 }
