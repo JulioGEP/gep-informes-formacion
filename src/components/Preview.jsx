@@ -12,10 +12,10 @@ const htmlKey  = (dealId) => `aiHtml:${dealId || 'sin'}`
  * Caja editable para el HTML de la IA:
  * - Inicializa con sessionStorage o initialHtml.
  * - Guarda cambios en sessionStorage.
- * - Notifica al padre (setAiHtml) para que el PDF use lo editado.
+ * - Notifica al padre (onChange) para que el PDF use lo editado.
  */
 function EditableHtml({ dealId, initialHtml, onChange }) {
-  const [html, setHtml] = React.useState(() => {
+  const [html, setHtml] = useState(() => {
     try {
       const saved = sessionStorage.getItem(htmlKey(dealId))
       return saved ?? (initialHtml || '')
@@ -24,9 +24,9 @@ function EditableHtml({ dealId, initialHtml, onChange }) {
     }
   })
 
-  // Si cambia initialHtml (p.ej., tras pulsar "Mejorar informe"), sincroniza
+  // Si llega un nuevo initialHtml (por IA), sincroniza la caja
   useEffect(() => {
-    setHtml((prev) => (initialHtml != null && initialHtml !== prev ? initialHtml : prev))
+    setHtml(prev => (initialHtml != null && initialHtml !== prev ? initialHtml : prev))
   }, [initialHtml])
 
   useEffect(() => {
@@ -46,13 +46,17 @@ function EditableHtml({ dealId, initialHtml, onChange }) {
   )
 }
 
-export default function Preview({ draft, onBack }) {
-  const { datos, imagenes, formador, dealId } = draft || {}
+// ✅ Compatibilidad: acepta draft **o** data sin cambiar tu App
+export default function Preview(props) {
+  const { onBack } = props
+  const draft = props.draft ?? props.data ?? {}
+  const { datos, imagenes, formador, dealId } = draft
+
   const [aiHtml, setAiHtml] = useState(null)
   const [aiBusy, setAiBusy] = useState(false)
   const [tries, setTries] = useState(0)
 
-  // Cargar contador + html si hay dealId; si no hay, no aplicamos límite
+  // Cargar contador + html si hay dealId
   useEffect(() => {
     if (dealId) {
       try {
@@ -64,8 +68,7 @@ export default function Preview({ draft, onBack }) {
         if (savedHtml) setAiHtml(savedHtml)
       } catch {}
     } else {
-      setTries(0)
-      setAiHtml(null)
+      setTries(0); setAiHtml(null)
     }
   }, [dealId])
 
@@ -87,7 +90,6 @@ export default function Preview({ draft, onBack }) {
   }, [datos, imagenes])
 
   const mejorarInforme = async () => {
-    // Si no hay dealId, permitimos igual (sin persistir contador); si hay, comprobamos límite
     if (dealId && tries >= maxTries) return
     setAiBusy(true)
     try {
@@ -176,13 +178,11 @@ export default function Preview({ draft, onBack }) {
         <h2 className="h5 mb-0">Borrador del informe</h2>
         <div className="d-flex gap-2">
           <button className="btn btn-secondary" onClick={onBack}>Volver al formulario</button>
-
           {quedanIntentos && (
             <button className="btn btn-warning" onClick={mejorarInforme} disabled={aiBusy}>
               {aiBusy ? 'Mejorando…' : `Mejorar informe (${triesLabel})`}
             </button>
           )}
-
           {aiHtml && (
             <button className="btn btn-success" onClick={descargarPDF} disabled={!tieneContenido}>
               Descargar PDF
@@ -191,7 +191,7 @@ export default function Preview({ draft, onBack }) {
         </div>
       </div>
 
-      {/* Enlace de prueba para desbloquear si te quedas “sin intentos” durante pruebas */}
+      {/* Aviso de intentos */}
       {dealId && tries >= maxTries && (
         <div className="text-muted small">
           Has agotado las 3 mejoras para este presupuesto.{' '}
@@ -260,7 +260,7 @@ export default function Preview({ draft, onBack }) {
           {aiHtml && (
             <>
               <hr className="my-4" />
-              {/* AHORA EDITABLE: guarda en sessionStorage y actualiza aiHtml */}
+              {/* EDITABLE: guarda en sessionStorage y actualiza aiHtml */}
               <EditableHtml dealId={dealId} initialHtml={aiHtml} onChange={setAiHtml} />
             </>
           )}
@@ -296,7 +296,6 @@ export default function Preview({ draft, onBack }) {
         )}
       </div>
 
-      {/* Enlace de prueba para desbloquear si te quedas “sin intentos” durante pruebas */}
       {dealId && tries >= maxTries && (
         <div className="text-muted small">
           Has agotado las 3 mejoras para este presupuesto.{' '}
