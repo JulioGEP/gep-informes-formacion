@@ -1,6 +1,11 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react'
 import plantillasBase from '../utils/plantillas.json'
 
+// === RUTA DEL LOGO ===
+// Si lo tienes en /public, deja esta ruta.
+// Si está en src/assets, cambia por: import logoImg from '../assets/logo-gep.png'
+const logoSrc = '/logo-gep.png'
+
 const fileToDataURL = (file) =>
   new Promise((res, rej) => {
     const reader = new FileReader()
@@ -117,89 +122,107 @@ export default function Form({ initial, onNext }) {
 
   return (
     <form className="d-grid gap-4" onSubmit={onSubmit}>
-      {/* DATOS DEL CLIENTE */}
-      <div>
-        <h2 className="h5">Datos del cliente</h2>
-        <div className="card"><div className="card-body">
-          <div className="row g-3 align-items-end">
-            <div className="col-md-3">
-              <label className="form-label">Nº Presupuesto</label>
-              <input className="form-control" value={dealId} onChange={(e)=>setDealId(e.target.value)} />
-            </div>
-            <div className="col-md-3">
-              <button type="button" className="btn btn-outline-primary" onClick={rellenarDesdePipedrive} disabled={loadingDeal}>
-                {loadingDeal ? 'Rellenando…' : 'Rellenar'}
-              </button>
-            </div>
-          </div>
-
-          <div className="row g-3 mt-1">
-            <div className="col-md-5">
-              <label className="form-label">Cliente</label>
-              <input className="form-control" value={datos.cliente} onChange={(e)=>setDatos(d=>({...d, cliente:e.target.value}))} />
-            </div>
-            <div className="col-md-4">
-              <label className="form-label">CIF</label>
-              <input className="form-control" value={datos.cif} onChange={(e)=>setDatos(d=>({...d, cif:e.target.value}))} />
-            </div>
-            <div className="col-md-3">
-              <label className="form-label">Comercial</label>
-              <input className="form-control" value={datos.comercial} onChange={(e)=>setDatos(d=>({...d, comercial:e.target.value}))} />
-            </div>
-            <div className="col-md-6">
-              <label className="form-label">Dirección (Organización)</label>
-              <input className="form-control" value={datos.direccionOrg} onChange={(e)=>setDatos(d=>({...d, direccionOrg:e.target.value}))} />
-            </div>
-            <div className="col-md-6">
-              <label className="form-label">Dirección de la formación (Sede)</label>
-              <input className="form-control" value={datos.sede} onChange={(e)=>setDatos(d=>({...d, sede:e.target.value}))} />
-            </div>
-            <div className="col-md-6">
-              <label className="form-label">Persona de contacto</label>
-              <input className="form-control" value={datos.contacto} onChange={(e)=>setDatos(d=>({...d, contacto:e.target.value}))} />
-            </div>
-          </div>
-        </div></div>
+      {/* ===== Encabezado con logo ===== */}
+      <div className="border-bottom pb-2 d-flex align-items-center gap-3 sticky-top bg-white" style={{top:0, zIndex: 10}}>
+        <img src={logoSrc} alt="GEP Group" style={{ width: 180, height: 52, objectFit: 'contain' }} />
+        <div className="flex-grow-1">
+          <h1 className="h5 mb-0">Informe de Formación</h1>
+          <small className="text-muted">GEP Group — Formación y Servicios</small>
+        </div>
       </div>
 
-      {/* DATOS DEL FORMADOR */}
-      <div>
-        <h2 className="h5">Datos del formador</h2>
-        <div className="card"><div className="card-body">
-          <div className="row g-3">
-            <div className="col-md-4">
-              <label className="form-label">Formador/a</label>
-              <input className="form-control" value={datos.formadorNombre} onChange={(e)=>setDatos(d=>({...d, formadorNombre:e.target.value}))} />
-            </div>
-            <div className="col-md-3">
-              <label className="form-label">Idioma</label>
-              <select className="form-select" value={datos.idioma} onChange={(e)=>setDatos(d=>({...d, idioma:e.target.value}))}>
-                <option value="ES">Castellano</option>
-                <option value="CA">Català</option>
-                <option value="EN">English</option>
-              </select>
-            </div>
-            <div className="col-md-3">
-              <label className="form-label">Fecha</label>
-              <input type="date" className="form-control" value={datos.fecha} onChange={(e)=>setDatos(d=>({...d, fecha:e.target.value}))} />
-            </div>
-            <div className="col-md-2">
-              <label className="form-label">Sesiones</label>
-              <input type="number" min="1" className="form-control" value={datos.sesiones} onChange={(e)=>setDatos(d=>({...d, sesiones:Number(e.target.value||1)}))} />
-            </div>
-            <div className="col-md-3">
-              <label className="form-label">Nº de alumnos</label>
-              <input className="form-control" value={datos.alumnos} onChange={(e)=>setDatos(d=>({...d, alumnos:e.target.value}))} />
-            </div>
-            <div className="col-md-3">
-              <label className="form-label">Duración (horas)</label>
-              <input className="form-control" value={datos.duracion} onChange={(e)=>setDatos(d=>({...d, duracion:e.target.value}))} />
+      {/* ===== Cliente + Formador en 2 columnas, misma altura ===== */}
+      <div className="row g-3 align-items-stretch">
+        {/* DATOS DEL CLIENTE */}
+        <div className="col-md-6 d-flex">
+          <div className="card w-100 h-100">
+            <div className="card-body">
+              <h2 className="h6">Datos del cliente</h2>
+
+              <div className="row g-3 align-items-end">
+                <div className="col-7 col-md-6">
+                  <label className="form-label">Nº Presupuesto</label>
+                  <input className="form-control" value={dealId} onChange={(e)=>setDealId(e.target.value)} />
+                </div>
+                <div className="col-5 col-md-6">
+                  <button type="button" className="btn btn-outline-primary w-100" onClick={rellenarDesdePipedrive} disabled={loadingDeal}>
+                    {loadingDeal ? 'Rellenando…' : 'Rellenar'}
+                  </button>
+                </div>
+              </div>
+
+              <div className="row g-3 mt-1">
+                <div className="col-md-7">
+                  <label className="form-label">Cliente</label>
+                  <input className="form-control" value={datos.cliente} onChange={(e)=>setDatos(d=>({...d, cliente:e.target.value}))} />
+                </div>
+                <div className="col-md-5">
+                  <label className="form-label">CIF</label>
+                  <input className="form-control" value={datos.cif} onChange={(e)=>setDatos(d=>({...d, cif:e.target.value}))} />
+                </div>
+                <div className="col-md-6">
+                  <label className="form-label">Comercial</label>
+                  <input className="form-control" value={datos.comercial} onChange={(e)=>setDatos(d=>({...d, comercial:e.target.value}))} />
+                </div>
+                <div className="col-md-6">
+                  <label className="form-label">Persona de contacto</label>
+                  <input className="form-control" value={datos.contacto} onChange={(e)=>setDatos(d=>({...d, contacto:e.target.value}))} />
+                </div>
+                <div className="col-md-6">
+                  <label className="form-label">Dirección (Organización)</label>
+                  <input className="form-control" value={datos.direccionOrg} onChange={(e)=>setDatos(d=>({...d, direccionOrg:e.target.value}))} />
+                </div>
+                <div className="col-md-6">
+                  <label className="form-label">Dirección de la formación (Sede)</label>
+                  <input className="form-control" value={datos.sede} onChange={(e)=>setDatos(d=>({...d, sede:e.target.value}))} />
+                </div>
+              </div>
             </div>
           </div>
-        </div></div>
+        </div>
+
+        {/* DATOS DEL FORMADOR */}
+        <div className="col-md-6 d-flex">
+          <div className="card w-100 h-100">
+            <div className="card-body">
+              <h2 className="h6">Datos del formador</h2>
+
+              <div className="row g-3">
+                <div className="col-md-6">
+                  <label className="form-label">Formador/a</label>
+                  <input className="form-control" value={datos.formadorNombre} onChange={(e)=>setDatos(d=>({...d, formadorNombre:e.target.value}))} />
+                </div>
+                <div className="col-md-3">
+                  <label className="form-label">Idioma</label>
+                  <select className="form-select" value={datos.idioma} onChange={(e)=>setDatos(d=>({...d, idioma:e.target.value}))}>
+                    <option value="ES">Castellano</option>
+                    <option value="CA">Català</option>
+                    <option value="EN">English</option>
+                  </select>
+                </div>
+                <div className="col-md-3">
+                  <label className="form-label">Fecha</label>
+                  <input type="date" className="form-control" value={datos.fecha} onChange={(e)=>setDatos(d=>({...d, fecha:e.target.value}))} />
+                </div>
+                <div className="col-md-4">
+                  <label className="form-label">Sesiones</label>
+                  <input type="number" min="1" className="form-control" value={datos.sesiones} onChange={(e)=>setDatos(d=>({...d, sesiones:Number(e.target.value||1)}))} />
+                </div>
+                <div className="col-md-4">
+                  <label className="form-label">Nº de alumnos</label>
+                  <input className="form-control" value={datos.alumnos} onChange={(e)=>setDatos(d=>({...d, alumnos:e.target.value}))} />
+                </div>
+                <div className="col-md-4">
+                  <label className="form-label">Duración (horas)</label>
+                  <input className="form-control" value={datos.duracion} onChange={(e)=>setDatos(d=>({...d, duracion:e.target.value}))} />
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
       </div>
 
-      {/* FORMACIÓN */}
+      {/* ===== FORMACIÓN ===== */}
       <div>
         <h2 className="h5">Formación realizada</h2>
         <div className="card"><div className="card-body">
@@ -249,7 +272,7 @@ export default function Form({ initial, onNext }) {
         </div></div>
       </div>
 
-      {/* VALORACIÓN + IMÁGENES */}
+      {/* ===== VALORACIÓN + IMÁGENES ===== */}
       <div>
         <h2 className="h5">Valoración e imágenes</h2>
         <div className="card"><div className="card-body">
