@@ -2,6 +2,9 @@ import React, { useEffect, useMemo, useState } from 'react'
 import plantillasBase from '../utils/plantillas.json'
 import { getMergedPlantillas, upsertPlantilla } from '../utils/plantillasStore'
 
+// Utilidad: leer Fimport React, { useEffect, useState } from 'react'
+import plantillasBase from '../utils/plantillas.json'
+
 // Utilidad: leer File -> DataURL (para mostrar/mandar a PDF)
 const fileToDataURL = (file) => new Promise((res, rej) => {
   const reader = new FileReader()
@@ -10,14 +13,13 @@ const fileToDataURL = (file) => new Promise((res, rej) => {
   reader.readAsDataURL(file)
 })
 
-// (Opcional) reducción simple del tamaño si fuese necesario (aquí lo dejamos directo)
-
 export default function Form({ initial, onNext }) {
   const [dealId, setDealId] = useState(initial?.dealId || '')
   const [formador, setFormador] = useState({
     nombre: initial?.formador?.nombre || '',
     idioma: initial?.formador?.idioma || 'ES',
   })
+
   const [datos, setDatos] = useState({
     cliente: initial?.datos?.cliente || '',
     cif: initial?.datos?.cif || '',
@@ -34,26 +36,14 @@ export default function Form({ initial, onNext }) {
     contenidoPractica: initial?.datos?.contenidoPractica || [],
   })
 
-  // Imágenes de apoyo
-  const [imagenes, setImagenes] = useState(initial?.imagenes || []) // [{name, dataUrl}]
-  // Gestión plantillas
-  const [plantillas, setPlantillas] = useState({})
+  // Imágenes de apoyo (solo en memoria + copia en sessionStorage para limpiar tras descarga)
+  const [imagenes, setImagenes] = useState(initial?.imagenes || [])
+
+  // Al elegir formación del listado base, volcamos sus puntos
   const [selTitulo, setSelTitulo] = useState(datos.formacionTitulo || '')
-  const [showEditor, setShowEditor] = useState(false)
-  const [editorTitulo, setEditorTitulo] = useState('')
-  const [editorTeorica, setEditorTeorica] = useState([''])
-  const [editorPractica, setEditorPractica] = useState([''])
-  const [editMode, setEditMode] = useState(false)
-
-  useEffect(() => {
-    const merged = getMergedPlantillas(plantillasBase)
-    setPlantillas(merged)
-  }, [])
-
-  // Al seleccionar una formación, volcamos los puntos al borrador
   useEffect(() => {
     if (!selTitulo) return
-    const p = plantillas[selTitulo]
+    const p = plantillasBase[selTitulo]
     if (p) {
       setDatos(d => ({
         ...d,
@@ -62,65 +52,26 @@ export default function Form({ initial, onNext }) {
         contenidoPractica: p.practica || [],
       }))
     }
-  }, [selTitulo, plantillas])
+  }, [selTitulo])
 
   const handleAddImagenes = async (e) => {
     const files = Array.from(e.target.files || [])
     if (!files.length) return
-    // Límite simple de total 100MB aprox (solo indicativo, no bloqueamos duro)
     let list = [...imagenes]
     for (const f of files) {
       const dataUrl = await fileToDataURL(f)
       list.push({ name: f.name, dataUrl })
     }
     setImagenes(list)
+    // guardado temporal de sesión para poder limpiar tras descargar
+    try { sessionStorage.setItem('tmpImages', JSON.stringify(list)) } catch {}
     e.target.value = ''
   }
 
   const removeImagen = (idx) => {
-    setImagenes(arr => arr.filter((_, i) => i !== idx))
-  }
-
-  const openCrear = () => {
-    setEditMode(false)
-    setEditorTitulo('')
-    setEditorTeorica([''])
-    setEditorPractica([''])
-    setShowEditor(true)
-  }
-  const openEditar = () => {
-    if (!selTitulo) return
-    const p = plantillas[selTitulo] || { teorica: [], practica: [] }
-    setEditMode(true)
-    setEditorTitulo(selTitulo)
-    setEditorTeorica(p.teorica.length ? p.teorica : [''])
-    setEditorPractica(p.practica.length ? p.practica : [''])
-    setShowEditor(true)
-  }
-
-  const addEditorItem = (type) => {
-    if (type === 'teorica') setEditorTeorica(a => [...a, ''])
-    else setEditorPractica(a => [...a, ''])
-  }
-  const updateEditorItem = (type, idx, value) => {
-    if (type === 'teorica') setEditorTeorica(a => a.map((v, i) => i === idx ? value : v))
-    else setEditorPractica(a => a.map((v, i) => i === idx ? value : v))
-  }
-  const removeEditorItem = (type, idx) => {
-    if (type === 'teorica') setEditorTeorica(a => a.filter((_, i) => i !== idx))
-    else setEditorPractica(a => a.filter((_, i) => i !== idx))
-  }
-
-  const saveEditor = () => {
-    const title = editorTitulo.trim()
-    if (!title) { alert('Introduce un título de formación'); return }
-    const t = editorTeorica.map(s => s.trim()).filter(Boolean)
-    const p = editorPractica.map(s => s.trim()).filter(Boolean)
-    upsertPlantilla(title, { teorica: t, practica: p })
-    const merged = getMergedPlantillas(plantillasBase)
-    setPlantillas(merged)
-    setSelTitulo(title)
-    setShowEditor(false)
+    const list = imagenes.filter((_, i) => i !== idx)
+    setImagenes(list)
+    try { sessionStorage.setItem('tmpImages', JSON.stringify(list)) } catch {}
   }
 
   const onSubmit = (e) => {
@@ -128,25 +79,19 @@ export default function Form({ initial, onNext }) {
     onNext({
       dealId,
       formador,
-      datos: {
-        ...datos,
-        idioma: formador.idioma
-      },
+      datos: { ...datos, idioma: formador.idioma },
       imagenes
     })
   }
 
   return (
     <form className="d-grid gap-3" onSubmit={onSubmit}>
-      {/* Encabezado */}
+      {/* Datos del cliente */}
       <div className="d-flex align-items-center justify-content-between">
-        <h2 className="h5 mb-0 d-flex align-items-center gap-2">
-          <span>Datos del cliente</span>
-        </h2>
+        <h2 className="h5 mb-0">Datos del cliente</h2>
         <div className="text-secondary small">Nº Presupuesto</div>
       </div>
 
-      {/* CLIENTE */}
       <div className="card">
         <div className="card-body">
           <div className="row g-3">
@@ -174,7 +119,7 @@ export default function Form({ initial, onNext }) {
         </div>
       </div>
 
-      {/* DATOS FORMACIÓN */}
+      {/* Datos de la formación */}
       <div className="card">
         <div className="card-body">
           <h3 className="h6 mb-3">Datos de la formación</h3>
@@ -209,22 +154,16 @@ export default function Form({ initial, onNext }) {
               <input className="form-control" value={datos.duracion} onChange={e=>setDatos(d=>({...d, duracion:e.target.value}))} />
             </div>
 
-            {/* Selección de formación + botones de crear/editar */}
+            {/* Selector de formación (solo base) */}
             <div className="col-md-6">
-              <label className="form-label d-flex align-items-center justify-content-between">
-                <span>Formación</span>
-                <span className="d-flex gap-2">
-                  <button type="button" className="btn btn-sm btn-outline-secondary" onClick={openCrear}>Subir nueva formación</button>
-                  <button type="button" className="btn btn-sm btn-outline-secondary" onClick={openEditar} disabled={!selTitulo}>Editar formación</button>
-                </span>
-              </label>
+              <label className="form-label">Formación</label>
               <select className="form-select" value={selTitulo} onChange={e=>setSelTitulo(e.target.value)}>
                 <option value="">— Selecciona —</option>
-                {Object.keys(plantillas).sort().map(t => <option key={t} value={t}>{t}</option>)}
+                {Object.keys(plantillasBase).sort().map(t => <option key={t} value={t}>{t}</option>)}
               </select>
             </div>
 
-            {/* Contenido (editable por si quieren borrar/modificar puntos estándar puntualmente) */}
+            {/* Contenido editable por si hay variaciones puntuales */}
             <div className="col-12">
               <div className="row g-3">
                 <div className="col-md-6">
@@ -274,7 +213,7 @@ export default function Form({ initial, onNext }) {
               </div>
             </div>
 
-            {/* Valoraciones cualitativas (1-10 como input, la IA NO mostrará números) */}
+            {/* Valoraciones (1-10) */}
             <div className="col-12">
               <label className="form-label">Valora la formación del 1 al 10</label>
               <div className="row g-2">
@@ -338,7 +277,7 @@ export default function Form({ initial, onNext }) {
               <textarea className="form-control" value={datos.comentarios.c17} onChange={e=>setDatos(d=>({...d, comentarios:{...d.comentarios, c17:e.target.value}}))} />
             </div>
 
-            {/* Imágenes de apoyo (al final del formulario) */}
+            {/* Imágenes de apoyo */}
             <div className="col-12">
               <label className="form-label">Imágenes de apoyo (opcional)</label>
               <input type="file" accept="image/*" multiple className="form-control" onChange={handleAddImagenes} />
@@ -365,59 +304,6 @@ export default function Form({ initial, onNext }) {
       <div className="d-flex justify-content-end gap-2">
         <button type="submit" className="btn btn-primary">Siguiente</button>
       </div>
-
-      {/* MODAL Editor de Formaciones */}
-      {showEditor && (
-        <div className="modal fade show d-block" tabIndex="-1" role="dialog">
-          <div className="modal-dialog modal-lg" role="document">
-            <div className="modal-content">
-              <div className="modal-header">
-                <h5 className="modal-title">{editMode ? 'Editar formación' : 'Subir nueva formación'}</h5>
-                <button type="button" className="btn-close" onClick={()=>setShowEditor(false)} />
-              </div>
-              <div className="modal-body">
-                <div className="mb-3">
-                  <label className="form-label">Título</label>
-                  <input className="form-control" value={editorTitulo} onChange={e=>setEditorTitulo(e.target.value)} />
-                </div>
-
-                <div className="row g-3">
-                  <div className="col-md-6">
-                    <label className="form-label">Parte Teórica</label>
-                    <div className="d-grid gap-2">
-                      {editorTeorica.map((v, i) => (
-                        <div className="input-group" key={`et-${i}`}>
-                          <input className="form-control" value={v} onChange={e=>updateEditorItem('teorica', i, e.target.value)} />
-                          <button type="button" className="btn btn-outline-danger" onClick={()=>removeEditorItem('teorica', i)}>Eliminar</button>
-                        </div>
-                      ))}
-                      <button type="button" className="btn btn-outline-primary" onClick={()=>addEditorItem('teorica')}>Añadir punto</button>
-                    </div>
-                  </div>
-                  <div className="col-md-6">
-                    <label className="form-label">Parte Práctica</label>
-                    <div className="d-grid gap-2">
-                      {editorPractica.map((v, i) => (
-                        <div className="input-group" key={`ep-${i}`}>
-                          <input className="form-control" value={v} onChange={e=>updateEditorItem('practica', i, e.target.value)} />
-                          <button type="button" className="btn btn-outline-danger" onClick={()=>removeEditorItem('practica', i)}>Eliminar</button>
-                        </div>
-                      ))}
-                      <button type="button" className="btn btn-outline-primary" onClick={()=>addEditorItem('practica')}>Añadir punto</button>
-                    </div>
-                  </div>
-                </div>
-
-              </div>
-              <div className="modal-footer">
-                <button type="button" className="btn btn-secondary" onClick={()=>setShowEditor(false)}>Cancelar</button>
-                <button type="button" className="btn btn-primary" onClick={saveEditor}>Guardar</button>
-              </div>
-            </div>
-          </div>
-        </div>
-      )}
-      {showEditor && <div className="modal-backdrop fade show" />}
     </form>
   )
 }
