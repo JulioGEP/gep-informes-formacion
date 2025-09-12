@@ -15,7 +15,6 @@ export async function handler(event) {
     const { formador, datos } = JSON.parse(event.body || '{}');
     const idioma = (formador?.idioma || 'ES').toUpperCase();
 
-    // Construimos contexto
     const ctx = `
 Deal: ${datos?.cliente || '-'} | CIF: ${datos?.cif || '-'}
 Sede: ${datos?.sede || '-'} | Fecha: ${datos?.fecha || '-'}
@@ -44,21 +43,24 @@ Comentarios:
 `.trim();
 
     const system = (idioma === 'EN')
-      ? 'You are a technical writer. Write in first person as the trainer, formal and concise, Spanish safety training terminology translated to English when needed. Temperature 0.3. No numeric scores.' 
+      ? 'You are a technical writer. Write in first person as the trainer, formal and precise. Temperature 0.3. Never show numeric scores.'
       : (idioma === 'CA')
-        ? 'Ets un redactor tècnic. Escriu en primera persona com a formador, to formal i precís. Temperatura 0.3. No mostris puntuacions numèriques.' 
+        ? 'Ets un redactor tècnic. Escriu en primera persona com a formador, to formal i precís. Temperatura 0.3. No mostris puntuacions numèriques.'
         : 'Eres un redactor técnico. Escribe en primera persona como el formador, tono formal y preciso. Temperatura 0.3. No muestres puntuaciones numéricas.';
 
     const prompt = `
-Redacta un INFORME TÉCNICO en primera persona (yo) basado en el contexto. 
-No muestres números de las escalas; interpreta en texto (“participación alta/ media/ baja”, etc.).
+Redacta un INFORME TÉCNICO en primera persona (yo) basado en el contexto.
+No muestres números de las escalas; interpreta en texto (“participación alta/media/baja”, etc.).
 Estructura:
 - Introducción breve (qué formación impartí, para quién y cuándo).
 - Desarrollo (cómo transcurrió, puntos teóricos y prácticos relevantes).
 - Incidencias (asistencia, puntualidad, accidentes si los hubo).
 - Evaluación cualitativa (participación, compromiso, superación) sin números.
-- Recomendaciones (mejoras del entorno, materiales, y/o formaciones futuras).
-Devuélvelo en HTML simple con <section>, <h3>, <p> y listas <ul><li>. Sin estilos inline.
+- Recomendaciones (mejoras del entorno, materiales y/o formaciones futuras).
+
+IMPORTANTE:
+- Devuelve **solo** un fragmento HTML **puro** (sin \`\`\`, ni etiquetas <html>/<body>, ni estilos inline).
+- Usa únicamente <section>, <h3>, <p>, <ul>, <li>. Nada más.
 
 Contexto:
 ${ctx}
@@ -76,10 +78,14 @@ ${ctx}
         ]
       })
     });
+
     const json = await resp.json();
     if (!resp.ok) throw new Error(json?.error?.message || 'OpenAI error');
 
-    const html = json.choices?.[0]?.message?.content || '';
+    // Sanitizar si el modelo devolviera fences por error
+    let html = json.choices?.[0]?.message?.content || '';
+    html = html.replace(/^\s*```(?:html)?\s*/i, '').replace(/\s*```\s*$/i, '').trim();
+
     return { statusCode: 200, headers: { 'Content-Type': 'application/json', ...cors }, body: JSON.stringify({ html }) };
   } catch (err) {
     console.error('[generateReport] error:', err);
