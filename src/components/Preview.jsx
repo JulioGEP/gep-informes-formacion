@@ -160,7 +160,7 @@ export default function Preview({ draft, onBack }){
                 </button>
               )}
               {aiHtml && (
-                <button className="btn btn-success" onClick={descar garPDF}>Descargar PDF</button>
+                <button className="btn btn-success" onClick={descargarPDF}>Descargar PDF</button>
               )}
             </div>
           </div>
