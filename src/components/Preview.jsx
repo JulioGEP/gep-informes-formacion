@@ -1,5 +1,5 @@
 // src/components/Preview.jsx
-import React, { useEffect, useMemo, useState } from 'react'
+import React, { useEffect, useMemo, useRef, useState } from 'react'
 import { pdf } from '@react-pdf/renderer'
 import PdfReport from './PdfReport.jsx'
 import logoImg from '../assets/logo-gep.png'
@@ -9,44 +9,40 @@ const triesKey = (dealId) => `aiAttempts:${dealId || 'sin'}`
 const htmlKey  = (dealId) => `aiHtml:${dealId || 'sin'}`
 
 /**
- * Caja editable para el HTML de la IA:
- * - Inicializa con sessionStorage o initialHtml.
- * - Guarda cambios en sessionStorage.
- * - Notifica al padre (onChange) para que el PDF use lo editado.
+ * Caja editable NO controlada (sin saltos de cursor):
+ * - Inicializa el innerHTML con initialHtml o sessionStorage.
+ * - En cada cambio guarda en sessionStorage y notifica al padre via onChange.
+ * - No re-renderiza el contenido en cada tecla (por eso no “salta” arriba).
  */
 function EditableHtml({ dealId, initialHtml, onChange }) {
-  const [html, setHtml] = useState(() => {
-    try {
-      const saved = sessionStorage.getItem(htmlKey(dealId))
-      return saved ?? (initialHtml || '')
-    } catch {
-      return initialHtml || ''
-    }
-  })
+  const ref = useRef(null)
 
-  // Si llega un nuevo initialHtml (por IA), sincroniza la caja
+  // Poner el HTML inicial (mount y cuando cambie initialHtml, p. ej. tras IA)
   useEffect(() => {
-    setHtml(prev => (initialHtml != null && initialHtml !== prev ? initialHtml : prev))
-  }, [initialHtml])
+    if (!ref.current) return
+    ref.current.innerHTML = initialHtml || ''
+  }, [initialHtml, dealId])
 
-  useEffect(() => {
+  // Handler de entrada de texto
+  const handleInput = () => {
+    const html = ref.current?.innerHTML || ''
     try { sessionStorage.setItem(htmlKey(dealId), html) } catch {}
     onChange?.(html)
-  }, [dealId, html, onChange])
+  }
 
   return (
     <div
+      ref={ref}
       contentEditable
       suppressContentEditableWarning
       className="form-control"
       style={{ minHeight: 220, lineHeight: 1.5, overflow: 'auto' }}
-      onInput={(e) => setHtml(e.currentTarget.innerHTML)}
-      dangerouslySetInnerHTML={{ __html: html }}
+      onInput={handleInput}
     />
   )
 }
 
-// ✅ Compatibilidad: acepta draft **o** data sin cambiar tu App
+// Acepta draft o data (compat)
 export default function Preview(props) {
   const { onBack } = props
   const draft = props.draft ?? props.data ?? {}
@@ -56,7 +52,7 @@ export default function Preview(props) {
   const [aiBusy, setAiBusy] = useState(false)
   const [tries, setTries] = useState(0)
 
-  // Cargar contador + html si hay dealId
+  // Cargar contador + HTML guardado
   useEffect(() => {
     if (dealId) {
       try {
