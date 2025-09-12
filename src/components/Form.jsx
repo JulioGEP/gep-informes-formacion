@@ -1,16 +1,7 @@
-<div className="border-bottom pb-2 d-flex align-items-center gap-3 sticky-top bg-white" style={{ top: 0, zIndex: 10 }}>
-  <img
-    src={logoImg}
-    alt="GEP Group"
-    style={{ width: 180, height: 52, objectFit: 'contain', display: 'block' }}
-  />
-  <div className="flex-grow-1">
-    <h1 className="h5 mb-0">Informe de Formación</h1>
-    <small className="text-muted">GEP Group — Formación y Servicios</small>
-  </div>
-</div>
+// src/components/Form.jsx
 import React, { useEffect, useMemo, useRef, useState } from 'react'
 import plantillasBase from '../utils/plantillas.json'
+import logoImg from '../assets/logo-gep.png' // <-- asegúrate de que exista
 
 const fileToDataURL = (file) =>
   new Promise((res, rej) => {
@@ -44,7 +35,7 @@ export default function Form({ initial, onNext }) {
     formacionTitulo: initial?.datos?.formacionTitulo || '',
     contenidoTeorica: initial?.datos?.contenidoTeorica || [],
     contenidoPractica: initial?.datos?.contenidoPractica || [],
-    // ⬇️ Por defecto a 7 como pides
+    // Por defecto 7 en las escalas
     escalas: initial?.datos?.escalas || { participacion: 7, compromiso: 7, superacion: 7 },
     comentarios: initial?.datos?.comentarios || { c11:'', c12:'', c13:'', c14:'', c15:'', c16:'', c17:'' },
   })
@@ -137,9 +128,20 @@ export default function Form({ initial, onNext }) {
 
   return (
     <form className="d-grid gap-4" onSubmit={onSubmit}>
-      {/* NOTA: se ha eliminado el encabezado para evitar duplicar logo/título */}
+      {/* Header con logo y título */}
+      <div className="border-bottom pb-2 d-flex align-items-center gap-3 sticky-top bg-white" style={{ top: 0, zIndex: 10 }}>
+        <img
+          src={logoImg}
+          alt="GEP Group"
+          style={{ width: 180, height: 52, objectFit: 'contain', display: 'block' }}
+        />
+        <div className="flex-grow-1">
+          <h1 className="h5 mb-0">Informe de Formación</h1>
+          <small className="text-muted">GEP Group — Formación y Servicios</small>
+        </div>
+      </div>
 
-      {/* ===== Cliente + Formador en 2 columnas, misma altura ===== */}
+      {/* ===== Cliente + Formador en 2 columnas ===== */}
       <div className="row g-3 align-items-stretch">
         {/* DATOS DEL CLIENTE */}
         <div className="col-md-6 d-flex">
@@ -322,165 +324,163 @@ export default function Form({ initial, onNext }) {
       </div>
 
       {/* ===== VALORACIÓN ===== */}
-<div>
-  <h2 className="h5">Valoración</h2>
-  <div className="card">
-    <div className="card-body">
-      {/* Escalas numéricas */}
-      <div className="row g-3">
-        <div className="col-md-4">
-          <div className="input-group">
-            <span className="input-group-text">Participación</span>
-            <input
-              type="number" min="1" max="10" className="form-control"
-              value={datos.escalas.participacion}
-              onChange={(e)=>setDatos(d=>({
-                ...d, escalas:{...d.escalas, participacion:Number(e.target.value||0)}
-              }))}
-            />
+      <div>
+        <h2 className="h5">Valoración</h2>
+        <div className="card"><div className="card-body">
+          {/* Escalas numéricas */}
+          <div className="row g-3">
+            <div className="col-md-4">
+              <div className="input-group">
+                <span className="input-group-text">Participación</span>
+                <input
+                  type="number" min="1" max="10" className="form-control"
+                  value={datos.escalas.participacion}
+                  onChange={(e)=>setDatos(d=>({
+                    ...d, escalas:{...d.escalas, participacion:Number(e.target.value||0)}
+                  }))}
+                />
+              </div>
+            </div>
+            <div className="col-md-4">
+              <div className="input-group">
+                <span className="input-group-text">Compromiso</span>
+                <input
+                  type="number" min="1" max="10" className="form-control"
+                  value={datos.escalas.compromiso}
+                  onChange={(e)=>setDatos(d=>({
+                    ...d, escalas:{...d.escalas, compromiso:Number(e.target.value||0)}
+                  }))}
+                />
+              </div>
+            </div>
+            <div className="col-md-4">
+              <div className="input-group">
+                <span className="input-group-text">Superación</span>
+                <input
+                  type="number" min="1" max="10" className="form-control"
+                  value={datos.escalas.superacion}
+                  onChange={(e)=>setDatos(d=>({
+                    ...d, escalas:{...d.escalas, superacion:Number(e.target.value||0)}
+                  }))}
+                />
+              </div>
+            </div>
           </div>
-        </div>
-        <div className="col-md-4">
-          <div className="input-group">
-            <span className="input-group-text">Compromiso</span>
-            <input
-              type="number" min="1" max="10" className="form-control"
-              value={datos.escalas.compromiso}
-              onChange={(e)=>setDatos(d=>({
-                ...d, escalas:{...d.escalas, compromiso:Number(e.target.value||0)}
-              }))}
-            />
-          </div>
-        </div>
-        <div className="col-md-4">
-          <div className="input-group">
-            <span className="input-group-text">Superación</span>
-            <input
-              type="number" min="1" max="10" className="form-control"
-              value={datos.escalas.superacion}
-              onChange={(e)=>setDatos(d=>({
-                ...d, escalas:{...d.escalas, superacion:Number(e.target.value||0)}
-              }))}
-            />
-          </div>
-        </div>
-      </div>
 
-      {/* Preguntas abiertas (entre las escalas y las imágenes) */}
-      <div className="row g-3 mt-1">
-        <div className="col-md-6">
-          <label className="form-label">Puntos fuertes de los alumnos a destacar</label>
-          <textarea
-            className="form-control"
-            value={datos.comentarios.c11}
-            onChange={(e)=>setDatos(d=>({
-              ...d, comentarios:{...d.comentarios, c11:e.target.value}
-            }))}
-          />
-        </div>
-        <div className="col-md-6">
-          <label className="form-label">Incidencias: Referentes a la asistencia</label>
-          <textarea
-            className="form-control"
-            value={datos.comentarios.c12}
-            onChange={(e)=>setDatos(d=>({
-              ...d, comentarios:{...d.comentarios, c12:e.target.value}
-            }))}
-          />
-        </div>
-        <div className="col-md-6">
-          <label className="form-label">Incidencias: Referentes a la puntualidad</label>
-          <textarea
-            className="form-control"
-            value={datos.comentarios.c13}
-            onChange={(e)=>setDatos(d=>({
-              ...d, comentarios:{...d.comentarios, c13:e.target.value}
-            }))}
-          />
-        </div>
-        <div className="col-md-6">
-          <label className="form-label">Incidencias: Accidentes</label>
-          <textarea
-            className="form-control"
-            value={datos.comentarios.c14}
-            onChange={(e)=>setDatos(d=>({
-              ...d, comentarios:{...d.comentarios, c14:e.target.value}
-            }))}
-          />
-        </div>
-        <div className="col-md-4">
-          <label className="form-label">Recomendaciones: Formaciones futuras</label>
-          <textarea
-            className="form-control"
-            value={datos.comentarios.c15}
-            onChange={(e)=>setDatos(d=>({
-              ...d, comentarios:{...d.comentarios, c15:e.target.value}
-            }))}
-          />
-        </div>
-        <div className="col-md-4">
-          <label className="form-label">Recomendaciones: Del entorno de trabajo</label>
-          <textarea
-            className="form-control"
-            value={datos.comentarios.c16}
-            onChange={(e)=>setDatos(d=>({
-              ...d, comentarios:{...d.comentarios, c16:e.target.value}
-            }))}
-          />
-        </div>
-        <div className="col-md-4">
-          <label className="form-label">Recomendaciones: De materiales</label>
-          <textarea
-            className="form-control"
-            value={datos.comentarios.c17}
-            onChange={(e)=>setDatos(d=>({
-              ...d, comentarios:{...d.comentarios, c17:e.target.value}
-            }))}
-          />
-        </div>
-      </div>
+          {/* Preguntas abiertas */}
+          <div className="row g-3 mt-1">
+            <div className="col-md-6">
+              <label className="form-label">Puntos fuertes de los alumnos a destacar</label>
+              <textarea
+                className="form-control"
+                value={datos.comentarios.c11}
+                onChange={(e)=>setDatos(d=>({
+                  ...d, comentarios:{...d.comentarios, c11:e.target.value}
+                }))}
+              />
+            </div>
+            <div className="col-md-6">
+              <label className="form-label">Incidencias: Referentes a la asistencia</label>
+              <textarea
+                className="form-control"
+                value={datos.comentarios.c12}
+                onChange={(e)=>setDatos(d=>({
+                  ...d, comentarios:{...d.comentarios, c12:e.target.value}
+                }))}
+              />
+            </div>
+            <div className="col-md-6">
+              <label className="form-label">Incidencias: Referentes a la puntualidad</label>
+              <textarea
+                className="form-control"
+                value={datos.comentarios.c13}
+                onChange={(e)=>setDatos(d=>({
+                  ...d, comentarios:{...d.comentarios, c13:e.target.value}
+                }))}
+              />
+            </div>
+            <div className="col-md-6">
+              <label className="form-label">Incidencias: Accidentes</label>
+              <textarea
+                className="form-control"
+                value={datos.comentarios.c14}
+                onChange={(e)=>setDatos(d=>({
+                  ...d, comentarios:{...d.comentarios, c14:e.target.value}
+                }))}
+              />
+            </div>
+            <div className="col-md-4">
+              <label className="form-label">Recomendaciones: Formaciones futuras</label>
+              <textarea
+                className="form-control"
+                value={datos.comentarios.c15}
+                onChange={(e)=>setDatos(d=>({
+                  ...d, comentarios:{...d.comentarios, c15:e.target.value}
+                }))}
+              />
+            </div>
+            <div className="col-md-4">
+              <label className="form-label">Recomendaciones: Del entorno de trabajo</label>
+              <textarea
+                className="form-control"
+                value={datos.comentarios.c16}
+                onChange={(e)=>setDatos(d=>({
+                  ...d, comentarios:{...d.comentarios, c16:e.target.value}
+                }))}
+              />
+            </div>
+            <div className="col-md-4">
+              <label className="form-label">Recomendaciones: De materiales</label>
+              <textarea
+                className="form-control"
+                value={datos.comentarios.c17}
+                onChange={(e)=>setDatos(d=>({
+                  ...d, comentarios:{...d.comentarios, c17:e.target.value}
+                }))}
+              />
+            </div>
+          </div>
 
           {/* Imágenes */}
-      <div className="row g-3 mt-1">
-        <div className="col-12">
-          <label className="form-label">Imágenes de apoyo (opcional)</label>
-          <input
-            type="file"
-            accept="image/*"
-            multiple
-            className="form-control"
-            onChange={addImagenes}
-          />
-          {imagenes.length > 0 && (
-            <div className="mt-2 d-flex flex-wrap gap-2">
-              {imagenes.map((img, idx) => (
-                <div key={idx} className="border rounded p-1" style={{ width: 120 }}>
-                  <img src={img.dataUrl} alt={img.name} className="img-fluid rounded" />
-                  <div className="d-flex justify-content-between align-items-center mt-1">
-                    <small className="text-truncate" style={{ maxWidth: 80 }} title={img.name}>
-                      {img.name}
-                    </small>
-                    <button
-                      type="button"
-                      className="btn btn-sm btn-outline-danger"
-                      onClick={()=>removeImagen(idx)}
-                    >
-                      x
-                    </button>
-                  </div>
+          <div className="row g-3 mt-1">
+            <div className="col-12">
+              <label className="form-label">Imágenes de apoyo (opcional)</label>
+              <input
+                type="file"
+                accept="image/*"
+                multiple
+                className="form-control"
+                onChange={addImagenes}
+              />
+              {imagenes.length > 0 && (
+                <div className="mt-2 d-flex flex-wrap gap-2">
+                  {imagenes.map((img, idx) => (
+                    <div key={idx} className="border rounded p-1" style={{ width: 120 }}>
+                      <img src={img.dataUrl} alt={img.name} className="img-fluid rounded" />
+                      <div className="d-flex justify-content-between align-items-center mt-1">
+                        <small className="text-truncate" style={{ maxWidth: 80 }} title={img.name}>
+                          {img.name}
+                        </small>
+                        <button
+                          type="button"
+                          className="btn btn-sm btn-outline-danger"
+                          onClick={()=>removeImagen(idx)}
+                        >
+                          x
+                        </button>
+                      </div>
+                    </div>
+                  ))}
                 </div>
-              ))}
+              )}
             </div>
-          )}
-        </div>
+          </div>
+        </div></div>
       </div>
-    </div>
-  </div>
-</div>
 
-<div className="d-flex justify-content-end">
-  <button type="submit" className="btn btn-primary">Siguiente</button>
-</div>
-</form>
-)
+      <div className="d-flex justify-content-end">
+        <button type="submit" className="btn btn-primary">Siguiente</button>
+      </div>
+    </form>
+  )
 }
