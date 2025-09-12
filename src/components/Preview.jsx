@@ -1,10 +1,22 @@
-import React, { useMemo } from 'react'
+import React, { useEffect, useMemo, useState } from 'react'
 import { pdf } from '@react-pdf/renderer'
 import PdfReport from './PdfReport.jsx'
 
+const maxTries = 3
+const keyFor = (dealId) => `aiAttempts:${dealId || 'sin'}`
+
 export default function Preview({ draft, onBack }) {
-  // draft = { dealId, formador:{nombre,idioma}, datos:{...}, imagenes:[{name,dataUrl}] }
   const { datos, imagenes, formador, dealId } = draft || {}
+  const [aiHtml, setAiHtml] = useState(null)
+  const [aiBusy, setAiBusy] = useState(false)
+  const [tries, setTries] = useState(0)
+
+  useEffect(() => {
+    try {
+      const saved = Number(localStorage.getItem(keyFor(dealId)) || '0')
+      setTries(isNaN(saved) ? 0 : saved)
+    } catch {}
+  }, [dealId])
 
   const tieneContenido = useMemo(() => {
     if (!datos) return false
@@ -15,14 +27,46 @@ export default function Preview({ draft, onBack }) {
     )
   }, [datos, imagenes])
 
+  const mejorarInforme = async () => {
+    if (tries >= maxTries) return
+    setAiBusy(true)
+    try {
+      const r = await fetch('/.netlify/functions/generateReport', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ formador, datos }),
+      })
+      const data = await r.json()
+      if (!r.ok) throw new Error(data?.error || 'Error IA')
+      setAiHtml(data.html || '')
+      const next = Math.min(tries + 1, maxTries)
+      setTries(next)
+      try { localStorage.setItem(keyFor(dealId), String(next)) } catch {}
+    } catch (e) {
+      console.error(e)
+      alert('No se ha podido mejorar el informe.')
+    } finally {
+      setAiBusy(false)
+    }
+  }
+
+  const stripHtml = (html) => (html || '')
+    .replace(/<br\s*\/?>/gi, '\n')
+    .replace(/<\/p>/gi, '\n\n')
+    .replace(/<[^>]+>/g, '')
+    .replace(/&nbsp;/g, ' ')
+    .trim()
+
   const descargarPDF = async () => {
     try {
+      const aiText = aiHtml ? stripHtml(aiHtml) : ''
       const blob = await pdf(
         <PdfReport
           dealId={dealId}
           formador={formador}
           datos={datos}
           imagenes={imagenes}
+          aiText={aiText}
         />
       ).toBlob()
 
@@ -31,13 +75,9 @@ export default function Preview({ draft, onBack }) {
       const fecha = (datos?.fecha || '').slice(0, 10)
       const cliente = (datos?.cliente || '').replace(/[^\w\s\-._]/g, '').trim()
       const titulo = (datos?.formacionTitulo || 'Formación').replace(/[^\w\s\-._]/g, '').trim()
-
       a.href = url
       a.download = `GEP Group – ${dealId || 'SinPresu'} – ${cliente || 'Cliente'} – ${titulo} – ${fecha || 'fecha'}.pdf`
-      document.body.appendChild(a)
-      a.click()
-      a.remove()
-      // Limpieza
+      document.body.appendChild(a); a.click(); a.remove()
       URL.revokeObjectURL(url)
       try { sessionStorage.removeItem('tmpImages') } catch {}
     } catch (e) {
@@ -52,13 +92,26 @@ export default function Preview({ draft, onBack }) {
         <h2 className="h5 mb-0">Borrador del informe</h2>
         <div className="d-flex gap-2">
           <button className="btn btn-secondary" onClick={onBack}>Volver al formulario</button>
-          <button className="btn btn-success" onClick={descargarPDF} disabled={!tieneContenido}>
-            Descargar PDF
-          </button>
+
+          {/* Mostrar "Mejorar informe" si aún hay intentos; después aparece Descargar PDF */}
+          {tries < maxTries && (
+            <button className="btn btn-warning" onClick={mejorarInforme} disabled={aiBusy}>
+              {aiBusy ? 'Mejorando…' : `Mejorar informe (${tries}/${maxTries})`}
+            </button>
+          )}
+          {aiHtml && (
+            <button className="btn btn-success" onClick={descargarPDF} disabled={!tieneContenido}>
+              Descargar PDF
+            </button>
+          )}
         </div>
       </div>
 
-      {/* Resumen visual en Bootstrap */}
+      {tries < maxTries && (
+        <div className="text-muted small">Solo tienes 3 oportunidades para mejorar el informe.</div>
+      )}
+
+      {/* Datos generales + contenido + valoración (resumen) */}
       <div className="card">
         <div className="card-body">
           <h5 className="card-title mb-3">Datos generales</h5>
@@ -109,6 +162,14 @@ export default function Preview({ draft, onBack }) {
             <div className="col-md-4"><strong>Entorno de trabajo:</strong> <div>{datos?.comentarios?.c16 || '—'}</div></div>
             <div className="col-md-4"><strong>Materiales:</strong> <div>{datos?.comentarios?.c17 || '—'}</div></div>
           </div>
+
+          {aiHtml && (
+            <>
+              <hr className="my-4" />
+              <h5 className="card-title mb-3">Redacción mejorada (IA)</h5>
+              <div className="border rounded p-3" dangerouslySetInnerHTML={{ __html: aiHtml }} />
+            </>
+          )}
 
           {imagenes?.length > 0 && (
             <>
