@@ -28,6 +28,7 @@ export default function PdfReport({ dealId, formador, datos, imagenes, aiText })
 
         <View style={styles.box}><Text style={styles.h1}>Informe de formación</Text></View>
 
+        {/* Datos generales */}
         <View style={styles.box}>
           <Text style={styles.h2}>Datos generales</Text>
           <View style={styles.row}>
@@ -52,6 +53,7 @@ export default function PdfReport({ dealId, formador, datos, imagenes, aiText })
           </View>
         </View>
 
+        {/* Formación realizada */}
         <View style={styles.box}>
           <Text style={styles.h2}>Formación realizada</Text>
           <Text><Label>Formación: </Label>{datos?.formacionTitulo || '—'}</Text>
@@ -65,31 +67,36 @@ export default function PdfReport({ dealId, formador, datos, imagenes, aiText })
           </View>
         </View>
 
-        <View style={styles.box}>
-          <Text style={styles.h2}>Valoración y observaciones</Text>
-          <View style={styles.row}>
-            <View style={styles.col}><Label>Participación: </Label><Text>{String(datos?.escalas?.participacion ?? '—')}</Text></View>
-            <View style={styles.col}><Label>Compromiso: </Label><Text>{String(datos?.escalas?.compromiso ?? '—')}</Text></View>
-            <View style={styles.col}><Label>Superación: </Label><Text>{String(datos?.escalas?.superacion ?? '—')}</Text></View>
-          </View>
-          <View style={{ marginTop: 4 }}>
-            <Text><Label>Puntos fuertes: </Label>{datos?.comentarios?.c11 || '—'}</Text>
-            <Text><Label>Asistencia: </Label>{datos?.comentarios?.c12 || '—'}</Text>
-            <Text><Label>Puntualidad: </Label>{datos?.comentarios?.c13 || '—'}</Text>
-            <Text><Label>Accidentes: </Label>{datos?.comentarios?.c14 || '—'}</Text>
-            <Text><Label>Formaciones futuras: </Label>{datos?.comentarios?.c15 || '—'}</Text>
-            <Text><Label>Entorno de trabajo: </Label>{datos?.comentarios?.c16 || '—'}</Text>
-            <Text><Label>Materiales: </Label>{datos?.comentarios?.c17 || '—'}</Text>
-          </View>
-        </View>
-
-        {paragraphs.length > 0 && (
+        {/* Si NO hay IA, se muestra el bloque con lo que escribió el formador.
+            Si hay IA, lo ocultamos para que no aparezca su texto literal. */}
+        {!aiText && (
           <View style={styles.box}>
-            <Text style={styles.h2}>Redacción mejorada</Text>
+            <Text style={styles.h2}>Valoración y observaciones</Text>
+            <View style={styles.row}>
+              <View style={styles.col}><Label>Participación: </Label><Text>{String(datos?.escalas?.participacion ?? '—')}</Text></View>
+              <View style={styles.col}><Label>Compromiso: </Label><Text>{String(datos?.escalas?.compromiso ?? '—')}</Text></View>
+              <View style={styles.col}><Label>Superación: </Label><Text>{String(datos?.escalas?.superacion ?? '—')}</Text></View>
+            </View>
+            <View style={{ marginTop: 4 }}>
+              <Text><Label>Puntos fuertes: </Label>{datos?.comentarios?.c11 || '—'}</Text>
+              <Text><Label>Asistencia: </Label>{datos?.comentarios?.c12 || '—'}</Text>
+              <Text><Label>Puntualidad: </Label>{datos?.comentarios?.c13 || '—'}</Text>
+              <Text><Label>Accidentes: </Label>{datos?.comentarios?.c14 || '—'}</Text>
+              <Text><Label>Formaciones futuras: </Label>{datos?.comentarios?.c15 || '—'}</Text>
+              <Text><Label>Entorno de trabajo: </Label>{datos?.comentarios?.c16 || '—'}</Text>
+              <Text><Label>Materiales: </Label>{datos?.comentarios?.c17 || '—'}</Text>
+            </View>
+          </View>
+        )}
+
+        {/* Texto mejorado por IA (sin título “Informe mejorado”) */}
+        {aiText && (
+          <View style={styles.box}>
             {paragraphs.map((p, i) => <Text key={i} style={{ marginBottom: 3 }}>{p}</Text>)}
           </View>
         )}
 
+        {/* Imágenes */}
         {Array.isArray(imagenes) && imagenes.length > 0 && (
           <View style={styles.box}>
             <Text style={styles.h2}>Imágenes de apoyo</Text>
