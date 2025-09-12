@@ -1,20 +1,33 @@
-import React, { useMemo, useRef, useState } from 'react'
+import React, { useEffect, useMemo, useRef, useState } from 'react'
 import { jsPDF } from 'jspdf'
 import logoUrl from '../assets/logo-gep.png'
 import axios from 'axios'
+import PdfReport from './PdfReport.jsx' // nuevo
+
+const lsKey = (dealId) => `aiTries:${dealId || 'unknown'}`
 
 export default function Preview({ draft, onBack }){
-  const [notaLibre, setNotaLibre] = useState('')            // Ajuste final manual
-  const [aiHtml, setAiHtml] = useState('')                  // Resultado IA (HTML)
-  const [aiTries, setAiTries] = useState(0)                 // Intentos IA (máx 3)
+  const [notaLibre, setNotaLibre] = useState('')
+  const [analysisText, setAnalysisText] = useState('')  // texto IA (primera persona)
+  const [aiTries, setAiTries] = useState(0)            // 0..3 persistente por dealId
   const [loadingAI, setLoadingAI] = useState(false)
-  const printRef = useRef(null)
+  const [editBuffer, setEditBuffer] = useState('')      // edición manual
 
   const data = draft?.datos || {}
   const formador = draft?.formador || {}
-  const formacionTitulo = data.formacionTitulo || (data.plantillasSeleccionadas?.[0] || 'Formación')
+  const formacionTitulo = data.formacionTitulo || 'Formación'
 
-  // Borrador base (antes de IA)
+  // Cargar intentos guardados por dealId
+  useEffect(() => {
+    const saved = Number(localStorage.getItem(lsKey(draft?.dealId)) || '0')
+    setAiTries(Number.isFinite(saved) ? saved : 0)
+  }, [draft?.dealId])
+
+  // Guardar intentos al cambiar
+  useEffect(() => {
+    localStorage.setItem(lsKey(draft?.dealId), String(aiTries))
+  }, [aiTries, draft?.dealId])
+
   const informeHTMLBase = useMemo(() => (
     <div className="print-area">
       <div className="d-flex align-items-center gap-3 mb-3">
@@ -55,23 +68,13 @@ export default function Preview({ draft, onBack }){
         </div>
       </section>
 
-      <section className="mt-3">
-        <h2 className="h6">Observaciones y recomendaciones del formador</h2>
-        <ul>
-          {[
-            ['Puntos fuertes de los alumnos a destacar', data.comentarios?.c11],
-            ['Incidencias: Referentes a la asistencia', data.comentarios?.c12],
-            ['Incidencias: Referentes a la Puntualidad', data.comentarios?.c13],
-            ['Incidencias: Accidentes', data.comentarios?.c14],
-            ['Recomendaciones: Formaciones Futuras', data.comentarios?.c15],
-            ['Recomendaciones: Del entorno de Trabajo', data.comentarios?.c16],
-            ['Recomendaciones: De Materiales', data.comentarios?.c17],
-          ].filter(([,v]) => v && String(v).trim()).map(([t,v], i) => (
-            <li key={i}><strong>{t}:</strong> {v}</li>
-          ))}
-          {notaLibre && <li><strong>Ajustes finales:</strong> {notaLibre}</li>}
-        </ul>
-      </section>
+      {(analysisText || notaLibre) && (
+        <section className="mt-3">
+          <h2 className="h6">Análisis y recomendaciones</h2>
+          {analysisText && analysisText.split('\n').map((p,i)=> <p key={i}>{p}</p>)}
+          {notaLibre && <p><strong>Ajustes finales:</strong> {notaLibre}</p>}
+        </section>
+      )}
 
       <section className="mt-4">
         <p className="text-secondary small mb-0">
@@ -79,71 +82,51 @@ export default function Preview({ draft, onBack }){
         </p>
       </section>
     </div>
-  ), [data, formador, formacionTitulo, notaLibre])
+  ), [data, formador, formacionTitulo, analysisText, notaLibre])
 
-  // Render a imprimir (IA si existe; si no, base)
-  const printable = useMemo(() => {
-    if (aiHtml) {
-      return <div className="print-area" dangerouslySetInnerHTML={{ __html: aiHtml }} />
-    }
-    return informeHTMLBase
-  }, [aiHtml, informeHTMLBase])
+  const refContainer = useRef(null)
 
   const descargarPDF = async () => {
-    const pdf = new jsPDF({ unit: 'pt', format: 'a4' })
-    const headerH = 70
-    await pdf.html(printRef.current, {
-      x: 56, y: 56 + headerH,
-      html2canvas: { scale: 0.9, useCORS: true },
-      callback: (doc) => {
-        const total = doc.getNumberOfPages()
-        for (let i = 1; i <= total; i++) {
-          doc.setPage(i)
-          doc.setDrawColor(220)
-          doc.addImage(logoUrl, 'PNG', 56, 40, 44, 44, undefined, 'FAST')
-          doc.setFont('helvetica','bold')
-          doc.setFontSize(12)
-          doc.text('Informes de formación', 56 + 44 + 10, 56)
-          doc.setFont('helvetica','normal')
-          doc.setTextColor(120)
-          doc.setFontSize(10)
-          doc.text('GEP Group', 56 + 44 + 10, 56 + 16)
-          doc.setTextColor(0)
-          doc.line(56, 56 + headerH, 595 - 56, 56 + headerH)
-          doc.setFontSize(9)
-          doc.setTextColor(140)
-          doc.text(`Página ${i} de ${total}`, 595 - 56 - 80, 842 - 30)
-          doc.setTextColor(0)
-        }
-        const fileName = `GEP Group – ${draft.dealId} – ${data.cliente || 'Cliente'} – ${formacionTitulo} – ${data.fecha || ''}.pdf`
-        doc.save(fileName)
-      }
+    // Cambiamos a React-PDF: generamos un blob y lo descargamos
+    const blob = await PdfReport({
+      logoUrl,
+      datos: data,
+      formador,
+      formacionTitulo,
+      analysisText: analysisText || editBuffer || '',
+      notaLibre
     })
+    const url = URL.createObjectURL(blob)
+    const a = document.createElement('a')
+    a.href = url
+    const fileName = `GEP Group – ${draft.dealId} – ${data.cliente || 'Cliente'} – ${formacionTitulo} – ${data.fecha || ''}.pdf`
+    a.download = fileName
+    a.click()
+    URL.revokeObjectURL(url)
   }
 
+  const puedeMejorar = aiTries < 3
+
   const mejorarInforme = async () => {
-    if (aiTries >= 3) return
+    if (!puedeMejorar) return
     setLoadingAI(true)
     try {
+      const previousText = editBuffer || analysisText || ''
       const { data: resp } = await axios.post('/.netlify/functions/improveReport', {
-        dealId: draft.dealId, formador, datos: data, borrador: draft.borrador
+        formador, datos: data, previousText
       })
-      const html = (resp?.html || '').trim()
-      if (!html) {
-        alert('No se recibió contenido de la IA.')
-        return
-      }
-      setAiHtml(html)
+      const text = (resp?.analysisText || '').trim()
+      if (!text) { alert('No se recibió texto de la IA.'); return }
+      setAnalysisText(text)
+      setEditBuffer(text)
       setAiTries(t => t + 1)
     } catch (e) {
       console.error(e)
-      alert('Error al mejorar el informe. Revisa consola.')
+      alert('Error al mejorar el informe.')
     } finally {
       setLoadingAI(false)
     }
   }
-
-  const puedeMejorar = aiTries < 3
 
   return (
     <div className="d-grid gap-3">
@@ -151,34 +134,35 @@ export default function Preview({ draft, onBack }){
 
       <div className="card">
         <div className="card-body">
-          <div className="d-flex justify-content-between align-items-center mb-3">
-            <h2 className="h5 mb-0">{aiHtml ? 'Informe mejorado' : 'Borrador del informe'}</h2>
+          <div className="d-flex justify-content-between align-items-center mb-1">
+            <h2 className="h5 mb-0">{analysisText ? 'Informe mejorado' : 'Borrador del informe'}</h2>
             <div className="d-flex gap-2">
               {puedeMejorar && (
                 <button className="btn btn-outline-primary" onClick={mejorarInforme} disabled={loadingAI}>
                   {loadingAI ? 'Mejorando…' : `Mejorar informe (${aiTries}/3)`}
                 </button>
               )}
-              {aiHtml && (
+              {analysisText && (
                 <button className="btn btn-success" onClick={descargarPDF}>Descargar PDF</button>
               )}
             </div>
           </div>
+          <div className="text-secondary small mb-3">
+            Solo tienes 3 oportunidades para mejorar el informe
+          </div>
 
-          {/* Área editable previa a IA (notaLibre) la mantenemos por si se quiere matizar antes o después */}
-          <div ref={printRef}>{printable}</div>
+          {/* Vista (HTML Bootstrap) */}
+          <div ref={refContainer}>{informeHTMLBase}</div>
 
-          {aiHtml && (
+          {/* Edición libre del texto mejorado (aporta “previousText” en reintentos) */}
+          {analysisText && (
             <div className="mt-3">
-              <label className="form-label">Ajustes sobre el texto mejorado (opcional)</label>
+              <label className="form-label">Editar “Análisis y recomendaciones” (opcional)</label>
               <textarea
                 className="form-control"
-                placeholder="Puedes editar libremente; esto se imprimirá tal cual."
-                style={{ minHeight: '120px' }}
-                onChange={(e)=> setAiHtml(
-                  // Envolvemos en un contenedor para no perder estilos
-                  `<div class="print-area">${e.target.value}</div>`
-                )}
+                style={{ minHeight: 140 }}
+                value={editBuffer}
+                onChange={e=>setEditBuffer(e.target.value)}
               />
             </div>
           )}
