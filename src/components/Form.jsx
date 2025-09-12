@@ -17,7 +17,6 @@ const htmlKey  = (dealId) => `aiHtml:${dealId || 'sin'}`
 export default function Form({ initial, onNext }) {
   const [dealId, setDealId] = useState(initial?.dealId || '')
   const prevDealIdRef = useRef(dealId)
-  const dateInputRef = useRef(null)
 
   const [datos, setDatos] = useState({
     cliente: initial?.datos?.cliente || '',
@@ -35,7 +34,6 @@ export default function Form({ initial, onNext }) {
     formacionTitulo: initial?.datos?.formacionTitulo || '',
     contenidoTeorica: initial?.datos?.contenidoTeorica || [],
     contenidoPractica: initial?.datos?.contenidoPractica || [],
-    // Por defecto 7 en las escalas
     escalas: initial?.datos?.escalas || { participacion: 7, compromiso: 7, superacion: 7 },
     comentarios: initial?.datos?.comentarios || { c11:'', c12:'', c13:'', c14:'', c15:'', c16:'', c17:'' },
   })
@@ -118,13 +116,6 @@ export default function Form({ initial, onNext }) {
   const opcionesOrdenadas = useMemo(() =>
     Object.keys(plantillasBase).sort((a,b)=>a.localeCompare(b,'es',{sensitivity:'base'}))
   , [])
-
-  const openDatePicker = () => {
-    const el = dateInputRef.current
-    if (!el) return
-    if (el.showPicker) el.showPicker()
-    else el.focus()
-  }
 
   return (
     <form className="d-grid gap-4" onSubmit={onSubmit}>
@@ -218,9 +209,7 @@ export default function Form({ initial, onNext }) {
                 <div className="col-12 col-md-6">
                   <label className="form-label">Nº de alumnos</label>
                   <input
-                    type="number"
-                    min="0"
-                    className="form-control"
+                    type="number" min="0" className="form-control"
                     value={datos.alumnos}
                     onChange={(e)=>setDatos(d=>({...d, alumnos:e.target.value}))}
                   />
@@ -230,39 +219,27 @@ export default function Form({ initial, onNext }) {
                 <div className="col-12 col-md-6">
                   <label className="form-label">Duración (horas)</label>
                   <input
-                    type="number"
-                    min="0"
-                    step="0.5"
-                    className="form-control"
+                    type="number" min="0" step="0.5" className="form-control"
                     value={datos.duracion}
                     onChange={(e)=>setDatos(d=>({...d, duracion:e.target.value}))}
                   />
                 </div>
 
-                {/* Fecha + botón para desplegar calendario */}
+                {/* Fecha (sin botón auxiliar) */}
                 <div className="col-12 col-md-6">
                   <label className="form-label">Fecha</label>
-                  <div className="input-group">
-                    <input
-                      ref={dateInputRef}
-                      type="date"
-                      className="form-control"
-                      value={datos.fecha}
-                      onChange={(e)=>setDatos(d=>({...d, fecha:e.target.value}))}
-                    />
-                    <button type="button" className="btn btn-outline-secondary" onClick={openDatePicker}>
-                      Abrir calendario
-                    </button>
-                  </div>
+                  <input
+                    type="date" className="form-control"
+                    value={datos.fecha}
+                    onChange={(e)=>setDatos(d=>({...d, fecha:e.target.value}))}
+                  />
                 </div>
 
                 {/* Sesiones */}
                 <div className="col-12 col-md-6">
                   <label className="form-label">Sesiones</label>
                   <input
-                    type="number"
-                    min="1"
-                    className="form-control"
+                    type="number" min="1" className="form-control"
                     value={datos.sesiones}
                     onChange={(e)=>setDatos(d=>({...d, sesiones:Number(e.target.value||1)}))}
                   />
@@ -371,103 +348,52 @@ export default function Form({ initial, onNext }) {
           <div className="row g-3 mt-1">
             <div className="col-md-6">
               <label className="form-label">Puntos fuertes de los alumnos a destacar</label>
-              <textarea
-                className="form-control"
-                value={datos.comentarios.c11}
-                onChange={(e)=>setDatos(d=>({
-                  ...d, comentarios:{...d.comentarios, c11:e.target.value}
-                }))}
-              />
+              <textarea className="form-control" value={datos.comentarios.c11}
+                onChange={(e)=>setDatos(d=>({...d, comentarios:{...d.comentarios, c11:e.target.value}}))} />
             </div>
             <div className="col-md-6">
               <label className="form-label">Incidencias: Referentes a la asistencia</label>
-              <textarea
-                className="form-control"
-                value={datos.comentarios.c12}
-                onChange={(e)=>setDatos(d=>({
-                  ...d, comentarios:{...d.comentarios, c12:e.target.value}
-                }))}
-              />
+              <textarea className="form-control" value={datos.comentarios.c12}
+                onChange={(e)=>setDatos(d=>({...d, comentarios:{...d.comentarios, c12:e.target.value}}))} />
             </div>
             <div className="col-md-6">
               <label className="form-label">Incidencias: Referentes a la puntualidad</label>
-              <textarea
-                className="form-control"
-                value={datos.comentarios.c13}
-                onChange={(e)=>setDatos(d=>({
-                  ...d, comentarios:{...d.comentarios, c13:e.target.value}
-                }))}
-              />
+              <textarea className="form-control" value={datos.comentarios.c13}
+                onChange={(e)=>setDatos(d=>({...d, comentarios:{...d.comentarios, c13:e.target.value}}))} />
             </div>
             <div className="col-md-6">
               <label className="form-label">Incidencias: Accidentes</label>
-              <textarea
-                className="form-control"
-                value={datos.comentarios.c14}
-                onChange={(e)=>setDatos(d=>({
-                  ...d, comentarios:{...d.comentarios, c14:e.target.value}
-                }))}
-              />
+              <textarea className="form-control" value={datos.comentarios.c14}
+                onChange={(e)=>setDatos(d=>({...d, comentarios:{...d.comentarios, c14:e.target.value}}))} />
             </div>
             <div className="col-md-4">
               <label className="form-label">Recomendaciones: Formaciones futuras</label>
-              <textarea
-                className="form-control"
-                value={datos.comentarios.c15}
-                onChange={(e)=>setDatos(d=>({
-                  ...d, comentarios:{...d.comentarios, c15:e.target.value}
-                }))}
-              />
+              <textarea className="form-control" value={datos.comentarios.c15}
+                onChange={(e)=>setDatos(d=>({...d, comentarios:{...d.comentarios, c15:e.target.value}}))} />
             </div>
             <div className="col-md-4">
               <label className="form-label">Recomendaciones: Del entorno de trabajo</label>
-              <textarea
-                className="form-control"
-                value={datos.comentarios.c16}
-                onChange={(e)=>setDatos(d=>({
-                  ...d, comentarios:{...d.comentarios, c16:e.target.value}
-                }))}
-              />
+              <textarea className="form-control" value={datos.comentarios.c16}
+                onChange={(e)=>setDatos(d=>({...d, comentarios:{...d.comentarios, c16:e.target.value}}))} />
             </div>
             <div className="col-md-4">
               <label className="form-label">Recomendaciones: De materiales</label>
-              <textarea
-                className="form-control"
-                value={datos.comentarios.c17}
-                onChange={(e)=>setDatos(d=>({
-                  ...d, comentarios:{...d.comentarios, c17:e.target.value}
-                }))}
-              />
+              <textarea className="form-control" value={datos.comentarios.c17}
+                onChange={(e)=>setDatos(d=>({...d, comentarios:{...d.comentarios, c17:e.target.value}}))} />
             </div>
-          </div>
 
-          {/* Imágenes */}
-          <div className="row g-3 mt-1">
+            {/* Imágenes */}
             <div className="col-12">
               <label className="form-label">Imágenes de apoyo (opcional)</label>
-              <input
-                type="file"
-                accept="image/*"
-                multiple
-                className="form-control"
-                onChange={addImagenes}
-              />
+              <input type="file" accept="image/*" multiple className="form-control" onChange={addImagenes} />
               {imagenes.length > 0 && (
                 <div className="mt-2 d-flex flex-wrap gap-2">
                   {imagenes.map((img, idx) => (
                     <div key={idx} className="border rounded p-1" style={{ width: 120 }}>
                       <img src={img.dataUrl} alt={img.name} className="img-fluid rounded" />
                       <div className="d-flex justify-content-between align-items-center mt-1">
-                        <small className="text-truncate" style={{ maxWidth: 80 }} title={img.name}>
-                          {img.name}
-                        </small>
-                        <button
-                          type="button"
-                          className="btn btn-sm btn-outline-danger"
-                          onClick={()=>removeImagen(idx)}
-                        >
-                          x
-                        </button>
+                        <small className="text-truncate" style={{ maxWidth: 80 }} title={img.name}>{img.name}</small>
+                        <button type="button" className="btn btn-sm btn-outline-danger" onClick={()=>removeImagen(idx)}>x</button>
                       </div>
                     </div>
                   ))}
