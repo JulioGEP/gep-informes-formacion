@@ -8,7 +8,6 @@ export const handler = async (event) => {
     const body = event.body ? JSON.parse(event.body) : {}
     const { formador, datos, previousText } = body || {}
 
-    // Bloque "Datos generales" (se copia tal cual en el informe)
     const datosGenerales = `
 Cliente: ${datos?.cliente || ''}
 CIF: ${datos?.cif || ''}
@@ -25,7 +24,6 @@ Formación: ${datos?.formacionTitulo || '(no especificada)'}
     const parteTeorica = (datos?.contenidoTeorica || []).map(i=>`- ${i}`).join('\n') || '- (sin puntos)'
     const partePractica = (datos?.contenidoPractica || []).map(i=>`- ${i}`).join('\n') || '- (sin puntos)'
 
-    // Números NO visibles → solo cualitativo
     const valoraciones = {
       participacion: Number(datos?.escalas?.participacion ?? 0),
       compromiso: Number(datos?.escalas?.compromiso ?? 0),
@@ -44,12 +42,11 @@ Formación: ${datos?.formacionTitulo || '(no especificada)'}
 
     const systemPrompt = `
 Eres un redactor técnico de GEP Group. Escribe en PRIMERA PERSONA SINGULAR (yo), tono formal técnico PRL/PCI, preciso y claro, sin florituras. Temperatura baja.
-Reglas:
-- No muestres cifras de valoraciones (1–10). Interprétalas solo en lenguaje cualitativo (p. ej., participación alta/media/baja).
-- No inventes datos. Usa comentarios del formador como base factual.
-- Mantén coherencia terminológica PRL/PCI.
-- Devuelve SOLO el TEXTO de la sección "Análisis y recomendaciones" (sin HTML). Párrafos breves.
-- Idioma: usa el indicado (ES/CA/EN).
+- No muestres cifras de valoraciones. Interprétalas cualitativamente (alta/media/baja).
+- No inventes datos. Usa comentarios y contexto.
+- Devuelve SOLO el TEXTO de “Análisis y recomendaciones” (sin HTML).
+- Extensión objetivo: 250–450 palabras.
+- Idioma según se indique (ES/CA/EN).
 `.trim()
 
     const userPrompt = `
@@ -65,7 +62,7 @@ ${parteTeorica}
 [Parte Práctica]
 ${partePractica}
 
-### Valoraciones (contexto para interpretar cualitativamente, NO devolver números)
+### Valoraciones (contexto; NO devolver números)
 - Participación: ${valoraciones.participacion}
 - Compromiso: ${valoraciones.compromiso}
 - Superación: ${valoraciones.superacion}
@@ -73,17 +70,16 @@ ${partePractica}
 ### Comentarios del formador (contexto)
 ${comentarios.map(([t,v])=>`- ${t}: ${v}`).join('\n') || '- (sin comentarios)'}
 
-${previousText ? `### Borrador anterior (contexto para mejorar y refinar, NO devolver tal cual)
+${previousText ? `### Borrador anterior (mejóralo; úsalo como base si es útil)
 ${previousText}` : ''}
 
 ### Tarea
-Escribe la sección "Análisis y recomendaciones" en PRIMERA PERSONA, tono técnico. Explica con claridad:
-- Qué ha pasado en la formación (síntesis).
-- Incidencias observadas.
-- Puntos de mejora detectados.
-- Recomendaciones futuras (formativas, entorno, materiales) si aplican.
-
-No incluyas encabezados ni listados de datos generales ni puntos teórico/práctico (eso va en otras secciones). Solo redacta la sección solicitada.
+Redacta “Análisis y recomendaciones” en primera persona, incluyendo:
+- breve síntesis de la formación tal como la impartí,
+- observaciones relevantes,
+- incidencias detectadas (si las hubo),
+- puntos de mejora,
+- recomendaciones futuras (formativas, entorno, materiales) y próximos pasos sugeridos.
 `.trim()
 
     const base = OPENAI_BASE_URL || 'https://api.openai.com/v1'
