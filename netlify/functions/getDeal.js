@@ -1,17 +1,9 @@
 // netlify/functions/getDeal.js
-// ─────────────────────────────────────────────────────────────
-// Devuelve datos del deal para autocompletar el formulario.
-// Requiere variables de entorno en Netlify:
-//  - PIPEDRIVE_API_TOKEN  (tu token)
-//  - PIPEDRIVE_API_URL    (opcional; por defecto https://api.pipedrive.com/v1)
-// ─────────────────────────────────────────────────────────────
-
 const BASE = process.env.PIPEDRIVE_API_URL || 'https://api.pipedrive.com/v1';
 const TOKEN = process.env.PIPEDRIVE_API_TOKEN;
 
-// Claves proporcionadas por ti
-const DEAL_DIRECCION_INCOMPANY = '8b2a7570f5ba8aa4754f061cd9dc92fd778376a7'; // custom field deal
-const ORG_CIF = '6d39d015a33921753410c1bab0b067ca93b8cf2c'; // custom field org CIF
+const DEAL_DIRECCION_INCOMPANY = '8b2a7570f5ba8aa4754f061cd9dc92fd778376a7';
+const ORG_CIF = '6d39d015a33921753410c1bab0b067ca93b8cf2c';
 
 const cors = {
   'Access-Control-Allow-Origin': '*',
@@ -19,35 +11,28 @@ const cors = {
 };
 
 export async function handler(event) {
-  if (event.httpMethod === 'OPTIONS') {
-    return { statusCode: 204, headers: cors };
-  }
-  if (event.httpMethod !== 'POST') {
-    return { statusCode: 405, headers: cors, body: 'Method Not Allowed' };
-  }
+  if (event.httpMethod === 'OPTIONS') return { statusCode: 204, headers: cors };
+  if (event.httpMethod !== 'POST') return { statusCode: 405, headers: cors, body: 'Method Not Allowed' };
+
   try {
     if (!TOKEN) throw new Error('Missing PIPEDRIVE_API_TOKEN');
     const { dealId } = JSON.parse(event.body || '{}');
     if (!dealId) throw new Error('dealId is required');
 
-    // 1) Deal
+    // Deal
     const dealRes = await fetch(`${BASE}/deals/${encodeURIComponent(dealId)}?api_token=${TOKEN}`);
     const dealJson = await dealRes.json();
-    if (!dealJson?.success || !dealJson?.data) {
-      throw new Error('Deal not found');
-    }
+    if (!dealJson?.success || !dealJson?.data) throw new Error('Deal not found');
     const deal = dealJson.data;
 
-    const orgId = deal.org_id?.value || deal.org_id || null;
-    const personId = deal.person_id?.value || deal.person_id || null;
-    const ownerId = deal.owner_id?.value || deal.owner_id || null;
+    const orgId = deal.org_id?.value ?? deal.org_id ?? null;
+    const personId = deal.person_id?.value ?? deal.person_id ?? null;
+    const ownerId = deal.owner_id?.value ?? deal.owner_id ?? null;
 
     const sede = deal[DEAL_DIRECCION_INCOMPANY] || '';
 
-    // 2) Organización
-    let cliente = '';
-    let direccionOrg = '';
-    let cif = '';
+    // Organización
+    let cliente = '', direccionOrg = '', cif = '';
     if (orgId) {
       const orgRes = await fetch(`${BASE}/organizations/${orgId}?api_token=${TOKEN}`);
       const orgJson = await orgRes.json();
@@ -58,46 +43,29 @@ export async function handler(event) {
       }
     }
 
-    // 3) Persona de contacto
+    // Persona de contacto
     let contacto = '';
     if (personId) {
       const pRes = await fetch(`${BASE}/persons/${personId}?api_token=${TOKEN}`);
       const pJson = await pRes.json();
-      if (pJson?.success && pJson?.data) {
-        contacto = pJson.data.name || '';
-      }
+      if (pJson?.success && pJson?.data) contacto = pJson.data.name || '';
     }
 
-    // 4) Comercial (owner del deal)
-    let comercial = '';
-    if (ownerId) {
+    // Comercial (preferir owner_name del deal; si no, /users)
+    let comercial = deal.owner_name || '';
+    if (!comercial && ownerId) {
       const uRes = await fetch(`${BASE}/users/${ownerId}?api_token=${TOKEN}`);
       const uJson = await uRes.json();
-      if (uJson?.success && uJson?.data) {
-        comercial = uJson.data.name || '';
-      }
+      if (uJson?.success && uJson?.data) comercial = uJson.data.name || '';
     }
-
-    const payload = {
-      cliente,
-      cif,
-      direccionOrg,
-      sede,
-      contacto,
-      comercial,
-    };
 
     return {
       statusCode: 200,
       headers: { 'Content-Type': 'application/json', ...cors },
-      body: JSON.stringify(payload),
+      body: JSON.stringify({ cliente, cif, direccionOrg, sede, contacto, comercial }),
     };
   } catch (err) {
     console.error('[getDeal] error:', err);
-    return {
-      statusCode: 500,
-      headers: { 'Content-Type': 'application/json', ...cors },
-      body: JSON.stringify({ error: err.message || 'Unknown error' }),
-    };
+    return { statusCode: 500, headers: { 'Content-Type': 'application/json', ...cors }, body: JSON.stringify({ error: err.message }) };
   }
 }
