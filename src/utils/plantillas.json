@@ -1,15 +1,87 @@
 {
-  "form-extincion-incendios": {
-    "nombre": "Extinci\u00f3n de Incendios",
-    "parte_teorica": [
-      "Tri\u00e1ngulo del fuego y clases de fuego",
-      "Agentes extintores y compatibilidades",
-      "Equipos de primera intervenci\u00f3n (BIE, extintores)"
-    ],
-    "parte_practica": [
-      "Puesta en marcha y uso de extintores",
-      "Pr\u00e1cticas en escenarios controlados",
-      "Simulacros operativos b\u00e1sicos"
-    ]
+  "form-curso-extincion-incendios": {
+    "nombre": "Curso Extinción de Incendios",
+    "parte_teorica": [],
+    "parte_practica": []
+  },
+  "form-curso-pack-emergencias": {
+    "nombre": "Curso Pack Emergencias",
+    "parte_teorica": [],
+    "parte_practica": []
+  },
+  "form-extincion-incendios-casa-humo": {
+    "nombre": "Extinción de Incendios con Casa de Humo",
+    "parte_teorica": [],
+    "parte_practica": []
+  },
+  "form-curso-riesgo-quimico": {
+    "nombre": "Curso Riesgo Químico",
+    "parte_teorica": [],
+    "parte_practica": []
+  },
+  "form-curso-avanzado-extincion-incendios": {
+    "nombre": "Curso Avanzado Extinción de Incendios",
+    "parte_teorica": [],
+    "parte_practica": []
+  },
+  "form-curso-avanzado-campo-fuego": {
+    "nombre": "Curso Avanzado en Campo de Fuego",
+    "parte_teorica": [],
+    "parte_practica": []
+  },
+  "form-curso-espacios-confinados": {
+    "nombre": "Curso Espacios Confinados",
+    "parte_teorica": [],
+    "parte_practica": []
+  },
+  "form-curso-trabajos-verticales": {
+    "nombre": "Curso Trabajos Verticales",
+    "parte_teorica": [],
+    "parte_practica": []
+  },
+  "form-curso-trabajo-altura": {
+    "nombre": "Curso Trabajo en Altura",
+    "parte_teorica": [],
+    "parte_practica": []
+  },
+  "form-curso-carretillero": {
+    "nombre": "Curso Carretillero",
+    "parte_teorica": [],
+    "parte_practica": []
+  },
+  "form-curso-montador-andamios": {
+    "nombre": "Curso Montador de Andamios",
+    "parte_teorica": [],
+    "parte_practica": []
+  },
+  "form-curso-jefes-emergencia": {
+    "nombre": "Curso Jefes de Emergencia",
+    "parte_teorica": [],
+    "parte_practica": []
+  },
+  "form-curso-equipos-respiracion-autonomos": {
+    "nombre": "Curso Equipos de Respiración Autónoma",
+    "parte_teorica": [],
+    "parte_practica": []
+  },
+  "form-curso-implantacion-pau": {
+    "nombre": "Curso Implantación PAU",
+    "parte_teorica": [],
+    "parte_practica": []
+  },
+  "form-curso-primeros-auxilios": {
+    "nombre": "Curso Primeros Auxilios",
+    "parte_teorica": [],
+    "parte_practica": []
+  },
+  "form-certificacion-svb-dea": {
+    "nombre": "Certificación SVB y DEA",
+    "parte_teorica": [],
+    "parte_practica": []
+  },
+  "form-safety-day": {
+    "nombre": "Safety Day",
+    "parte_teorica": [],
+    "parte_practica": []
   }
 }
