@@ -1,8 +1,13 @@
 // src/pdf/reportPdfmake.js
-// Carga pdfmake, html-to-pdfmake y fuentes Poppins en runtime desde CDN → cero problemas con Vite/Netlify.
+// Generación de PDF con pdfmake cargado en runtime (sin líos con Vite/Netlify)
+// - Carga pdfmake y html-to-pdfmake desde CDN en tiempo de ejecución
+// - Usa Poppins (Regular/Bold/SemiBold) desde assets locales
+// - Maquetación según requisitos GEP
 
 import headerImg from '../assets/pdf/header.png'
 import footerImg from '../assets/pdf/footer.png'
+
+// Fuentes locales (sin CORS/CDN)
 import PoppinsRegular   from '../assets/fonts/Poppins-Regular.ttf'
 import PoppinsBold      from '../assets/fonts/Poppins-Bold.ttf'
 import PoppinsSemiBold  from '../assets/fonts/Poppins-SemiBold.ttf'
@@ -70,27 +75,24 @@ async function ensurePoppinsFont(pdfMake) {
       toBase64(PoppinsSemiBold),
     ])
 
-    // Registramos los TTF en el vfs (el semibold queda por si lo quieres usar más adelante)
     pdfMake.vfs['Poppins-Regular.ttf']   = reg
     pdfMake.vfs['Poppins-Bold.ttf']      = bold
     pdfMake.vfs['Poppins-SemiBold.ttf']  = semibold
 
-    // Mapeo de la familia: sin archivos itálicos → alias a regular/bold
+    // No tenemos variantes itálicas → las mapeamos a regular/bold para evitar errores
     pdfMake.fonts = {
       ...(pdfMake.fonts || {}),
       Poppins: {
         normal:      'Poppins-Regular.ttf',
         bold:        'Poppins-Bold.ttf',
-        italics:     'Poppins-Regular.ttf', // no tenemos itálica → usa regular
-        bolditalics: 'Poppins-Bold.ttf',    // no tenemos bold italic → usa bold
+        italics:     'Poppins-Regular.ttf',
+        bolditalics: 'Poppins-Bold.ttf',
       },
     }
   } catch (e) {
     console.warn('No se pudo cargar Poppins local; se usará la fuente por defecto.', e)
   }
 }
-
-
 
 const bullet = (items) =>
   (items || [])
@@ -119,7 +121,7 @@ const buildDocDefinition = ({
   datos,
   formador,
   imagenes,
-  aiContent,            // <- ya convertido con html-to-pdfmake
+  aiContent,            // html-to-pdfmake ya convertido
   headerDataUrl,
   footerDataUrl,
 }) => {
@@ -140,7 +142,7 @@ const buildDocDefinition = ({
   return {
     pageSize: 'A4',
     pageMargins: [58, 110, 58, 90], // respeta márgenes y header/footer
-    defaultStyle: { fontSize: 10, lineHeight: 1.25, font: 'Poppins' }, // <-- Poppins por defecto
+    defaultStyle: { fontSize: 10, lineHeight: 1.25, font: 'Poppins' }, // Poppins por defecto
     styles: {
       h1: { fontSize: 16, bold: true, margin: [0, 0, 0, 6] },
       h2: { fontSize: 13, bold: true, margin: [0, 14, 0, 6] },
@@ -162,6 +164,15 @@ const buildDocDefinition = ({
       alignment: 'center',
       margin: [0, 0, 0, 18],
     }),
+
+    // Asegurar que el bloque de Informe Técnico empieza en página 2 si iba a caer en la 1
+    pageBreakBefore: (currentNode) => {
+      if (currentNode.id === 'informeTecnico') {
+        const sp = currentNode.startPosition
+        if (sp && sp.pageNumber === 1) return true
+      }
+      return false
+    },
 
     content: [
       // ===== Título + fecha
@@ -204,7 +215,6 @@ const buildDocDefinition = ({
                           { columns: kv('CIF', datos?.cif) },
                           { columns: kv('Dirección fiscal', datos?.direccionOrg) },
                           { columns: kv('Dirección de la formación', datos?.sede) },
-                          // (Se mueven "Persona de contacto" y "Comercial" a la derecha)
                         ],
                       },
                       // DERECHA (formador)
@@ -214,9 +224,9 @@ const buildDocDefinition = ({
                           { columns: kv('Formador', formador?.nombre) },
                           { columns: kv('Sesiones', String(datos?.sesiones ?? '')) },
                           { columns: kv('Nº de alumnos', String(datos?.alumnos ?? '')) },
-                          { columns: kv('Duración', String(datos?.duracion ?? '')) }, // <-- texto cambiado
-                          { columns: kv('Persona de contacto', datos?.contacto) },   // <-- movidos aquí
-                          { columns: kv('Comercial', datos?.comercial) },            // <-- movidos aquí
+                          { columns: kv('Duración', String(datos?.duracion ?? '')) }, // texto cambiado
+                          { columns: kv('Persona de contacto', datos?.contacto) },   // movido aquí
+                          { columns: kv('Comercial', datos?.comercial) },            // movido aquí
                         ],
                       },
                     ],
@@ -263,8 +273,10 @@ const buildDocDefinition = ({
         columnGap: 20,
       },
 
-      // ===== Texto IA (sin título "Conclusiones")
-      ...(aiContent ? [Array.isArray(aiContent) ? { stack: aiContent } : aiContent] : []),
+      // ===== Informe Técnico (IA) — debe iniciar en página 2 si iba a caer en la 1
+      ...(aiContent
+        ? [{ id: 'informeTecnico', stack: Array.isArray(aiContent) ? aiContent : [aiContent] }]
+        : []),
 
       // ===== Evaluación Cualitativa (mantener)
       { text: 'Evaluación Cualitativa', style: 'h2' },
@@ -287,8 +299,6 @@ const buildDocDefinition = ({
         layout: 'lightHorizontalLines',
         margin: [0, 0, 0, 8],
       },
-
-      // (Eliminado "Incidencias" + "Recomendaciones" como pediste)
 
       // ===== Imágenes de apoyo (si hay)
       ...(Array.isArray(imagenes) && imagenes.length
