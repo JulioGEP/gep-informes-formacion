@@ -197,21 +197,22 @@ export default function Preview(props) {
     <strong>Fecha:</strong> {datos?.fecha || '—'}
   </div>
 
-  {/* Siguiente fila: Sesiones (debajo de Fecha) + resto */}
-  <div className="col-6 col-md-4">
+  {/* Debajo de Fecha → Sesiones */}
+  <div className="col-12">
     <strong>Sesiones:</strong> {datos?.sesiones || '—'}
   </div>
-                  
-  <div className="col-6 col-md-4">
-    <strong>Nº de alumnos:</strong> {datos?.alumnos || '—'}
-  </div>
-  
-  <div className="col-6 col-md-4">                
-  <div className="col-6 col-md-4">
+
+  {/* Debajo de Sesiones → Duración (h) */}
+  <div className="col-12">
     <strong>Duración (h):</strong> {datos?.duracion || '—'}
   </div>
-</div>
 
+  {/* Luego Nº de alumnos */}
+  <div className="col-12">
+    <strong>Nº de alumnos:</strong> {datos?.alumnos || '—'}
+  </div>
+</div>
+                
               </div>
             </div>
           </div>
