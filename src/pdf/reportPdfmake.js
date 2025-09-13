@@ -3,6 +3,9 @@
 
 import headerImg from '../assets/pdf/header.png'
 import footerImg from '../assets/pdf/footer.png'
+import PoppinsRegular   from '../assets/fonts/Poppins-Regular.ttf'
+import PoppinsBold      from '../assets/fonts/Poppins-Bold.ttf'
+import PoppinsSemiBold  from '../assets/fonts/Poppins-SemiBold.ttf'
 
 const htmlKey = (dealId) => `aiHtml:${dealId || 'sin'}`
 
@@ -44,15 +47,13 @@ async function ensureHtmlToPdfMake() {
   return window.htmlToPdfmake
 }
 
-// Reemplaza POR COMPLETO tu ensurePoppinsFont con esto:
+// Cargar Poppins desde assets locales (Regular, Bold, SemiBold)
 async function ensurePoppinsFont(pdfMake) {
-  // Si ya está registrada, no hacemos nada
   if (pdfMake.fonts && pdfMake.fonts.Poppins) return
 
-  // Descarga un TTF y devuélvelo en base64
-  const fetchBase64 = async (url) => {
-    const res = await fetch(url, { cache: 'force-cache' })
-    if (!res.ok) throw new Error(`HTTP ${res.status} al cargar ${url}`)
+  const toBase64 = async (assetUrl) => {
+    const res = await fetch(assetUrl, { cache: 'force-cache' })
+    if (!res.ok) throw new Error(`HTTP ${res.status} al cargar ${assetUrl}`)
     const buf = await res.arrayBuffer()
     let binary = ''
     const bytes = new Uint8Array(buf)
@@ -60,41 +61,35 @@ async function ensurePoppinsFont(pdfMake) {
     return btoa(binary)
   }
 
-  // ✅ Paths correctos: carpeta "static" dentro de ofl/poppins
-  const base = 'https://cdn.jsdelivr.net/gh/google/fonts@main/ofl/poppins/static'
-  const urls = {
-    'Poppins-Regular.ttf':     `${base}/Poppins-Regular.ttf`,
-    'Poppins-Bold.ttf':        `${base}/Poppins-Bold.ttf`,
-    'Poppins-Italic.ttf':      `${base}/Poppins-Italic.ttf`,
-    'Poppins-BoldItalic.ttf':  `${base}/Poppins-BoldItalic.ttf`,
-  }
-
-  // Asegura que existe el vfs
   pdfMake.vfs = pdfMake.vfs || {}
 
   try {
-    // Descarga y registra los 4 ficheros
-    const entries = await Promise.all(
-      Object.entries(urls).map(async ([name, url]) => [name, await fetchBase64(url)])
-    )
-    for (const [name, b64] of entries) {
-      pdfMake.vfs[name] = b64
-    }
+    const [reg, bold, semibold] = await Promise.all([
+      toBase64(PoppinsRegular),
+      toBase64(PoppinsBold),
+      toBase64(PoppinsSemiBold),
+    ])
 
-    // Declara la familia Poppins para pdfmake
+    // Registramos los TTF en el vfs (el semibold queda por si lo quieres usar más adelante)
+    pdfMake.vfs['Poppins-Regular.ttf']   = reg
+    pdfMake.vfs['Poppins-Bold.ttf']      = bold
+    pdfMake.vfs['Poppins-SemiBold.ttf']  = semibold
+
+    // Mapeo de la familia: sin archivos itálicos → alias a regular/bold
     pdfMake.fonts = {
       ...(pdfMake.fonts || {}),
       Poppins: {
-        normal: 'Poppins-Regular.ttf',
-        bold: 'Poppins-Bold.ttf',
-        italics: 'Poppins-Italic.ttf',
-        bolditalics: 'Poppins-BoldItalic.ttf',
+        normal:      'Poppins-Regular.ttf',
+        bold:        'Poppins-Bold.ttf',
+        italics:     'Poppins-Regular.ttf', // no tenemos itálica → usa regular
+        bolditalics: 'Poppins-Bold.ttf',    // no tenemos bold italic → usa bold
       },
     }
   } catch (e) {
-    console.warn('No se pudo cargar Poppins, se usará la fuente por defecto.', e)
+    console.warn('No se pudo cargar Poppins local; se usará la fuente por defecto.', e)
   }
 }
+
 
 
 const bullet = (items) =>
