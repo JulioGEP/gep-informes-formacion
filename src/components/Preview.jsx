@@ -125,7 +125,6 @@ export default function Preview(props) {
     alert('No se ha podido generar el PDF.')
   }
 }
-
   const triesLabel = `${dealId ? tries : 0}/${maxTries}`
   const quedanIntentos = dealId ? tries < maxTries : true
 
