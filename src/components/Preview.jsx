@@ -199,21 +199,64 @@ export default function Preview(props) {
 
       <div className="card">
         <div className="card-body">
-          <h5 className="card-title mb-3">Datos generales</h5>
-          <div className="row g-3">
-            <div className="col-md-4"><strong>Nº Presupuesto:</strong> {dealId || '—'}</div>
-            <div className="col-md-4"><strong>Cliente:</strong> {datos?.cliente || '—'}</div>
-            <div className="col-md-4"><strong>CIF:</strong> {datos?.cif || '—'}</div>
-            <div className="col-md-6"><strong>Dirección (Organización):</strong> {datos?.direccionOrg || '—'}</div>
-            <div className="col-md-6"><strong>Dirección de la formación (Sede):</strong> {datos?.sede || '—'}</div>
-            <div className="col-md-4"><strong>Persona de contacto:</strong> {datos?.contacto || '—'}</div>
-            <div className="col-md-4"><strong>Comercial:</strong> {datos?.comercial || '—'}</div>
-            <div className="col-md-4"><strong>Formador/a:</strong> {formador?.nombre || '—'} ({formador?.idioma || 'ES'})</div>
-            <div className="col-md-3"><strong>Fecha:</strong> {datos?.fecha || '—'}</div>
-            <div className="col-md-3"><strong>Sesiones:</strong> {datos?.sesiones || '—'}</div>
-            <div className="col-md-3"><strong>Nº de alumnos:</strong> {datos?.alumnos || '—'}</div>
-            <div className="col-md-3"><strong>Duración (h):</strong> {datos?.duracion || '—'}</div>
-          </div>
+          {/* ===== Datos generales (maquetado como en el Form) ===== */}
+<h5 className="card-title mb-3">Datos generales</h5>
+
+<div className="row g-3 align-items-stretch">
+  {/* Columna izquierda: Datos del cliente */}
+  <div className="col-md-6 d-flex">
+    <div className="border rounded p-3 w-100 h-100">
+      <h6 className="mb-3">Datos del cliente</h6>
+      <div className="row g-2">
+        <div className="col-12">
+          <strong>Nº Presupuesto:</strong> {dealId || '—'}
+        </div>
+        <div className="col-md-7">
+          <strong>Cliente:</strong> {datos?.cliente || '—'}
+        </div>
+        <div className="col-md-5">
+          <strong>CIF:</strong> {datos?.cif || '—'}
+        </div>
+        <div className="col-md-6">
+          <strong>Dirección (Organización):</strong> {datos?.direccionOrg || '—'}
+        </div>
+        <div className="col-md-6">
+          <strong>Dirección de la formación (Sede):</strong> {datos?.sede || '—'}
+        </div>
+        <div className="col-md-6">
+          <strong>Persona de contacto:</strong> {datos?.contacto || '—'}
+        </div>
+        <div className="col-md-6">
+          <strong>Comercial:</strong> {datos?.comercial || '—'}
+        </div>
+      </div>
+    </div>
+  </div>
+
+  {/* Columna derecha: Datos del formador */}
+  <div className="col-md-6 d-flex">
+    <div className="border rounded p-3 w-100 h-100">
+      <h6 className="mb-3">Datos del formador</h6>
+      <div className="row g-2">
+        <div className="col-12">
+          <strong>Formador/a:</strong> {formador?.nombre || '—'} ({formador?.idioma || 'ES'})
+        </div>
+        <div className="col-md-4">
+          <strong>Fecha:</strong> {datos?.fecha || '—'}
+        </div>
+        <div className="col-md-4">
+          <strong>Sesiones:</strong> {datos?.sesiones || '—'}
+        </div>
+        <div className="col-md-4">
+          <strong>Nº de alumnos:</strong> {datos?.alumnos || '—'}
+        </div>
+        <div className="col-md-4">
+          <strong>Duración (h):</strong> {datos?.duracion || '—'}
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
 
           <hr className="my-4" />
           <h5 className="card-title mb-3">Formación realizada</h5>
