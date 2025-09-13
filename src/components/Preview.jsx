@@ -197,7 +197,7 @@ export default function Preview(props) {
                   <div className="col-md-7"><strong>Cliente:</strong> {datos?.cliente || '—'}</div>
                   <div className="col-md-5"><strong>CIF:</strong> {datos?.cif || '—'}</div>
                   <div className="col-md-6"><strong>Dirección fiscal:</strong> {datos?.direccionOrg || '—'}</div>
-                  <div className="col-md-6"><strong>Dirección de la formación:</strong> {datos?.sede || '—'}</div>
+                  <div className="col-md-6"><strong>Dirección formación:</strong> {datos?.sede || '—'}</div>
                   <div className="col-md-6"><strong>Persona de contacto:</strong> {datos?.contacto || '—'}</div>
                   <div className="col-md-6"><strong>Comercial:</strong> {datos?.comercial || '—'}</div>
                 </div>
