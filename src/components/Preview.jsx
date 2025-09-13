@@ -208,12 +208,27 @@ export default function Preview(props) {
               <div className="border rounded p-3 w-100 h-100">
                 <h6 className="mb-3">Datos del formador</h6>
                 <div className="row g-2">
-                  <div className="col-12"><strong>Formador/a:</strong> {formador?.nombre || '—'}</div>
-                  <div className="col-md-4"><strong>Fecha:</strong> {datos?.fecha || '—'}</div>
-                  <div className="col-md-4"><strong>Sesiones:</strong> {datos?.sesiones || '—'}</div>
-                  <div className="col-md-4"><strong>Nº de alumnos:</strong> {datos?.alumnos || '—'}</div>
-                  <div className="col-md-4"><strong>Duración Total(h):</strong> {datos?.duracion || '—'}</div>
-                </div>
+  <div className="col-12">
+    <strong>Formador/a:</strong> {formador?.nombre || '—'}
+  </div>
+
+  {/* Fecha a ancho completo */}
+  <div className="col-12">
+    <strong>Fecha:</strong> {datos?.fecha || '—'}
+  </div>
+
+  {/* Siguiente fila: Sesiones (debajo de Fecha) + resto */}
+  <div className="col-6 col-md-4">
+    <strong>Sesiones:</strong> {datos?.sesiones || '—'}
+  </div>
+  <div className="col-6 col-md-4">
+    <strong>Nº de alumnos:</strong> {datos?.alumnos || '—'}
+  </div>
+  <div className="col-6 col-md-4">
+    <strong>Duración (h):</strong> {datos?.duracion || '—'}
+  </div>
+</div>
+
               </div>
             </div>
           </div>
