@@ -170,11 +170,11 @@ export default function Form({ initial, onNext }) {
                   <input className="form-control" value={datos.contacto} onChange={(e)=>setDatos(d=>({...d, contacto:e.target.value}))} />
                 </div>
                 <div className="col-md-6">
-                  <label className="form-label">Dirección (Organización)</label>
+                  <label className="form-label">Dirección Fiscal</label>
                   <input className="form-control" value={datos.direccionOrg} onChange={(e)=>setDatos(d=>({...d, direccionOrg:e.target.value}))} />
                 </div>
                 <div className="col-md-6">
-                  <label className="form-label">Dirección de la formación (Sede)</label>
+                  <label className="form-label">Dirección de la formación</label>
                   <input className="form-control" value={datos.sede} onChange={(e)=>setDatos(d=>({...d, sede:e.target.value}))} />
                 </div>
               </div>
