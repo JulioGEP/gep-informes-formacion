@@ -256,139 +256,149 @@ export default function Form({ initial, onNext }) {
       {/* ===== FORMACIÓN ===== */}
       <div>
         <h2 className="h5">Formación realizada</h2>
-        <div className="card"><div className="card-body">
-          <div className="row g-3">
-            <div className="col-md-6">
-              <label className="form-label">Formación</label>
-              <select className="form-select" value={selTitulo} onChange={(e)=>setSelTitulo(e.target.value)}>
-                <option value="">— Selecciona —</option>
-                {opcionesOrdenadas.map(t => <option key={t} value={t}>{t}</option>)}
-              </select>
-            </div>
-          </div>
-
-          <div className="row g-4 mt-1">
-            <div className="col-md-6">
-              <label className="form-label">Parte Teórica</label>
-              <div className="d-grid gap-2">
-                {(datos.contenidoTeorica || []).map((v,i)=>(
-                  <div className="input-group" key={`t-${i}`}>
-                    <input className="form-control" value={v}
-                      onChange={(e)=>setDatos(d=>{ const arr=[...(d.contenidoTeorica||[])]; arr[i]=e.target.value; return {...d, contenidoTeorica:arr}; })} />
-                    <button type="button" className="btn btn-outline-danger" onClick={()=>setDatos(d=>({...d, contenidoTeorica:d.contenidoTeorica.filter((_,idx)=>idx!==i)}))}>Eliminar</button>
-                  </div>
-                ))}
-                <button type="button" className="btn btn-outline-primary" onClick={addTeorica}>Añadir punto</button>
+        <div className="card">
+          <div className="card-body">
+            <div className="row g-3">
+              <div className="col-md-6">
+                <label className="form-label">Formación</label>
+                <select className="form-select" value={selTitulo} onChange={(e)=>setSelTitulo(e.target.value)}>
+                  <option value="">— Selecciona —</option>
+                  {opcionesOrdenadas.map(t => <option key={t} value={t}>{t}</option>)}
+                </select>
               </div>
             </div>
 
-            <div className="col-md-6">
-              <label className="form-label">Parte Práctica</label>
-              <div className="d-grid gap-2">
-                {(datos.contenidoPractica || []).map((v,i)=>(
-                  <div className="input-group" key={`p-${i}`}>
-                    <input className="form-control" value={v}
-                      onChange={(e)=>setDatos(d=>{ const arr=[...(d.contenidoPractica||[])]; arr[i]=e.target.value; return {...d, contenidoPractica:arr}; })} />
-                    <button type="button" className="btn btn-outline-danger" onClick={()=>setDatos(d=>({...d, contenidoPractica:d.contenidoPractica.filter((_,idx)=>idx!==i)}))}>Eliminar</button>
-                  </div>
-                ))}
-                <button type="button" className="btn btn-outline-primary" onClick={addPractica}>Añadir punto</button>
+            <div className="row g-4 mt-1">
+              <div className="col-md-6">
+                <label className="form-label">Parte Teórica</label>
+                <div className="d-grid gap-2">
+                  {(datos.contenidoTeorica || []).map((v,i)=>(
+                    <div className="input-group" key={`t-${i}`}>
+                      <input className="form-control" value={v}
+                        onChange={(e)=>setDatos(d=>{ const arr=[...(d.contenidoTeorica||[])]; arr[i]=e.target.value; return {...d, contenidoTeorica:arr}; })} />
+                      <button type="button" className="btn btn-outline-danger" onClick={()=>setDatos(d=>({...d, contenidoTeorica:d.contenidoTeorica.filter((_,idx)=>idx!==i)}))}>Eliminar</button>
+                    </div>
+                  ))}
+                  <button type="button" className="btn btn-outline-primary" onClick={addTeorica}>Añadir punto</button>
+                </div>
+              </div>
+
+              <div className="col-md-6">
+                <label className="form-label">Parte Práctica</label>
+                <div className="d-grid gap-2">
+                  {(datos.contenidoPractica || []).map((v,i)=>(
+                    <div className="input-group" key={`p-${i}`}>
+                      <input className="form-control" value={v}
+                        onChange={(e)=>setDatos(d=>{ const arr=[...(d.contenidoPractica||[])]; arr[i]=e.target.value; return {...d, contenidoPractica:arr}; })} />
+                      <button type="button" className="btn btn-outline-danger" onClick={()=>setDatos(d=>({...d, contenidoPractica:d.contenidoPractica.filter((_,idx)=>idx!==i)}))}>Eliminar</button>
+                    </div>
+                  ))}
+                  <button type="button" className="btn btn-outline-primary" onClick={addPractica}>Añadir punto</button>
+                </div>
               </div>
             </div>
-          </div>
 
-          <div className="form-text mt-2">
-            Selecciona la formación realizada. Se añadirán sus “Parte teórica” y “Parte práctica” al borrador. Si falta algún punto, añádelo.
+            <div className="form-text mt-2">
+              Selecciona la formación realizada. Se añadirán sus “Parte teórica” y “Parte práctica” al borrador. Si falta algún punto, añádelo.
+            </div>
           </div>
-        </div></div>
+        </div>
       </div>
 
       {/* ===== VALORACIÓN ===== */}
       <div>
         <h2 className="h5">Valoración</h2>
-        <div className="card"><div className="card-body">
-          <div className="row g-3">
-            <div className="col-md-4">
-              <div className="input-group">
-                <span className="input-group-text">Participación</span>
-                <input type="number" min="1" max="10" className="form-control"
-                  value={datos.escalas.participacion}
-                  onChange={(e)=>setDatos(d=>({...d, escalas:{...d.escalas, participacion:Number(e.target.value||0)}}))} />
-              </div>
-            </div>
-            <div className="col-md-4">
-              <div className="input-group">
-                <span className="input-group-text">Compromiso</span>
-                <input type="number" min="1" max="10" className="form-control"
-                  value={datos.escalas.compromiso}
-                  onChange={(e)=>setDatos(d=>({...d, escalas:{...d.escalas, compromiso:Number(e.target.value||0)}}))} />
-              </div>
-            </div>
-            <div className="col-md-4">
-              <div className="input-group">
-                <span className="input-group-text">Superación</span>
-                <input type="number" min="1" max="10" className="form-control"
-                  value={datos.escalas.superacion}
-                  onChange={(e)=>setDatos(d=>({...d, escalas:{...d.escalas, superacion:Number(e.target.value||0)}}))} />
-              </div>
-            </div>
-
-            <div className="col-md-6">
-              <label className="form-label">Puntos fuertes de los alumnos a destacar</label>
-              <textarea className="form-control" value={datos.comentarios.c11}
-                onChange={(e)=>setDatos(d=>({...d, comentarios:{...d.comentarios, c11:e.target.value}}))} />
-            </div>
-            <div className="col-md-6">
-              <label className="form-label">Incidencias: Referentes a la asistencia</label>
-              <textarea className="form-control" value={datos.comentarios.c12}
-                onChange={(e)=>setDatos(d=>({...d, comentarios:{...d.comentarios, c12:e.target.value}}))} />
-            </div>
-            <div className="col-md-6">
-              <label className="form-label">Incidencias: Referentes a la puntualidad</label>
-              <textarea className="form-control" value={datos.comentarios.c13}
-                onChange={(e)=>setDatos(d=>({...d, comentarios:{...d.comentarios, c13:e.target.value}}))} />
-            </div>
-            <div className="col-md-6">
-              <label className="form-label">Incidencias: Accidentes</label>
-              <textarea className="form-control" value={datos.comentarios.c14}
-                onChange={(e)=>setDatos(d=>({...d, comentarios:{...d.comentarios, c14:e.target.value}}))} />
-            </div>
-            <div className="col-md-4">
-              <label className="form-label">Recomendaciones: Formaciones futuras</label>
-              <textarea className="form-control" value={datos.comentarios.c15}
-                onChange={(e)=>setDatos(d=>({...d, comentarios:{...d.comentarios, c15:e.target.value}}))} />
-            </div>
-            <div className="col-md-4">
-              <label className="form-label">Recomendaciones: Del entorno de trabajo</label>
-              <textarea className="form-control" value={datos.comentarios.c16}
-                onChange={(e)=>setDatos(d=>({...d, comentarios:{...d.comentarios, c16:e.target.value}}))} />
-            </div>
-            <div className="col-md-4">
-              <label className="form-label">Recomendaciones: De materiales</label>
-              <textarea className="form-control" value={datos.comentarios.c17}
-                onChange={(e)=>setDatos(d=>({...d, comentarios:{...d.comentarios, c17:e.target.value}}))} />
-            </div>
-
-            <div className="col-12">
-              <label className="form-label">Imágenes de apoyo (opcional)</label>
-              <input type="file" accept="image/*" multiple className="form-control" onChange={addImagenes} />
-              {imagenes.length > 0 && (
-                <div className="mt-2 d-flex flex-wrap gap-2">
-                  {imagenes.map((img, idx) => (
-                    <div key={idx} className="border rounded p-1" style={{ width: 120 }}>
-                      <img src={img.dataUrl} alt={img.name} className="img-fluid rounded" />
-                      <div className="d-flex justify-content-between align-items-center mt-1">
-                        <small className="text-truncate" style={{ maxWidth: 80 }} title={img.name}>{img.name}</small>
-                        <button type="button" className="btn btn-sm btn-outline-danger" onClick={()=>removeImagen(idx)}>x</button>
-                      </div>
-                    </div>
-                  ))}
+        <div className="card">
+          <div className="card-body">
+            {/* Escalas */}
+            <div className="row g-3">
+              <div className="col-md-4">
+                <div className="input-group">
+                  <span className="input-group-text">Participación</span>
+                  <input type="number" min="1" max="10" className="form-control"
+                    value={datos.escalas.participacion}
+                    onChange={(e)=>setDatos(d=>({...d, escalas:{...d.escalas, participacion:Number(e.target.value||0)}}))} />
                 </div>
-              )}
+              </div>
+              <div className="col-md-4">
+                <div className="input-group">
+                  <span className="input-group-text">Compromiso</span>
+                  <input type="number" min="1" max="10" className="form-control"
+                    value={datos.escalas.compromiso}
+                    onChange={(e)=>setDatos(d=>({...d, escalas:{...d.escalas, compromiso:Number(e.target.value||0)}}))} />
+                </div>
+              </div>
+              <div className="col-md-4">
+                <div className="input-group">
+                  <span className="input-group-text">Superación</span>
+                  <input type="number" min="1" max="10" className="form-control"
+                    value={datos.escalas.superacion}
+                    onChange={(e)=>setDatos(d=>({...d, escalas:{...d.escalas, superacion:Number(e.target.value||0)}}))} />
+                </div>
+              </div>
             </div>
-          </div></div>
+
+            {/* Preguntas + Imágenes */}
+            <div className="row g-3 mt-1">
+              <div className="col-md-6">
+                <label className="form-label">Puntos fuertes de los alumnos a destacar</label>
+                <textarea className="form-control" value={datos.comentarios.c11}
+                  onChange={(e)=>setDatos(d=>({...d, comentarios:{...d.comentarios, c11:e.target.value}}))} />
+              </div>
+              <div className="col-md-6">
+                <label className="form-label">Incidencias: Referentes a la asistencia</label>
+                <textarea className="form-control" value={datos.comentarios.c12}
+                  onChange={(e)=>setDatos(d=>({...d, comentarios:{...d.comentarios, c12:e.target.value}}))} />
+              </div>
+              <div className="col-md-6">
+                <label className="form-label">Incidencias: Referentes a la puntualidad</label>
+                <textarea className="form-control" value={datos.comentarios.c13}
+                  onChange={(e)=>setDatos(d=>({...d, comentarios:{...d.comentarios, c13:e.target.value}}))} />
+              </div>
+              <div className="col-md-6">
+                <label className="form-label">Incidencias: Accidentes</label>
+                <textarea className="form-control" value={datos.comentarios.c14}
+                  onChange={(e)=>setDatos(d=>({...d, comentarios:{...d.comentarios, c14:e.target.value}}))} />
+              </div>
+              <div className="col-md-4">
+                <label className="form-label">Recomendaciones: Formaciones futuras</label>
+                <textarea className="form-control" value={datos.comentarios.c15}
+                  onChange={(e)=>setDatos(d=>({...d, comentarios:{...d.comentarios, c15:e.target.value}}))} />
+              </div>
+              <div className="col-md-4">
+                <label className="form-label">Recomendaciones: Del entorno de trabajo</label>
+                <textarea className="form-control" value={datos.comentarios.c16}
+                  onChange={(e)=>setDatos(d=>({...d, comentarios:{...d.comentarios, c16:e.target.value}}))} />
+              </div>
+              <div className="col-md-4">
+                <label className="form-label">Recomendaciones: De materiales</label>
+                <textarea className="form-control" value={datos.comentarios.c17}
+                  onChange={(e)=>setDatos(d=>({...d, comentarios:{...d.comentarios, c17:e.target.value}}))} />
+              </div>
+
+              <div className="col-12">
+                <label className="form-label">Imágenes de apoyo (opcional)</label>
+                <input type="file" accept="image/*" multiple className="form-control" onChange={addImagenes} />
+                {imagenes.length > 0 && (
+                  <div className="mt-2 d-flex flex-wrap gap-2">
+                    {imagenes.map((img, idx) => (
+                      <div key={idx} className="border rounded p-1" style={{ width: 120 }}>
+                        <img src={img.dataUrl} alt={img.name} className="img-fluid rounded" />
+                        <div className="d-flex justify-content-between align-items-center mt-1">
+                          <small className="text-truncate" style={{ maxWidth: 80 }} title={img.name}>{img.name}</small>
+                          <button type="button" className="btn btn-sm btn-outline-danger" onClick={()=>removeImagen(idx)}>x</button>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+            </div>
+          </div>
+        </div>
       </div>
 
+      {/* Botón Siguiente */}
       <div className="d-flex justify-content-end">
         <button type="submit" className="btn btn-primary">Siguiente</button>
       </div>
