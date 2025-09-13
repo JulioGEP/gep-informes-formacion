@@ -1,7 +1,7 @@
 // src/components/Form.jsx
 import React, { useEffect, useMemo, useRef, useState } from 'react'
 import plantillasBase from '../utils/plantillas.json'
-import logoImg from '../assets/logo-gep.png' // <-- asegúrate de que exista
+import logoImg from '../assets/logo-gep.png'
 
 const fileToDataURL = (file) =>
   new Promise((res, rej) => {
@@ -29,8 +29,8 @@ export default function Form({ initial, onNext }) {
     idioma: initial?.datos?.idioma || 'ES',
     fecha: initial?.datos?.fecha || '',
     sesiones: initial?.datos?.sesiones ?? 1,
-    alumnos: initial?.datos?.alumnos || '',      // numérico en UI
-    duracion: initial?.datos?.duracion || '',    // numérico en UI
+    alumnos: initial?.datos?.alumnos || '',
+    duracion: initial?.datos?.duracion || '',
     formacionTitulo: initial?.datos?.formacionTitulo || '',
     contenidoTeorica: initial?.datos?.contenidoTeorica || [],
     contenidoPractica: initial?.datos?.contenidoPractica || [],
@@ -41,7 +41,7 @@ export default function Form({ initial, onNext }) {
   const [selTitulo, setSelTitulo] = useState(datos.formacionTitulo || '')
   const [loadingDeal, setLoadingDeal] = useState(false)
 
-  // Reset de intentos/HTML si cambia el dealId
+  // Reset intentos/HTML al cambiar dealId
   useEffect(() => {
     if (prevDealIdRef.current !== dealId) {
       try {
@@ -120,21 +120,15 @@ export default function Form({ initial, onNext }) {
   return (
     <form className="d-grid gap-4" onSubmit={onSubmit}>
       {/* Header con logo y título */}
-<div
-  className="border-bottom d-flex align-items-center gap-3 sticky-top bg-white py-3 my-3"
-  style={{ top: 0, zIndex: 10 }}
->
-  <img
-    src={logoImg}
-    alt="GEP Group"
-    style={{ width: 180, height: 52, objectFit: 'contain', display: 'block' }}
-  />
-  <div className="flex-grow-1">
-    <h1 className="h5 mb-0">Informe de Formación</h1>
-    <small className="text-muted">GEP Group — Formación y Servicios</small>
-  </div>
-</div>
-
+      <div
+        className="border-bottom d-flex align-items-center gap-3 sticky-top bg-white py-3 my-3"
+        style={{ top: 0, zIndex: 10 }}
+      >
+        <img
+          src={logoImg}
+          alt="GEP Group"
+          style={{ width: 180, height: 52, objectFit: 'contain', display: 'block' }}
+        />
         <div className="flex-grow-1">
           <h1 className="h5 mb-0">Informe de Formación</h1>
           <small className="text-muted">GEP Group — Formación y Servicios</small>
@@ -179,7 +173,7 @@ export default function Form({ initial, onNext }) {
                   <input className="form-control" value={datos.contacto} onChange={(e)=>setDatos(d=>({...d, contacto:e.target.value}))} />
                 </div>
                 <div className="col-md-6">
-                  <label className="form-label">Dirección Fiscal</label>
+                  <label className="form-label">Dirección fiscal</label>
                   <input className="form-control" value={datos.direccionOrg} onChange={(e)=>setDatos(d=>({...d, direccionOrg:e.target.value}))} />
                 </div>
                 <div className="col-md-6">
@@ -313,48 +307,32 @@ export default function Form({ initial, onNext }) {
       <div>
         <h2 className="h5">Valoración</h2>
         <div className="card"><div className="card-body">
-          {/* Escalas numéricas */}
           <div className="row g-3">
             <div className="col-md-4">
               <div className="input-group">
                 <span className="input-group-text">Participación</span>
-                <input
-                  type="number" min="1" max="10" className="form-control"
+                <input type="number" min="1" max="10" className="form-control"
                   value={datos.escalas.participacion}
-                  onChange={(e)=>setDatos(d=>({
-                    ...d, escalas:{...d.escalas, participacion:Number(e.target.value||0)}
-                  }))}
-                />
+                  onChange={(e)=>setDatos(d=>({...d, escalas:{...d.escalas, participacion:Number(e.target.value||0)}}))} />
               </div>
             </div>
             <div className="col-md-4">
               <div className="input-group">
                 <span className="input-group-text">Compromiso</span>
-                <input
-                  type="number" min="1" max="10" className="form-control"
+                <input type="number" min="1" max="10" className="form-control"
                   value={datos.escalas.compromiso}
-                  onChange={(e)=>setDatos(d=>({
-                    ...d, escalas:{...d.escalas, compromiso:Number(e.target.value||0)}
-                  }))}
-                />
+                  onChange={(e)=>setDatos(d=>({...d, escalas:{...d.escalas, compromiso:Number(e.target.value||0)}}))} />
               </div>
             </div>
             <div className="col-md-4">
               <div className="input-group">
                 <span className="input-group-text">Superación</span>
-                <input
-                  type="number" min="1" max="10" className="form-control"
+                <input type="number" min="1" max="10" className="form-control"
                   value={datos.escalas.superacion}
-                  onChange={(e)=>setDatos(d=>({
-                    ...d, escalas:{...d.escalas, superacion:Number(e.target.value||0)}
-                  }))}
-                />
+                  onChange={(e)=>setDatos(d=>({...d, escalas:{...d.escalas, superacion:Number(e.target.value||0)}}))} />
               </div>
             </div>
-          </div>
 
-          {/* Preguntas abiertas */}
-          <div className="row g-3 mt-1">
             <div className="col-md-6">
               <label className="form-label">Puntos fuertes de los alumnos a destacar</label>
               <textarea className="form-control" value={datos.comentarios.c11}
@@ -391,7 +369,6 @@ export default function Form({ initial, onNext }) {
                 onChange={(e)=>setDatos(d=>({...d, comentarios:{...d.comentarios, c17:e.target.value}}))} />
             </div>
 
-            {/* Imágenes */}
             <div className="col-12">
               <label className="form-label">Imágenes de apoyo (opcional)</label>
               <input type="file" accept="image/*" multiple className="form-control" onChange={addImagenes} />
@@ -409,8 +386,7 @@ export default function Form({ initial, onNext }) {
                 </div>
               )}
             </div>
-          </div>
-        </div></div>
+          </div></div>
       </div>
 
       <div className="d-flex justify-content-end">
