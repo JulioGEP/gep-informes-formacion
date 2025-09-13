@@ -3,6 +3,7 @@ import React, { useEffect, useMemo, useRef, useState } from 'react'
 import { pdf } from '@react-pdf/renderer'
 import PdfReport from './PdfReport.jsx'
 import logoImg from '../assets/logo-gep.png'
+import { generateReportPdfmake } from '../pdf/reportPdfmake'
 
 const maxTries = 3
 const triesKey = (dealId) => `aiAttempts:${dealId || 'sin'}`
@@ -117,33 +118,13 @@ export default function Preview(props) {
     .trim()
 
   const descargarPDF = async () => {
-    try {
-      const aiText = aiHtml ? stripHtml(aiHtml) : ''
-      const blob = await pdf(
-        <PdfReport
-          dealId={dealId}
-          formador={formador}
-          datos={datos}
-          imagenes={imagenes}
-          aiText={aiText}
-        />
-      ).toBlob()
-
-      const url = URL.createObjectURL(blob)
-      const a = document.createElement('a')
-      const fecha = (datos?.fecha || '').slice(0, 10)
-      const cliente = (datos?.cliente || '').replace(/[^\w\s\-._]/g, '').trim()
-      const titulo = (datos?.formacionTitulo || 'Formación').replace(/[^\w\s\-._]/g, '').trim()
-      a.href = url
-      a.download = `GEP Group – ${dealId || 'SinPresu'} – ${cliente || 'Cliente'} – ${titulo} – ${fecha || 'fecha'}.pdf`
-      document.body.appendChild(a); a.click(); a.remove()
-      URL.revokeObjectURL(url)
-      try { sessionStorage.removeItem('tmpImages') } catch {}
-    } catch (e) {
-      console.error('Error generando PDF:', e)
-      alert('No se ha podido generar el PDF.')
-    }
+  try {
+    await generateReportPdfmake({ dealId, datos, formador, imagenes })
+  } catch (e) {
+    console.error('Error generando PDF (pdfmake):', e)
+    alert('No se ha podido generar el PDF.')
   }
+}
 
   const triesLabel = `${dealId ? tries : 0}/${maxTries}`
   const quedanIntentos = dealId ? tries < maxTries : true
