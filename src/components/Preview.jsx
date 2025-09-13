@@ -221,9 +221,11 @@ export default function Preview(props) {
   <div className="col-6 col-md-4">
     <strong>Sesiones:</strong> {datos?.sesiones || '—'}
   </div>
+                  
   <div className="col-6 col-md-4">
     <strong>Nº de alumnos:</strong> {datos?.alumnos || '—'}
   </div>
+                  
   <div className="col-6 col-md-4">
     <strong>Duración (h):</strong> {datos?.duracion || '—'}
   </div>
