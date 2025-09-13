@@ -9,21 +9,17 @@ const triesKey = (dealId) => `aiAttempts:${dealId || 'sin'}`
 const htmlKey  = (dealId) => `aiHtml:${dealId || 'sin'}`
 
 /**
- * Caja editable NO controlada (sin saltos de cursor):
- * - Inicializa el innerHTML con initialHtml o sessionStorage.
- * - En cada cambio guarda en sessionStorage y notifica al padre via onChange.
- * - No re-renderiza el contenido en cada tecla (por eso no “salta” arriba).
+ * Editor NO controlado para el HTML de IA (sin saltos de cursor):
+ * - Inicializa innerHTML con initialHtml (o lo guardado).
+ * - Guarda en sessionStorage y notifica onChange(html) en cada cambio.
  */
 function EditableHtml({ dealId, initialHtml, onChange }) {
   const ref = useRef(null)
 
-  // Poner el HTML inicial (mount y cuando cambie initialHtml, p. ej. tras IA)
   useEffect(() => {
-    if (!ref.current) return
-    ref.current.innerHTML = initialHtml || ''
+    if (ref.current) ref.current.innerHTML = initialHtml || ''
   }, [initialHtml, dealId])
 
-  // Handler de entrada de texto
   const handleInput = () => {
     const html = ref.current?.innerHTML || ''
     try { sessionStorage.setItem(htmlKey(dealId), html) } catch {}
@@ -42,7 +38,7 @@ function EditableHtml({ dealId, initialHtml, onChange }) {
   )
 }
 
-// Acepta draft o data (compat)
+// Acepta draft o data (compat con tu App)
 export default function Preview(props) {
   const { onBack } = props
   const draft = props.draft ?? props.data ?? {}
@@ -154,22 +150,11 @@ export default function Preview(props) {
 
   return (
     <div className="d-grid gap-4">
-      {/* Header con logo y título */}
-<div
-  className="border-bottom d-flex align-items-center gap-3 sticky-top bg-white py-3 my-3"
-  style={{ top: 0, zIndex: 10 }}
->
-  <img
-    src={logoImg}
-    alt="GEP Group"
-    style={{ width: 180, height: 52, objectFit: 'contain', display: 'block' }}
-  />
-  <div className="flex-grow-1">
-    <h1 className="h5 mb-0">Informe de Formación</h1>
-    <small className="text-muted">GEP Group — Formación y Servicios</small>
-  </div>
-</div>
-
+      {/* Header con margen superior e inferior simétrico */}
+      <div
+        className="border-bottom d-flex align-items-center gap-3 sticky-top bg-white py-3 my-3"
+        style={{ top: 0, zIndex: 10 }}
+      >
         <img
           src={logoImg}
           alt="GEP Group"
@@ -198,102 +183,40 @@ export default function Preview(props) {
         </div>
       </div>
 
-      {/* Aviso de intentos */}
-      {dealId && tries >= maxTries && (
-        <div className="text-muted small">
-          Has agotado las 3 mejoras para este presupuesto.{' '}
-          <button className="btn btn-link p-0 align-baseline" onClick={resetLocalForDeal}>
-            Reiniciar intentos (solo pruebas)
-          </button>
-        </div>
-      )}
-
       <div className="card">
         <div className="card-body">
-         {/* ===== Datos generales (maquetado como en el Form) ===== */}
-<h5 className="card-title mb-3">Datos generales</h5>
-
-<div className="row g-3 align-items-stretch">
-  {/* Columna izquierda: Datos del cliente */}
-  <div className="col-md-6 d-flex">
-    <div className="border rounded p-3 w-100 h-100">
-      <h6 className="mb-3">Datos del cliente</h6>
-      <div className="row g-2">
-        <div className="col-12">
-          <strong>Nº Presupuesto:</strong> {dealId || '—'}
-        </div>
-        <div className="col-md-7">
-          <strong>Cliente:</strong> {datos?.cliente || '—'}
-        </div>
-        <div className="col-md-5">
-          <strong>CIF:</strong> {datos?.cif || '—'}
-        </div>
-        <div className="col-md-6">
-          <strong>Dirección fiscal:</strong> {datos?.direccionOrg || '—'}
-        </div>
-        <div className="col-md-6">
-          <strong>Dirección de la formación:</strong> {datos?.sede || '—'}
-        </div>
-        <div className="col-md-6">
-          <strong>Persona de contacto:</strong> {datos?.contacto || '—'}
-        </div>
-        <div className="col-md-6">
-          <strong>Comercial:</strong> {datos?.comercial || '—'}
-        </div>
-      </div>
-    </div>
-  </div>
-
-  {/* Columna derecha: Datos del formador */}
-  <div className="col-md-6 d-flex">
-    <div className="border rounded p-3 w-100 h-100">
-      <h6 className="mb-3">Datos del formador</h6>
-      <div className="row g-2">
-        <div className="col-12">
-          <strong>Formador/a:</strong> {formador?.nombre || '—'}
-        </div>
-        <div className="col-md-4">
-          <strong>Fecha:</strong> {datos?.fecha || '—'}
-        </div>
-        <div className="col-md-4">
-          <strong>Sesiones:</strong> {datos?.sesiones || '—'}
-        </div>
-        <div className="col-md-4">
-          <strong>Nº de alumnos:</strong> {datos?.alumnos || '—'}
-        </div>
-        <div className="col-md-4">
-          <strong>Duración (h):</strong> {datos?.duracion || '—'}
-        </div>
-      </div>
-    </div>
-  </div>
-</div>
-
-
-  {/* Columna derecha: Datos del formador */}
-  <div className="col-md-6 d-flex">
-    <div className="border rounded p-3 w-100 h-100">
-      <h6 className="mb-3">Datos del formador</h6>
-      <div className="row g-2">
-        <div className="col-12">
-          <strong>Formador/a:</strong> {formador?.nombre || '—'} ({formador?.idioma || 'ES'})
-        </div>
-        <div className="col-md-4">
-          <strong>Fecha:</strong> {datos?.fecha || '—'}
-        </div>
-        <div className="col-md-4">
-          <strong>Sesiones:</strong> {datos?.sesiones || '—'}
-        </div>
-        <div className="col-md-4">
-          <strong>Nº de alumnos:</strong> {datos?.alumnos || '—'}
-        </div>
-        <div className="col-md-4">
-          <strong>Duración (h):</strong> {datos?.duracion || '—'}
-        </div>
-      </div>
-    </div>
-  </div>
-</div>
+          {/* ===== Datos generales (dos columnas, textos pedidos) ===== */}
+          <h5 className="card-title mb-3">Datos generales</h5>
+          <div className="row g-3 align-items-stretch">
+            {/* Izquierda: Cliente */}
+            <div className="col-md-6 d-flex">
+              <div className="border rounded p-3 w-100 h-100">
+                <h6 className="mb-3">Datos del cliente</h6>
+                <div className="row g-2">
+                  <div className="col-12"><strong>Nº Presupuesto:</strong> {dealId || '—'}</div>
+                  <div className="col-md-7"><strong>Cliente:</strong> {datos?.cliente || '—'}</div>
+                  <div className="col-md-5"><strong>CIF:</strong> {datos?.cif || '—'}</div>
+                  <div className="col-md-6"><strong>Dirección fiscal:</strong> {datos?.direccionOrg || '—'}</div>
+                  <div className="col-md-6"><strong>Dirección de la formación:</strong> {datos?.sede || '—'}</div>
+                  <div className="col-md-6"><strong>Persona de contacto:</strong> {datos?.contacto || '—'}</div>
+                  <div className="col-md-6"><strong>Comercial:</strong> {datos?.comercial || '—'}</div>
+                </div>
+              </div>
+            </div>
+            {/* Derecha: Formador */}
+            <div className="col-md-6 d-flex">
+              <div className="border rounded p-3 w-100 h-100">
+                <h6 className="mb-3">Datos del formador</h6>
+                <div className="row g-2">
+                  <div className="col-12"><strong>Formador/a:</strong> {formador?.nombre || '—'}</div>
+                  <div className="col-md-4"><strong>Fecha:</strong> {datos?.fecha || '—'}</div>
+                  <div className="col-md-4"><strong>Sesiones:</strong> {datos?.sesiones || '—'}</div>
+                  <div className="col-md-4"><strong>Nº de alumnos:</strong> {datos?.alumnos || '—'}</div>
+                  <div className="col-md-4"><strong>Duración (h):</strong> {datos?.duracion || '—'}</div>
+                </div>
+              </div>
+            </div>
+          </div>
 
           <hr className="my-4" />
           <h5 className="card-title mb-3">Formación realizada</h5>
