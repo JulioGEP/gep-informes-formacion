@@ -44,12 +44,15 @@ async function ensureHtmlToPdfMake() {
   return window.htmlToPdfmake
 }
 
-// Cargar Poppins (TTF) en pdfMake.vfs y registrar fuentes
+// Reemplaza POR COMPLETO tu ensurePoppinsFont con esto:
 async function ensurePoppinsFont(pdfMake) {
+  // Si ya está registrada, no hacemos nada
   if (pdfMake.fonts && pdfMake.fonts.Poppins) return
 
+  // Descarga un TTF y devuélvelo en base64
   const fetchBase64 = async (url) => {
-    const res = await fetch(url)
+    const res = await fetch(url, { cache: 'force-cache' })
+    if (!res.ok) throw new Error(`HTTP ${res.status} al cargar ${url}`)
     const buf = await res.arrayBuffer()
     let binary = ''
     const bytes = new Uint8Array(buf)
@@ -57,23 +60,28 @@ async function ensurePoppinsFont(pdfMake) {
     return btoa(binary)
   }
 
-  const base = 'https://cdn.jsdelivr.net/gh/google/fonts/ofl/poppins'
+  // ✅ Paths correctos: carpeta "static" dentro de ofl/poppins
+  const base = 'https://cdn.jsdelivr.net/gh/google/fonts@main/ofl/poppins/static'
   const urls = {
-    'Poppins-Regular.ttf': `${base}/Poppins-Regular.ttf`,
-    'Poppins-Bold.ttf': `${base}/Poppins-Bold.ttf`,
-    'Poppins-Italic.ttf': `${base}/Poppins-Italic.ttf`,
-    'Poppins-BoldItalic.ttf': `${base}/Poppins-BoldItalic.ttf`,
+    'Poppins-Regular.ttf':     `${base}/Poppins-Regular.ttf`,
+    'Poppins-Bold.ttf':        `${base}/Poppins-Bold.ttf`,
+    'Poppins-Italic.ttf':      `${base}/Poppins-Italic.ttf`,
+    'Poppins-BoldItalic.ttf':  `${base}/Poppins-BoldItalic.ttf`,
   }
 
-  // Crear vfs si no existe
+  // Asegura que existe el vfs
   pdfMake.vfs = pdfMake.vfs || {}
 
-  // Intentar cargar; si falla, seguimos con Roboto por defecto
   try {
+    // Descarga y registra los 4 ficheros
     const entries = await Promise.all(
       Object.entries(urls).map(async ([name, url]) => [name, await fetchBase64(url)])
     )
-    for (const [name, b64] of entries) pdfMake.vfs[name] = b64
+    for (const [name, b64] of entries) {
+      pdfMake.vfs[name] = b64
+    }
+
+    // Declara la familia Poppins para pdfmake
     pdfMake.fonts = {
       ...(pdfMake.fonts || {}),
       Poppins: {
@@ -87,6 +95,7 @@ async function ensurePoppinsFont(pdfMake) {
     console.warn('No se pudo cargar Poppins, se usará la fuente por defecto.', e)
   }
 }
+
 
 const bullet = (items) =>
   (items || [])
