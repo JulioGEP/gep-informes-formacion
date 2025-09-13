@@ -212,7 +212,7 @@ export default function Preview(props) {
                   <div className="col-md-4"><strong>Fecha:</strong> {datos?.fecha || '—'}</div>
                   <div className="col-md-4"><strong>Sesiones:</strong> {datos?.sesiones || '—'}</div>
                   <div className="col-md-4"><strong>Nº de alumnos:</strong> {datos?.alumnos || '—'}</div>
-                  <div className="col-md-4"><strong>Duración (h):</strong> {datos?.duracion || '—'}</div>
+                  <div className="col-md-4"><strong>Duración Total(h):</strong> {datos?.duracion || '—'}</div>
                 </div>
               </div>
             </div>
