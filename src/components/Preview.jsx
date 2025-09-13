@@ -156,9 +156,9 @@ export default function Preview(props) {
     <div className="d-grid gap-4">
       {/* Header igual que en el Form */}
       <div
-        className="border-bottom pb-2 d-flex align-items-center gap-3 sticky-top bg-white"
-        style={{ top: 0, zIndex: 10 }}
-      >
+  className="border-bottom d-flex align-items-center gap-3 sticky-top bg-white py-3 my-3"
+  style={{ top: 0, zIndex: 10 }}
+>
         <img
           src={logoImg}
           alt="GEP Group"
