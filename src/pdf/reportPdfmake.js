@@ -2,7 +2,10 @@
 import pdfMake from 'pdfmake/build/pdfmake'
 import pdfFonts from 'pdfmake/build/vfs_fonts'
 import htmlToPdfmake from 'html-to-pdfmake'
-import logoImg from '../assets/logo-gep.png'
+
+// Assets
+import headerImg from '../assets/pdf/header.png'
+import footerImg from '../assets/pdf/footer.png'
 
 pdfMake.vfs = pdfFonts.pdfMake.vfs
 
@@ -18,14 +21,12 @@ const toDataURL = async (url) => {
   })
 }
 
-const bulletList = (items) =>
+const bullet = (items) =>
   (items || [])
     .filter((s) => (s || '').trim())
-    .map((s) => ({ text: s.trim(), margin: [0, 2, 0, 2] }))
+    .map((s) => s.trim())
 
-const kv = (label, value) => ([
-  { text: `${label}: `, bold: true }, { text: value || '—' }
-])
+const kv = (label, value) => [{ text: `${label}: `, bold: true }, { text: value || '—' }]
 
 const chunk = (arr = [], size = 2) => {
   const out = []
@@ -33,211 +34,270 @@ const chunk = (arr = [], size = 2) => {
   return out
 }
 
-const buildDocDefinition = ({ dealId, datos, formador, imagenes, aiHtml, logoDataUrl }) => {
-  const teorica = bulletList(datos?.contenidoTeorica)
-  const practica = bulletList(datos?.contenidoPractica)
+const buildDocDefinition = ({
+  dealId,
+  datos,
+  formador,
+  imagenes,
+  aiHtml,
+  headerDataUrl,
+  footerDataUrl,
+}) => {
+  const teorica = bullet(datos?.contenidoTeorica)
+  const practica = bullet(datos?.contenidoPractica)
 
-  // IA: convertir HTML editable a contenido pdfmake (mantiene negritas, listas, etc.)
+  // IA → contenido pdfmake (sin fondo)
   const aiContent = aiHtml
-    ? htmlToPdfmake(aiHtml, { defaultStyles: { b: { bold: true }, strong: { bold: true }, i: { italics: true } } })
+    ? htmlToPdfmake(aiHtml, {
+        defaultStyles: {
+          b: { bold: true },
+          strong: { bold: true },
+          i: { italics: true },
+        },
+      })
     : null
 
-  // Imágenes en rejilla (2 por fila)
+  // Rejilla imágenes (2 por fila)
   const imageRows = chunk(imagenes || [], 2).map((row) => ({
     columns: row.map((img) => ({
       stack: [
         { image: img.dataUrl, width: 220, margin: [0, 0, 0, 4] },
-        { text: img.name || '', style: 'caption' }
+        { text: img.name || '', style: 'caption' },
       ],
     })),
     columnGap: 10,
     margin: [0, 6, 0, 6],
   }))
 
+  // Incidencias + Recomendaciones
+  const incidenciasBlocks = [
+    { title: 'Asistencia', text: datos?.comentarios?.c12 },
+    { title: 'Puntualidad', text: datos?.comentarios?.c13 },
+    { title: 'Accidentes', text: datos?.comentarios?.c14 },
+  ].filter((x) => (x.text || '').trim())
+
+  const recomendacionesBlocks = [
+    { title: 'Formaciones futuras', text: datos?.comentarios?.c15 },
+    { title: 'Entorno de trabajo', text: datos?.comentarios?.c16 },
+    { title: 'Materiales', text: datos?.comentarios?.c17 },
+  ].filter((x) => (x.text || '').trim())
+
   return {
     pageSize: 'A4',
-    pageMargins: [40, 60, 40, 60],
+    // Márgenes generosos para respetar cabecera y pie
+    pageMargins: [58, 110, 58, 90],
     defaultStyle: { fontSize: 10, lineHeight: 1.25 },
     styles: {
       h1: { fontSize: 16, bold: true, margin: [0, 0, 0, 6] },
-      h2: { fontSize: 13, bold: true, margin: [0, 12, 0, 6] },
+      h2: { fontSize: 13, bold: true, margin: [0, 14, 0, 6] },
+      h3: { fontSize: 11, bold: true, margin: [0, 10, 0, 4] },
       small: { fontSize: 9, color: '#666' },
       caption: { fontSize: 8, color: '#666' },
-      k: { bold: true }
+      k: { bold: true },
     },
-    header: (currentPage, pageCount) => ({
-      columns: [
-        { image: logoDataUrl, width: 140 },
-        [
-          { text: 'Informe de Formación', style: 'h1', margin: [0, 0, 0, 2] },
-          { text: 'GEP Group — Formación y Servicios', style: 'small' }
-        ],
-        { text: `Página ${currentPage} de ${pageCount}`, alignment: 'right', style: 'small' },
-      ],
-      margin: [40, 20, 40, 10]
+
+    header: () => ({
+      image: headerDataUrl,
+      width: 479, // ~ (595 - 58 - 58)
+      alignment: 'center',
+      margin: [0, 18, 0, 0],
     }),
-    footer: (currentPage, pageCount) => ({
-      text: `GEP Group · ${new Date().toLocaleDateString()}`,
-      alignment: 'right',
-      margin: [40, 0, 40, 20],
-      style: 'small'
+    footer: () => ({
+      image: footerDataUrl,
+      width: 479,
+      alignment: 'center',
+      margin: [0, 0, 0, 18],
     }),
+
     content: [
-      // ===== Datos generales =====
-      { text: 'Datos generales', style: 'h2' },
+      // ===== Título + fecha (tipo plantilla)
       {
         columns: [
           {
-            width: '50%',
-            stack: [
-              { text: 'Datos del cliente', style: 'k', margin: [0, 0, 0, 6] },
-              { columns: kv('Nº Presupuesto', dealId) },
-              { columns: kv('Cliente', datos?.cliente) },
-              { columns: kv('CIF', datos?.cif) },
-              { columns: kv('Dirección fiscal', datos?.direccionOrg) },
-              { columns: kv('Dirección de la formación', datos?.sede) },
-              { columns: kv('Persona de contacto', datos?.contacto) },
-              { columns: kv('Comercial', datos?.comercial) },
-            ],
-          },
-          {
-            width: '50%',
-            stack: [
-              { text: 'Datos del formador', style: 'k', margin: [0, 0, 0, 6] },
-              { columns: kv('Formador/a', formador?.nombre) },
-              { columns: kv('Fecha', datos?.fecha) },
-              { columns: kv('Sesiones', String(datos?.sesiones ?? '')) },
-              { columns: kv('Nº de alumnos', String(datos?.alumnos ?? '')) },
-              { columns: kv('Duración (h)', String(datos?.duracion ?? '')) },
+            text: [
+              { text: 'INFORME FORMACIÓN: ', style: 'h1' },
+              { text: datos?.formacionTitulo || '—', color: '#E1062C', bold: true, fontSize: 16 },
             ],
           },
         ],
-        columnGap: 20
+        margin: [0, 0, 0, 4],
+      },
+      {
+        text: [
+          { text: 'Fecha de la formación: ', bold: true },
+          { text: datos?.fecha || '—' },
+        ],
+        margin: [0, 0, 0, 6],
       },
 
-      // ===== Formación realizada =====
-      { text: 'Formación realizada', style: 'h2' },
+      // ===== Bloque gris: DATOS GENERALES =====
+      {
+        table: {
+          widths: ['*'],
+          body: [
+            [
+              {
+                stack: [
+                  { text: 'Datos generales', style: 'h3', margin: [0, 0, 0, 6] },
+                  {
+                    columns: [
+                      // Cliente (izquierda)
+                      {
+                        width: '50%',
+                        stack: [
+                          { columns: kv('Nº Presupuesto', dealId) },
+                          { columns: kv('Empresa', datos?.cliente) },
+                          { columns: kv('CIF', datos?.cif) },
+                          { columns: kv('Dirección fiscal', datos?.direccionOrg) },
+                          { columns: kv('Dirección de la formación', datos?.sede) },
+                          { columns: kv('Persona de contacto', datos?.contacto) },
+                          { columns: kv('Comercial', datos?.comercial) },
+                        ],
+                      },
+                      // Formador (derecha)
+                      {
+                        width: '50%',
+                        stack: [
+                          { columns: kv('Formador', formador?.nombre) },
+                          { columns: kv('Sesiones', String(datos?.sesiones ?? '')) },
+                          { columns: kv('Nº de alumnos', String(datos?.alumnos ?? '')) },
+                          { columns: kv('Duración (h)', String(datos?.duracion ?? '')) },
+                        ],
+                      },
+                    ],
+                    columnGap: 20,
+                  },
+                ],
+                fillColor: '#F3F3F3',
+                margin: [8, 8, 8, 8],
+              },
+            ],
+          ],
+        },
+        layout: {
+          hLineWidth: () => 0,
+          vLineWidth: () => 0,
+          paddingTop: () => 0,
+          paddingBottom: () => 0,
+          paddingLeft: () => 0,
+          paddingRight: () => 0,
+        },
+        margin: [0, 8, 0, 0],
+      },
+
+      // ===== Secciones pedidas =====
+      { text: 'Informe Técnico de Formación', style: 'h2' },
+      { text: '—', color: '#666' }, // (espacio reservado si luego quieres un intro)
+
+      { text: 'Desarrollo de la Formación', style: 'h2' },
+      { text: 'Formación realizada', style: 'h3' },
       { columns: kv('Formación', datos?.formacionTitulo) },
       {
         columns: [
           {
             width: '50%',
             stack: [
-              { text: 'Parte Teórica', style: 'k', margin: [0, 6, 0, 6] },
-              ...(teorica.length ? [{ ul: teorica.map((x) => x.text) }] : [{ text: '—' }]),
-            ]
+              { text: 'Teórica', style: 'k', margin: [0, 6, 0, 6] },
+              ...(teorica.length ? [{ ul: teorica }] : [{ text: '—' }]),
+            ],
           },
           {
             width: '50%',
             stack: [
-              { text: 'Parte Práctica', style: 'k', margin: [0, 6, 0, 6] },
-              ...(practica.length ? [{ ul: practica.map((x) => x.text) }] : [{ text: '—' }]),
-            ]
-          }
+              { text: 'Práctica', style: 'k', margin: [0, 6, 0, 6] },
+              ...(practica.length ? [{ ul: practica }] : [{ text: '—' }]),
+            ],
+          },
         ],
-        columnGap: 20
+        columnGap: 20,
       },
 
-      // ===== Valoración y observaciones =====
-      { text: 'Valoración y observaciones', style: 'h2' },
+      { text: 'Conclusiones', style: 'h2' },
+      ...(aiContent ? [Array.isArray(aiContent) ? { stack: aiContent } : aiContent] : [{ text: '—' }]),
+
+      { text: 'Incidencias', style: 'h2' },
+      ...(incidenciasBlocks.length
+        ? incidenciasBlocks.map((b) => ({
+            stack: [{ text: b.title, style: 'k' }, { text: b.text }],
+            margin: [0, 4, 0, 4],
+          }))
+        : [{ text: '—' }]),
+
+      { text: 'Evaluación Cualitativa', style: 'h2' },
       {
-        columns: [
-          {
-            width: '100%',
-            table: {
-              widths: ['*', '*', '*'],
-              body: [
-                [
-                  { text: 'Participación', bold: true }, { text: 'Compromiso', bold: true }, { text: 'Superación', bold: true }
-                ],
-                [
-                  { text: String(datos?.escalas?.participacion ?? '—') },
-                  { text: String(datos?.escalas?.compromiso ?? '—') },
-                  { text: String(datos?.escalas?.superacion ?? '—') },
-                ],
-              ]
-            },
-            layout: 'lightHorizontalLines',
-            margin: [0, 0, 0, 8]
-          }
-        ]
-      },
-      {
-        columns: [
-          { width: '50%', stack: [
-            { text: 'Puntos fuertes', style: 'k', margin: [0, 6, 0, 4] },
-            { text: datos?.comentarios?.c11 || '—' }
-          ]},
-          { width: '50%', stack: [
-            { text: 'Asistencia', style: 'k', margin: [0, 6, 0, 4] },
-            { text: datos?.comentarios?.c12 || '—' }
-          ]},
-        ],
-        columnGap: 20
-      },
-      {
-        columns: [
-          { width: '50%', stack: [
-            { text: 'Puntualidad', style: 'k', margin: [0, 6, 0, 4] },
-            { text: datos?.comentarios?.c13 || '—' }
-          ]},
-          { width: '50%', stack: [
-            { text: 'Accidentes', style: 'k', margin: [0, 6, 0, 4] },
-            { text: datos?.comentarios?.c14 || '—' }
-          ]},
-        ],
-        columnGap: 20
-      },
-      {
-        columns: [
-          { width: '33%', stack: [
-            { text: 'Formaciones futuras', style: 'k', margin: [0, 6, 0, 4] },
-            { text: datos?.comentarios?.c15 || '—' }
-          ]},
-          { width: '33%', stack: [
-            { text: 'Entorno de trabajo', style: 'k', margin: [0, 6, 0, 4] },
-            { text: datos?.comentarios?.c16 || '—' }
-          ]},
-          { width: '33%', stack: [
-            { text: 'Materiales', style: 'k', margin: [0, 6, 0, 4] },
-            { text: datos?.comentarios?.c17 || '—' }
-          ]},
-        ],
-        columnGap: 20
+        table: {
+          widths: ['*', '*', '*'],
+          body: [
+            [
+              { text: 'Participación', bold: true },
+              { text: 'Compromiso', bold: true },
+              { text: 'Superación', bold: true },
+            ],
+            [
+              { text: String(datos?.escalas?.participacion ?? '—') },
+              { text: String(datos?.escalas?.compromiso ?? '—') },
+              { text: String(datos?.escalas?.superacion ?? '—') },
+            ],
+          ],
+        },
+        layout: 'lightHorizontalLines',
+        margin: [0, 0, 0, 8],
       },
 
-      // ===== Texto generado por IA (editable) =====
-      ...(aiContent ? [
-        { text: 'Informe narrativo', style: 'h2' },
-        { stack: Array.isArray(aiContent) ? aiContent : [aiContent] }
-      ] : []),
+      { text: 'Recomendaciones', style: 'h2' },
+      ...(recomendacionesBlocks.length
+        ? recomendacionesBlocks.map((b) => ({
+            stack: [{ text: b.title, style: 'k' }, { text: b.text }],
+            margin: [0, 4, 0, 4],
+          }))
+        : [{ text: '—' }]),
 
       // ===== Imágenes de apoyo =====
       ...(Array.isArray(imagenes) && imagenes.length
-        ? [
-            { text: 'Imágenes de apoyo', style: 'h2' },
-            ...imageRows
-          ]
-        : []
-      ),
-    ]
+        ? [{ text: 'Imágenes de apoyo', style: 'h2' }, ...imageRows]
+        : []),
+
+      // ===== Firma =====
+      { text: 'Atentamente,', margin: [0, 18, 0, 2] },
+      { text: 'Jaime', style: 'k' }, // “Misma firma a todos .Jaime”
+      { text: 'Responsable de formaciones', color: '#E1062C', margin: [0, 2, 0, 0] },
+    ],
   }
 }
 
 export async function generateReportPdfmake(draft) {
   const { dealId, datos, formador, imagenes } = draft || {}
-  const logoDataUrl = await toDataURL(logoImg)
+
+  // Cargar imágenes header/footer
+  const [headerDataUrl, footerDataUrl] = await Promise.all([
+    toDataURL(headerImg),
+    toDataURL(footerImg),
+  ])
+
+  // Cargar IA desde sessionStorage (lo que editas en Preview)
   const aiHtml = (() => {
-    try { return sessionStorage.getItem(htmlKey(dealId)) || '' } catch { return '' }
+    try {
+      return sessionStorage.getItem(htmlKey(dealId)) || ''
+    } catch {
+      return ''
+    }
   })()
 
   const docDefinition = buildDocDefinition({
-    dealId, datos, formador, imagenes, aiHtml, logoDataUrl
+    dealId,
+    datos,
+    formador,
+    imagenes,
+    aiHtml,
+    headerDataUrl,
+    footerDataUrl,
   })
 
   const fecha = (datos?.fecha || '').slice(0, 10)
   const cliente = (datos?.cliente || '').replace(/[^\w\s\-._]/g, '').trim() || 'Cliente'
-  const titulo = (datos?.formacionTitulo || 'Formación').replace(/[^\w\s\-._]/g, '').trim()
+  const titulo = (datos?.formacionTitulo || 'Formación')
+    .replace(/[^\w\s\-._]/g, '')
+    .trim()
   const nombre = `GEP Group – ${dealId || 'SinPresu'} – ${cliente} – ${titulo} – ${fecha || 'fecha'}.pdf`
 
   pdfMake.createPdf(docDefinition).download(nombre)
