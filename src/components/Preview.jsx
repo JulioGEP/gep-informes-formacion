@@ -199,7 +199,7 @@ export default function Preview(props) {
 
       <div className="card">
         <div className="card-body">
-          {/* ===== Datos generales (maquetado como en el Form) ===== */}
+         {/* ===== Datos generales (maquetado como en el Form) ===== */}
 <h5 className="card-title mb-3">Datos generales</h5>
 
 <div className="row g-3 align-items-stretch">
@@ -218,10 +218,10 @@ export default function Preview(props) {
           <strong>CIF:</strong> {datos?.cif || '—'}
         </div>
         <div className="col-md-6">
-          <strong>Dirección (Organización):</strong> {datos?.direccionOrg || '—'}
+          <strong>Dirección fiscal:</strong> {datos?.direccionOrg || '—'}
         </div>
         <div className="col-md-6">
-          <strong>Dirección de la formación (Sede):</strong> {datos?.sede || '—'}
+          <strong>Dirección de la formación:</strong> {datos?.sede || '—'}
         </div>
         <div className="col-md-6">
           <strong>Persona de contacto:</strong> {datos?.contacto || '—'}
@@ -232,6 +232,32 @@ export default function Preview(props) {
       </div>
     </div>
   </div>
+
+  {/* Columna derecha: Datos del formador */}
+  <div className="col-md-6 d-flex">
+    <div className="border rounded p-3 w-100 h-100">
+      <h6 className="mb-3">Datos del formador</h6>
+      <div className="row g-2">
+        <div className="col-12">
+          <strong>Formador/a:</strong> {formador?.nombre || '—'}
+        </div>
+        <div className="col-md-4">
+          <strong>Fecha:</strong> {datos?.fecha || '—'}
+        </div>
+        <div className="col-md-4">
+          <strong>Sesiones:</strong> {datos?.sesiones || '—'}
+        </div>
+        <div className="col-md-4">
+          <strong>Nº de alumnos:</strong> {datos?.alumnos || '—'}
+        </div>
+        <div className="col-md-4">
+          <strong>Duración (h):</strong> {datos?.duracion || '—'}
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
 
   {/* Columna derecha: Datos del formador */}
   <div className="col-md-6 d-flex">
