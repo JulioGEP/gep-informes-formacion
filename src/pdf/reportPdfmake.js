@@ -1,16 +1,14 @@
 // src/pdf/reportPdfmake.js
-import pdfMake from 'pdfmake/build/pdfmake.js'
-import pdfFonts from 'pdfmake/build/vfs_fonts.js'
-import htmlToPdfmake from 'html-to-pdfmake'
+// ✅ Sin import estático de pdfmake → build de Vite/Netlify limpio
+// Cargamos pdfmake en runtime desde CDN y lo cacheamos en window.pdfMake
 
-// Assets
+import htmlToPdfmake from 'html-to-pdfmake'
 import headerImg from '../assets/pdf/header.png'
 import footerImg from '../assets/pdf/footer.png'
 
-pdfMake.vfs = pdfFonts.pdfMake.vfs
-
 const htmlKey = (dealId) => `aiHtml:${dealId || 'sin'}`
 
+// -------- utilidades --------
 const toDataURL = async (url) => {
   const res = await fetch(url)
   const blob = await res.blob()
@@ -19,6 +17,27 @@ const toDataURL = async (url) => {
     reader.onload = () => resolve(reader.result)
     reader.readAsDataURL(blob)
   })
+}
+const loadScript = (src) =>
+  new Promise((resolve, reject) => {
+    const s = document.createElement('script')
+    s.src = src
+    s.async = true
+    s.onload = () => resolve()
+    s.onerror = (e) => reject(e)
+    document.head.appendChild(s)
+  })
+
+// Carga pdfmake + fuentes desde CDN una sola vez
+async function ensurePdfMake() {
+  if (window.pdfMake?.createPdf) return window.pdfMake
+  // versiones estables
+  const ver = '0.2.12'
+  await loadScript(`https://cdn.jsdelivr.net/npm/pdfmake@${ver}/build/pdfmake.min.js`)
+  await loadScript(`https://cdn.jsdelivr.net/npm/pdfmake@${ver}/build/vfs_fonts.js`)
+  // tras cargar vfs_fonts, pdfMake.vfs ya está puesto
+  if (!window.pdfMake?.createPdf) throw new Error('No se pudo cargar pdfmake')
+  return window.pdfMake
 }
 
 const bullet = (items) =>
@@ -34,6 +53,7 @@ const chunk = (arr = [], size = 2) => {
   return out
 }
 
+// -------- docDefinition --------
 const buildDocDefinition = ({
   dealId,
   datos,
@@ -46,7 +66,6 @@ const buildDocDefinition = ({
   const teorica = bullet(datos?.contenidoTeorica)
   const practica = bullet(datos?.contenidoPractica)
 
-  // IA → contenido pdfmake (sin fondo)
   const aiContent = aiHtml
     ? htmlToPdfmake(aiHtml, {
         defaultStyles: {
@@ -57,7 +76,6 @@ const buildDocDefinition = ({
       })
     : null
 
-  // Rejilla imágenes (2 por fila)
   const imageRows = chunk(imagenes || [], 2).map((row) => ({
     columns: row.map((img) => ({
       stack: [
@@ -69,7 +87,6 @@ const buildDocDefinition = ({
     margin: [0, 6, 0, 6],
   }))
 
-  // Incidencias + Recomendaciones
   const incidenciasBlocks = [
     { title: 'Asistencia', text: datos?.comentarios?.c12 },
     { title: 'Puntualidad', text: datos?.comentarios?.c13 },
@@ -84,8 +101,7 @@ const buildDocDefinition = ({
 
   return {
     pageSize: 'A4',
-    // Márgenes generosos para respetar cabecera y pie
-    pageMargins: [58, 110, 58, 90],
+    pageMargins: [58, 110, 58, 90], // respeta márgenes y sitio para header/footer
     defaultStyle: { fontSize: 10, lineHeight: 1.25 },
     styles: {
       h1: { fontSize: 16, bold: true, margin: [0, 0, 0, 6] },
@@ -98,7 +114,7 @@ const buildDocDefinition = ({
 
     header: () => ({
       image: headerDataUrl,
-      width: 479, // ~ (595 - 58 - 58)
+      width: 479,
       alignment: 'center',
       margin: [0, 18, 0, 0],
     }),
@@ -110,7 +126,7 @@ const buildDocDefinition = ({
     }),
 
     content: [
-      // ===== Título + fecha (tipo plantilla)
+      // ===== Título + fecha
       {
         columns: [
           {
@@ -130,7 +146,7 @@ const buildDocDefinition = ({
         margin: [0, 0, 0, 6],
       },
 
-      // ===== Bloque gris: DATOS GENERALES =====
+      // ===== Bloque gris: DATOS GENERALES
       {
         table: {
           widths: ['*'],
@@ -141,7 +157,6 @@ const buildDocDefinition = ({
                   { text: 'Datos generales', style: 'h3', margin: [0, 0, 0, 6] },
                   {
                     columns: [
-                      // Cliente (izquierda)
                       {
                         width: '50%',
                         stack: [
@@ -154,7 +169,6 @@ const buildDocDefinition = ({
                           { columns: kv('Comercial', datos?.comercial) },
                         ],
                       },
-                      // Formador (derecha)
                       {
                         width: '50%',
                         stack: [
@@ -185,9 +199,9 @@ const buildDocDefinition = ({
         margin: [0, 8, 0, 0],
       },
 
-      // ===== Secciones pedidas =====
+      // ===== Secciones
       { text: 'Informe Técnico de Formación', style: 'h2' },
-      { text: '—', color: '#666' }, // (espacio reservado si luego quieres un intro)
+      { text: '—', color: '#666' },
 
       { text: 'Desarrollo de la Formación', style: 'h2' },
       { text: 'Formación realizada', style: 'h3' },
@@ -216,12 +230,13 @@ const buildDocDefinition = ({
       ...(aiContent ? [Array.isArray(aiContent) ? { stack: aiContent } : aiContent] : [{ text: '—' }]),
 
       { text: 'Incidencias', style: 'h2' },
-      ...(incidenciasBlocks.length
+      ...((incidenciasBlocks.length
         ? incidenciasBlocks.map((b) => ({
             stack: [{ text: b.title, style: 'k' }, { text: b.text }],
             margin: [0, 4, 0, 4],
           }))
-        : [{ text: '—' }]),
+        : [{ text: '—' }])
+      ),
 
       { text: 'Evaluación Cualitativa', style: 'h2' },
       {
@@ -245,60 +260,47 @@ const buildDocDefinition = ({
       },
 
       { text: 'Recomendaciones', style: 'h2' },
-      ...(recomendacionesBlocks.length
+      ...((recomendacionesBlocks.length
         ? recomendacionesBlocks.map((b) => ({
             stack: [{ text: b.title, style: 'k' }, { text: b.text }],
             margin: [0, 4, 0, 4],
           }))
-        : [{ text: '—' }]),
+        : [{ text: '—' }])
+      ),
 
-      // ===== Imágenes de apoyo =====
       ...(Array.isArray(imagenes) && imagenes.length
         ? [{ text: 'Imágenes de apoyo', style: 'h2' }, ...imageRows]
         : []),
 
-      // ===== Firma =====
       { text: 'Atentamente,', margin: [0, 18, 0, 2] },
-      { text: 'Jaime', style: 'k' }, // “Misma firma a todos .Jaime”
+      { text: 'Jaime', style: 'k' },
       { text: 'Responsable de formaciones', color: '#E1062C', margin: [0, 2, 0, 0] },
     ],
   }
 }
 
+// -------- API principal que llama tu Preview.jsx --------
 export async function generateReportPdfmake(draft) {
   const { dealId, datos, formador, imagenes } = draft || {}
 
-  // Cargar imágenes header/footer
   const [headerDataUrl, footerDataUrl] = await Promise.all([
     toDataURL(headerImg),
     toDataURL(footerImg),
   ])
 
-  // Cargar IA desde sessionStorage (lo que editas en Preview)
   const aiHtml = (() => {
-    try {
-      return sessionStorage.getItem(htmlKey(dealId)) || ''
-    } catch {
-      return ''
-    }
+    try { return sessionStorage.getItem(htmlKey(dealId)) || '' } catch { return '' }
   })()
 
   const docDefinition = buildDocDefinition({
-    dealId,
-    datos,
-    formador,
-    imagenes,
-    aiHtml,
-    headerDataUrl,
-    footerDataUrl,
+    dealId, datos, formador, imagenes, aiHtml, headerDataUrl, footerDataUrl,
   })
 
   const fecha = (datos?.fecha || '').slice(0, 10)
   const cliente = (datos?.cliente || '').replace(/[^\w\s\-._]/g, '').trim() || 'Cliente'
-  const titulo = (datos?.formacionTitulo || 'Formación')
-    .replace(/[^\w\s\-._]/g, '')
-    .trim()
+  const titulo = (datos?.formacionTitulo || 'Formación').replace(/[^\w\s\-._]/g, '').trim()
   const nombre = `GEP Group – ${dealId || 'SinPresu'} – ${cliente} – ${titulo} – ${fecha || 'fecha'}.pdf`
 
+  const pdfMake = await ensurePdfMake()
   pdfMake.createPdf(docDefinition).download(nombre)
 }
