@@ -206,7 +206,6 @@ export default function Preview(props) {
     <strong>Nº de alumnos:</strong> {datos?.alumnos || '—'}
   </div>
   
-   {/* Siguiente fila: Duración (debajo de Sesiones) + resto */}
   <div className="col-6 col-md-4">                
   <div className="col-6 col-md-4">
     <strong>Duración (h):</strong> {datos?.duracion || '—'}
