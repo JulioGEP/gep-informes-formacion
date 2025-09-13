@@ -1,5 +1,5 @@
 // src/pdf/reportPdfmake.js
-// Carga pdfmake y html-to-pdfmake en runtime desde CDN → cero problemas con Vite/Netlify
+// Carga pdfmake, html-to-pdfmake y fuentes Poppins en runtime desde CDN → cero problemas con Vite/Netlify.
 
 import headerImg from '../assets/pdf/header.png'
 import footerImg from '../assets/pdf/footer.png'
@@ -39,10 +39,53 @@ async function ensurePdfMake() {
 async function ensureHtmlToPdfMake() {
   if (window.htmlToPdfmake) return window.htmlToPdfmake
   const ver = '2.5.5'
-  // UMD para navegador
   await loadScript(`https://cdn.jsdelivr.net/npm/html-to-pdfmake@${ver}/browser.js`)
   if (!window.htmlToPdfmake) throw new Error('No se pudo cargar html-to-pdfmake')
   return window.htmlToPdfmake
+}
+
+// Cargar Poppins (TTF) en pdfMake.vfs y registrar fuentes
+async function ensurePoppinsFont(pdfMake) {
+  if (pdfMake.fonts && pdfMake.fonts.Poppins) return
+
+  const fetchBase64 = async (url) => {
+    const res = await fetch(url)
+    const buf = await res.arrayBuffer()
+    let binary = ''
+    const bytes = new Uint8Array(buf)
+    for (let i = 0; i < bytes.byteLength; i++) binary += String.fromCharCode(bytes[i])
+    return btoa(binary)
+  }
+
+  const base = 'https://cdn.jsdelivr.net/gh/google/fonts/ofl/poppins'
+  const urls = {
+    'Poppins-Regular.ttf': `${base}/Poppins-Regular.ttf`,
+    'Poppins-Bold.ttf': `${base}/Poppins-Bold.ttf`,
+    'Poppins-Italic.ttf': `${base}/Poppins-Italic.ttf`,
+    'Poppins-BoldItalic.ttf': `${base}/Poppins-BoldItalic.ttf`,
+  }
+
+  // Crear vfs si no existe
+  pdfMake.vfs = pdfMake.vfs || {}
+
+  // Intentar cargar; si falla, seguimos con Roboto por defecto
+  try {
+    const entries = await Promise.all(
+      Object.entries(urls).map(async ([name, url]) => [name, await fetchBase64(url)])
+    )
+    for (const [name, b64] of entries) pdfMake.vfs[name] = b64
+    pdfMake.fonts = {
+      ...(pdfMake.fonts || {}),
+      Poppins: {
+        normal: 'Poppins-Regular.ttf',
+        bold: 'Poppins-Bold.ttf',
+        italics: 'Poppins-Italic.ttf',
+        bolditalics: 'Poppins-BoldItalic.ttf',
+      },
+    }
+  } catch (e) {
+    console.warn('No se pudo cargar Poppins, se usará la fuente por defecto.', e)
+  }
 }
 
 const bullet = (items) =>
@@ -90,22 +133,10 @@ const buildDocDefinition = ({
     margin: [0, 6, 0, 6],
   }))
 
-  const incidenciasBlocks = [
-    { title: 'Asistencia', text: datos?.comentarios?.c12 },
-    { title: 'Puntualidad', text: datos?.comentarios?.c13 },
-    { title: 'Accidentes', text: datos?.comentarios?.c14 },
-  ].filter((x) => (x.text || '').trim())
-
-  const recomendacionesBlocks = [
-    { title: 'Formaciones futuras', text: datos?.comentarios?.c15 },
-    { title: 'Entorno de trabajo', text: datos?.comentarios?.c16 },
-    { title: 'Materiales', text: datos?.comentarios?.c17 },
-  ].filter((x) => (x.text || '').trim())
-
   return {
     pageSize: 'A4',
     pageMargins: [58, 110, 58, 90], // respeta márgenes y header/footer
-    defaultStyle: { fontSize: 10, lineHeight: 1.25 },
+    defaultStyle: { fontSize: 10, lineHeight: 1.25, font: 'Poppins' }, // <-- Poppins por defecto
     styles: {
       h1: { fontSize: 16, bold: true, margin: [0, 0, 0, 6] },
       h2: { fontSize: 13, bold: true, margin: [0, 14, 0, 6] },
@@ -160,6 +191,7 @@ const buildDocDefinition = ({
                   { text: 'Datos generales', style: 'h3', margin: [0, 0, 0, 6] },
                   {
                     columns: [
+                      // IZQUIERDA (cliente)
                       {
                         width: '50%',
                         stack: [
@@ -168,17 +200,19 @@ const buildDocDefinition = ({
                           { columns: kv('CIF', datos?.cif) },
                           { columns: kv('Dirección fiscal', datos?.direccionOrg) },
                           { columns: kv('Dirección de la formación', datos?.sede) },
-                          { columns: kv('Persona de contacto', datos?.contacto) },
-                          { columns: kv('Comercial', datos?.comercial) },
+                          // (Se mueven "Persona de contacto" y "Comercial" a la derecha)
                         ],
                       },
+                      // DERECHA (formador)
                       {
                         width: '50%',
                         stack: [
                           { columns: kv('Formador', formador?.nombre) },
                           { columns: kv('Sesiones', String(datos?.sesiones ?? '')) },
                           { columns: kv('Nº de alumnos', String(datos?.alumnos ?? '')) },
-                          { columns: kv('Duración (h)', String(datos?.duracion ?? '')) },
+                          { columns: kv('Duración', String(datos?.duracion ?? '')) }, // <-- texto cambiado
+                          { columns: kv('Persona de contacto', datos?.contacto) },   // <-- movidos aquí
+                          { columns: kv('Comercial', datos?.comercial) },            // <-- movidos aquí
                         ],
                       },
                     ],
@@ -202,11 +236,7 @@ const buildDocDefinition = ({
         margin: [0, 8, 0, 0],
       },
 
-      // ===== Desarrollo de la Formación (Formación realizada)
-      { text: 'Informe Técnico de Formación', style: 'h2' },
-      { text: '—', color: '#666' },
-
-      { text: 'Desarrollo de la Formación', style: 'h2' },
+      // ===== Formación realizada (sin intertítulos extra)
       { text: 'Formación realizada', style: 'h3' },
       { columns: kv('Formación', datos?.formacionTitulo) },
       {
@@ -229,22 +259,10 @@ const buildDocDefinition = ({
         columnGap: 20,
       },
 
-      // ===== Conclusiones (IA, sin fondo)
-      { text: 'Conclusiones', style: 'h2' },
-      ...(aiContent ? [Array.isArray(aiContent) ? { stack: aiContent } : aiContent] : [{ text: '—' }]),
+      // ===== Texto IA (sin título "Conclusiones")
+      ...(aiContent ? [Array.isArray(aiContent) ? { stack: aiContent } : aiContent] : []),
 
-      // ===== Incidencias
-      { text: 'Incidencias', style: 'h2' },
-      ...(([
-        { title: 'Asistencia', text: datos?.comentarios?.c12 },
-        { title: 'Puntualidad', text: datos?.comentarios?.c13 },
-        { title: 'Accidentes', text: datos?.comentarios?.c14 },
-      ].filter((x) => (x.text || '').trim())
-        .map((b) => ({ stack: [{ text: b.title, style: 'k' }, { text: b.text }], margin: [0, 4, 0, 4] })))
-        || [{ text: '—' }]
-      ),
-
-      // ===== Evaluación Cualitativa
+      // ===== Evaluación Cualitativa (mantener)
       { text: 'Evaluación Cualitativa', style: 'h2' },
       {
         table: {
@@ -266,18 +284,9 @@ const buildDocDefinition = ({
         margin: [0, 0, 0, 8],
       },
 
-      // ===== Recomendaciones
-      { text: 'Recomendaciones', style: 'h2' },
-      ...(([
-        { title: 'Formaciones futuras', text: datos?.comentarios?.c15 },
-        { title: 'Entorno de trabajo', text: datos?.comentarios?.c16 },
-        { title: 'Materiales', text: datos?.comentarios?.c17 },
-      ].filter((x) => (x.text || '').trim())
-        .map((b) => ({ stack: [{ text: b.title, style: 'k' }, { text: b.text }], margin: [0, 4, 0, 4] })))
-        || [{ text: '—' }]
-      ),
+      // (Eliminado "Incidencias" + "Recomendaciones" como pediste)
 
-      // ===== Imágenes de apoyo
+      // ===== Imágenes de apoyo (si hay)
       ...(Array.isArray(imagenes) && imagenes.length
         ? [{ text: 'Imágenes de apoyo', style: 'h2' }, ...imageRows]
         : []),
@@ -300,6 +309,9 @@ export async function generateReportPdfmake(draft) {
     toDataURL(headerImg),
     toDataURL(footerImg),
   ])
+
+  // Registrar Poppins (si se puede); si no, seguirá con Roboto por defecto
+  await ensurePoppinsFont(pdfMake)
 
   const aiHtml = (() => {
     try { return sessionStorage.getItem(htmlKey(dealId)) || '' } catch { return '' }
