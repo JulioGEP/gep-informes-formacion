@@ -62,6 +62,9 @@ Estructura:
 IMPORTANTE:
 - Devuelve **solo** un fragmento HTML **puro** (sin \`\`\`, ni etiquetas <html>/<body>, ni estilos inline).
 - Usa únicamente <section>, <h3>, <p>, <ul>, <li>. Nada más.
+- La fecha debe aparecer en formato DD/MM/YYYY exactamente así: "${fechaFmt || 'DD/MM/YYYY'}".
+- La ubicación dela formación viene resuelta como Moratin 100 Sabadell o Primavera 1 de Arganda del Rey no son instalaciones del cilente, son nuestras instalaciones, NO lo atribuyas al cliente. Pon que son "en nuestras instaciones de..."
+
 
 Contexto:
 ${ctx}
