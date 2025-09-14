@@ -11,8 +11,7 @@ import footerImg from '../assets/pdf/footer.png'
 import PoppinsRegular   from '../assets/fonts/Poppins-Regular.ttf'
 import PoppinsBold      from '../assets/fonts/Poppins-Bold.ttf'
 import PoppinsSemiBold  from '../assets/fonts/Poppins-SemiBold.ttf'
-
-const htmlKey = (dealId) => `aiHtml:${dealId || 'sin'}`
+import { htmlKey } from '../utils/keys'
 
 // ---------- utils ----------
 const toDataURL = async (url) => {
