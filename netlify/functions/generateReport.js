@@ -4,6 +4,25 @@ const cors = {
   'Access-Control-Allow-Headers': 'content-type',
 };
 
+// ───────── Utils ─────────
+const normalize = (s = '') =>
+  s.normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase().replace(/\s+/g, ' ').trim();
+
+const formatFechaDDMMYYYY = (iso) => {
+  if (!iso) return '';
+  const m = /^(\d{4})-(\d{2})-(\d{2})/.exec(iso);
+  if (!m) return iso;
+  const [, y, mo, d] = m;
+  return `${d}/${mo}/${y}`;
+};
+
+const esInstalacionGEPCO = (direccion = '') => {
+  const n = normalize(direccion);
+  const a = n.includes('primavera, 1') && n.includes('arganda del rey') && n.includes('madrid');
+  const b = n.includes('moratin, 100') && n.includes('sabadell') && n.includes('barcelona');
+  return a || b;
+};
+
 export async function handler(event) {
   if (event.httpMethod === 'OPTIONS') return { statusCode: 204, headers: cors };
   if (event.httpMethod !== 'POST') return { statusCode: 405, headers: cors, body: 'Method Not Allowed' };
@@ -15,9 +34,15 @@ export async function handler(event) {
     const { formador, datos } = JSON.parse(event.body || '{}');
     const idioma = (formador?.idioma || 'ES').toUpperCase();
 
+    // Reglas nuevas: fecha formateada + sede GEPCO si coincide
+    const fechaFmt = formatFechaDDMMYYYY(datos?.fecha || '');
+    const sede = datos?.sede || '-';
+    const sedeEsGEPCO = esInstalacionGEPCO(sede);
+    const sedeRedactada = sedeEsGEPCO ? `nuestras instalaciones de GEPCO (${sede})` : sede;
+
     const ctx = `
 Deal: ${datos?.cliente || '-'} | CIF: ${datos?.cif || '-'}
-Sede: ${datos?.sede || '-'} | Fecha: ${datos?.fecha || '-'}
+Sede original: ${sede} | Sede para 1er párrafo: ${sedeRedactada} | Fecha (DD/MM/YYYY): ${fechaFmt || '-'}
 Formador/a: ${formador?.nombre || '-'} | Idioma: ${idioma}
 Sesiones: ${datos?.sesiones || '-'} | Alumnos: ${datos?.alumnos || '-'} | Duración(h): ${datos?.duracion || '-'}
 
@@ -51,12 +76,19 @@ Comentarios:
     const prompt = `
 Redacta un INFORME TÉCNICO en primera persona (yo) basado en el contexto.
 No muestres números de las escalas; interpreta en texto (“participación alta/media/baja”, etc.).
+
+REGLAS DEL PRIMER PÁRRAFO (OBLIGATORIAS):
+1) La fecha debe aparecer en formato DD/MM/YYYY exactamente así: "${fechaFmt || 'DD/MM/YYYY'}".
+2) La ubicación del primer párrafo ya viene resuelta:
+   - Usa exactamente: "${sedeRedactada}".
+   - Si pone “nuestras instalaciones de GEPCO (…)”, NO lo atribuyas al cliente.
+
 Estructura:
-- Introducción breve (qué formación impartí, para quién y cuándo).
+- Introducción breve (qué formación impartí, para quién, cuándo y dónde) cumpliendo las reglas anteriores.
 - Desarrollo (cómo transcurrió, puntos teóricos y prácticos relevantes).
-- Incidencias (asistencia, puntualidad, accidentes si los hubo).
+- Incidencias (asistencia, puntualidad, accidentes si los hubo) solo si procede.
 - Evaluación cualitativa (participación, compromiso, superación) sin números.
-- Recomendaciones (mejoras del entorno, materiales y/o formaciones futuras).
+- Recomendaciones (mejoras del entorno, materiales y/o formaciones futuras) solo si procede.
 
 IMPORTANTE:
 - Devuelve **solo** un fragmento HTML **puro** (sin \`\`\`, ni etiquetas <html>/<body>, ni estilos inline).
