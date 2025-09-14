@@ -12,7 +12,7 @@ const fileToDataURL = (file) =>
     reader.readAsDataURL(file)
   })
 
-export default function Form({ initial, onNext }) {
+export default function Form({ initial, onNext, title = 'Informe de Formación', onChooseAnother }) {
   const formRef = useRef(null)
 
   const [dealId, setDealId] = useState(initial?.dealId || '')
@@ -146,7 +146,7 @@ export default function Form({ initial, onNext }) {
           style={{ width: 180, height: 52, objectFit: 'contain', display: 'block' }}
         />
         <div className="flex-grow-1">
-          <h1 className="h5 mb-0">Informe de Formación</h1>
+          <h1 className="h5 mb-0">{title}</h1>
           <small className="text-muted">GEP Group — Formación y Servicios</small>
         </div>
       </div>
@@ -432,7 +432,8 @@ export default function Form({ initial, onNext }) {
         </div></div>
       </div>
 
-      <div className="d-flex justify-content-end">
+      <div className="d-flex justify-content-between">
+        <button type="button" className="btn btn-secondary" onClick={onChooseAnother}>Elegir otro informe</button>
         <button type="submit" className="btn btn-primary">Siguiente</button>
       </div>
     </form>
