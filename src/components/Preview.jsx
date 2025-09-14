@@ -2,10 +2,9 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react'
 import logoImg from '../assets/logo-gep.png'
 import { generateReportPdfmake } from '../pdf/reportPdfmake'
+import { triesKey, htmlKey } from '../utils/keys'
 
 const maxTries = 3
-const triesKey = (dealId) => `aiAttempts:${dealId || 'sin'}`
-const htmlKey  = (dealId) => `aiHtml:${dealId || 'sin'}`
 
 /**
  * Editor NO controlado para el HTML de IA (sin saltos de cursor):

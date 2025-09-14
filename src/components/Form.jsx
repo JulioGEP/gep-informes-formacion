@@ -2,6 +2,7 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react'
 import plantillasBase from '../utils/plantillas.json'
 import logoImg from '../assets/logo-gep.png'
+import { triesKey, htmlKey } from '../utils/keys'
 
 const fileToDataURL = (file) =>
   new Promise((res, rej) => {
@@ -10,9 +11,6 @@ const fileToDataURL = (file) =>
     reader.onerror = rej
     reader.readAsDataURL(file)
   })
-
-const triesKey = (dealId) => `aiAttempts:${dealId || 'sin'}`
-const htmlKey  = (dealId) => `aiHtml:${dealId || 'sin'}`
 
 export default function Form({ initial, onNext }) {
   const formRef = useRef(null)
