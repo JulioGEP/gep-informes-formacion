@@ -38,7 +38,7 @@ function EditableHtml({ dealId, initialHtml, onChange }) {
 
 // Acepta draft o data (compat con tu App)
 export default function Preview(props) {
-  const { onBack } = props
+  const { onBack, title = 'Informe de Formación' } = props
   const draft = props.draft ?? props.data ?? {}
   const { datos, imagenes, formador, dealId } = draft
 
@@ -138,7 +138,7 @@ export default function Preview(props) {
           style={{ width: 180, height: 52, objectFit: 'contain', display: 'block' }}
         />
         <div className="flex-grow-1">
-          <h1 className="h5 mb-0">Informe de Formación</h1>
+          <h1 className="h5 mb-0">{title}</h1>
           <small className="text-muted">GEP Group — Formación y Servicios</small>
         </div>
       </div>
