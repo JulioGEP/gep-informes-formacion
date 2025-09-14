@@ -88,11 +88,10 @@ IMPORTANTE:
 - Devuelve **solo** un fragmento HTML **puro** (sin \`\`\`, ni etiquetas <html>/<body>, ni estilos inline).
 - Usa únicamente <section>, <h3>, <p>, <ul>, <li>. Nada más.
 - La fecha debe aparecer en formato DD/MM/YYYY exactamente así: "${fechaFmt || 'DD/MM/YYYY'}".
-- La ubicación de la formación ya viene resuelta. Si la sede corresponde a:
+- Si la sede de la formación corresponde a:
   • C/ Primavera, 1, 28500, Arganda del Rey, Madrid
   • Carrer de Moratín, 100, 08206 Sabadell, Barcelona
-  entonces son **nuestras instalaciones** (GEPCO). NO lo atribuyas al cliente.
-  Usa exactamente: "${sedeRedactada}" y redacta “en nuestras instalaciones de…”.
+  entonces son **nuestras instalaciones** (GEPCO).Sino, di que "en sus instalaciones"
 
 Contexto:
 ${ctx}
