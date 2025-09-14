@@ -1,7 +1,5 @@
 // src/components/Preview.jsx
 import React, { useEffect, useMemo, useRef, useState } from 'react'
-import { pdf } from '@react-pdf/renderer'
-import PdfReport from './PdfReport.jsx'
 import logoImg from '../assets/logo-gep.png'
 import { generateReportPdfmake } from '../pdf/reportPdfmake'
 
