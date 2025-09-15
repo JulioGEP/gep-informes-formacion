@@ -24,13 +24,26 @@ const pickLabel = (idioma, es, ca, en) => {
   return es;
 };
 
+const escapeHtml = (value = '') =>
+  value
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;');
+
 const ensureSection = (html, title) => {
   const trimmed = sanitizeContent(html);
   if (!trimmed) return '';
   if (/<section[\s>]/i.test(trimmed)) return trimmed;
+
+  const hasHtmlTags = /<([a-z][a-z0-9]*)\b[^>]*>/i.test(trimmed);
+  if (hasHtmlTags) {
+    const body = /<h[1-6][^>]*>/i.test(trimmed) ? trimmed : `<h3>${title}</h3>${trimmed}`;
+    return `<section>${body}</section>`;
+  }
+
   const safe = compactText(trimmed);
   if (!safe) return '';
-  return `<section><h3>${title}</h3><p>${safe}</p></section>`;
+  return `<section><h3>${title}</h3><p>${escapeHtml(safe)}</p></section>`;
 };
 
 const callChatCompletion = async ({ apiKey, temperature, messages }) => {
