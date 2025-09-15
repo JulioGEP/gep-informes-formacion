@@ -33,14 +33,62 @@ export async function handler(event) {
 
     const { formador, datos } = JSON.parse(event.body || '{}');
     const idioma = (formador?.idioma || 'ES').toUpperCase();
+    const tipo = datos?.tipo || 'formacion';
 
-    // ⬇️ NUEVO: fecha en DD/MM/YYYY y sede resuelta (GEPCO si coincide)
     const fechaFmt = formatFechaDDMMYYYY(datos?.fecha || '');
     const sede = datos?.sede || '-';
     const sedeEsGEPCO = esInstalacionGEPCO(sede);
     const sedeRedactada = sedeEsGEPCO ? `nuestras instalaciones de GEPCO (${sede})` : sede;
 
-    const ctx = `
+    let ctx, system, prompt;
+
+    if (tipo === 'simulacro') {
+      ctx = `
+Cliente: ${datos?.cliente || '-'}
+CIF: ${datos?.cif || '-'} | Dirección: ${datos?.sede || '-'}
+Auditor: ${formador?.nombre || '-'} | Idioma: ${idioma}
+Sesiones: ${datos?.sesiones || '-'} | Duración(h): ${datos?.duracion || '-'}
+
+Desarrollo:
+${datos?.desarrollo || '-'}
+
+Cronología:
+- ${(datos?.cronologia || []).map(c=>`${c.hora} ${c.texto}`).join('\n- ')}
+
+Valoraciones (1-10): Participación=${datos?.escalas?.participacion ?? 0}, Compromiso=${datos?.escalas?.compromiso ?? 0}, Superación=${datos?.escalas?.superacion ?? 0}
+
+Incidencias detectadas: ${datos?.comentarios?.c12 || '-'}
+Accidentes: ${datos?.comentarios?.c14 || '-'}
+Recomendaciones formaciones: ${datos?.comentarios?.c15 || '-'}
+Recomendaciones entorno: ${datos?.comentarios?.c16 || '-'}
+Recomendaciones materiales: ${datos?.comentarios?.c17 || '-'}
+Observaciones generales: ${datos?.comentarios?.c11 || '-'}
+`.trim();
+
+      system = (idioma === 'EN')
+        ? 'You are a technical writer for GEP Group, expert in emergency drills. Write in first person plural (we), formal and precise. Temperature 0.3. Never show numeric scores.'
+        : (idioma === 'CA')
+          ? 'Ets un redactor tècnic de GEP Group, expert en auditar simulacres. Escriu en primera persona del plural (nosaltres), to formal tècnic PRL/PCI i emergències. Temperatura 0.3. No mostris puntuacions numèriques.'
+          : 'Eres un redactor técnico de GEP Group, experto en auditar simulacros. Escribe en primera persona plural (nosotros), tono formal técnico PRL/PCI y emergencias. Temperatura 0.3. No muestres puntuaciones numéricas.';
+
+      prompt = `
+Redacta "Análisis y recomendaciones" del simulacro en un máximo de 650 palabras.
+Interpreta las valoraciones de forma cualitativa (alta/media/baja).
+No inventes datos y utiliza la cronología tal cual aparece, corrigiendo solo ortografía.
+
+Estructura:
+- Datos generales
+- DESARROLLO / INCIDENCIAS / RECOMENDACIONES
+- Desarrollo
+- Cronología
+- INCIDENCIAS DETECTADA
+- RECOMENDACIONES
+- OBSERVACIONES
+
+Devuelve solo el texto sin HTML.
+`.trim();
+    } else {
+      ctx = `
 Deal: ${datos?.cliente || '-'} | CIF: ${datos?.cif || '-'}
 Sede: ${datos?.sede || '-'} | Fecha: ${datos?.fecha || '-'}
 Formador/a: ${formador?.nombre || '-'} | Idioma: ${idioma}
@@ -67,13 +115,13 @@ Comentarios:
 - Materiales: ${datos?.comentarios?.c17 || '-'}
 `.trim();
 
-    const system = (idioma === 'EN')
-      ? 'You are a technical writer. Write in first person as the trainer, formal and precise. Temperature 0.3. Never show numeric scores.'
-      : (idioma === 'CA')
-        ? 'Ets un redactor tècnic. Escriu en primera persona com a formador, to formal i precís. Temperatura 0.3. No mostris puntuacions numèriques.'
-        : 'Eres un redactor técnico. Escribe en primera persona como el formador, tono formal y preciso. Temperatura 0.3. No muestres puntuaciones numéricas.';
+      system = (idioma === 'EN')
+        ? 'You are a technical writer. Write in first person as the trainer, formal and precise. Temperature 0.3. Never show numeric scores.'
+        : (idioma === 'CA')
+          ? 'Ets un redactor tècnic. Escriu en primera persona com a formador, to formal i precís. Temperatura 0.3. No mostris puntuacions numèriques.'
+          : 'Eres un redactor técnico. Escribe en primera persona como el formador, tono formal y preciso. Temperatura 0.3. No muestres puntuaciones numéricas.';
 
-    const prompt = `
+      prompt = `
 Redacta un INFORME TÉCNICO en primera persona (yo) basado en el contexto.
 No muestres números de las escalas; interpreta en texto (“participación alta/media/baja”, etc.).
 
@@ -96,6 +144,7 @@ IMPORTANTE:
 Contexto:
 ${ctx}
 `.trim();
+    }
 
     const resp = await fetch('https://api.openai.com/v1/chat/completions', {
       method: 'POST',

@@ -127,6 +127,8 @@ const buildDocDefinition = ({
   const teorica = bullet(datos?.contenidoTeorica)
   const practica = bullet(datos?.contenidoPractica)
 
+  const crono = (datos?.cronologia || []).map(c => `${c.hora || ''} ${c.texto || ''}`.trim())
+
   const imageRows = chunk(imagenes || [], 2).map((row) => ({
     columns: row.map((img) => ({
       stack: [
@@ -137,6 +139,105 @@ const buildDocDefinition = ({
     columnGap: 10,
     margin: [0, 6, 0, 6],
   }))
+
+  if (datos?.tipo === 'simulacro') {
+    return {
+      pageSize: 'A4',
+      pageMargins: [58,110,58,90],
+      defaultStyle: { fontSize:10, lineHeight:1.25, font:'Poppins' },
+      styles: {
+        h1: { fontSize:16, bold:true, margin:[0,0,0,6] },
+        h2: { fontSize:13, bold:true, margin:[0,14,0,6], color:'#E1062C' },
+        h3: { fontSize:11, bold:true, margin:[0,10,0,4] },
+        small: { fontSize:9, color:'#666' },
+        caption: { fontSize:8, color:'#666' },
+        k: { bold:true },
+      },
+      header: () => ({ image: headerDataUrl, width:479, alignment:'center', margin:[0,18,0,0] }),
+      footer: () => ({ image: footerDataUrl, width:479, alignment:'center', margin:[0,0,0,18] }),
+      content: [
+        { text: 'INFORME SIMULACRO', style:'h1' },
+        { text: [{ text:'Fecha del simulacro: ', bold:true }, { text: datos?.fecha || '—' }], margin:[0,0,0,6] },
+        {
+          table: {
+            widths: ['*'],
+            body: [[{
+              stack: [
+                { text:'Datos generales', style:'h3', margin:[0,0,0,6] },
+                {
+                  columns: [
+                    {
+                      width:'50%',
+                      stack: [
+                        { columns: kv('Nº Presupuesto', dealId) },
+                        { columns: kv('Empresa', datos?.cliente) },
+                        { columns: kv('CIF', datos?.cif) },
+                        { columns: kv('Dirección fiscal', datos?.direccionOrg) },
+                        { columns: kv('Dirección del simulacro', datos?.sede) },
+                      ],
+                    },
+                    {
+                      width:'50%',
+                      stack: [
+                        { columns: kv('Auditor', formador?.nombre) },
+                        { columns: kv('Sesiones', String(datos?.sesiones ?? '')) },
+                        { columns: kv('Duración', String(datos?.duracion ?? '')) },
+                        { columns: kv('Persona de contacto', datos?.contacto) },
+                        { columns: kv('Comercial', datos?.comercial) },
+                      ],
+                    },
+                  ],
+                  columnGap:20,
+                },
+              ],
+              fillColor:'#F3F3F3',
+              margin:[8,8,8,8],
+            }]],
+          },
+          layout:{ hLineWidth:()=>0, vLineWidth:()=>0, paddingTop:()=>0, paddingBottom:()=>0, paddingLeft:()=>0, paddingRight:()=>0 },
+          margin:[0,8,0,0],
+        },
+        { text:'DESARROLLO / INCIDENCIAS / RECOMENDACIONES', style:'h2' },
+        { text:'Desarrollo', style:'h3' },
+        { text: datos?.desarrollo || '—', margin:[0,0,0,6] },
+        { text:'Cronología', style:'h3' },
+        ...(crono.length ? [{ ol: crono }] : [{ text:'—' }]),
+        ...(aiContent ? [{ id:'informeTecnico', stack:Array.isArray(aiContent)?aiContent:[aiContent] }] : []),
+        { text:'Evaluación Cualitativa', style:'h2', color:'#000', margin:[0,14,0,6] },
+        {
+          table:{
+            widths:['*','*','*'],
+            body:[
+              [{ text:'Participación', bold:true }, { text:'Compromiso', bold:true }, { text:'Superación', bold:true }],
+              [
+                { text:String(datos?.escalas?.participacion ?? '—') },
+                { text:String(datos?.escalas?.compromiso ?? '—') },
+                { text:String(datos?.escalas?.superacion ?? '—') },
+              ],
+            ],
+          },
+          layout:'lightHorizontalLines',
+          margin:[0,0,0,8],
+        },
+        { text:'Incidencias detectadas', style:'h3' },
+        { text: datos?.comentarios?.c12 || '—', margin:[0,0,0,4] },
+        { text:'Accidentes', style:'h3' },
+        { text: datos?.comentarios?.c14 || '—', margin:[0,0,0,4] },
+        { text:'Recomendaciones: Formaciones', style:'h3' },
+        { text: datos?.comentarios?.c15 || '—', margin:[0,0,0,4] },
+        { text:'Recomendaciones: Del entorno de Trabajo', style:'h3' },
+        { text: datos?.comentarios?.c16 || '—', margin:[0,0,0,4] },
+        { text:'Recomendaciones: De Materiales', style:'h3' },
+        { text: datos?.comentarios?.c17 || '—', margin:[0,0,0,4] },
+        { text:'Observaciones generales', style:'h3' },
+        { text: datos?.comentarios?.c11 || '—', margin:[0,0,0,8] },
+        ...(Array.isArray(imagenes) && imagenes.length ? [{ text:'Imágenes de apoyo', style:'h2', color:'#000' }, ...imageRows] : []),
+        { text:'Atentamente,', margin:[0,18,0,2] },
+        { text:'Jaime', style:'k' },
+        { text:'Responsable de formaciones', color:'#E1062C', margin:[0,2,0,0] },
+      ],
+    }
+  }
 
   return {
     pageSize: 'A4',
@@ -314,7 +415,7 @@ const buildDocDefinition = ({
 
 // ---------- API usada por Preview.jsx ----------
 export async function generateReportPdfmake(draft) {
-  const { dealId, datos, formador, imagenes } = draft || {}
+  const { dealId, datos, formador, imagenes, type } = draft || {}
 
   const [pdfMake, htmlToPdfmake, headerDataUrl, footerDataUrl] = await Promise.all([
     ensurePdfMake(),
@@ -346,7 +447,13 @@ export async function generateReportPdfmake(draft) {
   }
 
   const docDefinition = buildDocDefinition({
-    dealId, datos, formador, imagenes, aiContent, headerDataUrl, footerDataUrl,
+    dealId,
+    datos: { ...datos, tipo: datos?.tipo || type },
+    formador,
+    imagenes,
+    aiContent,
+    headerDataUrl,
+    footerDataUrl,
   })
 
   const fecha = (datos?.fecha || '').slice(0, 10)

@@ -19,6 +19,7 @@ export default function App() {
         <Form
           initial={formacion}
           title="Informe de Formación"
+          type="formacion"
           onChooseAnother={() => setScreen('home')}
           onNext={(data) => {
             setFormacion(data);
@@ -30,6 +31,7 @@ export default function App() {
         <Preview
           data={formacion}
           title="Informe de Formación"
+          type="formacion"
           onBack={() => setScreen('formacion-form')}
         />
       )}
@@ -37,6 +39,7 @@ export default function App() {
         <Form
           initial={simulacro}
           title="Informe de Simulacro"
+          type="simulacro"
           onChooseAnother={() => setScreen('home')}
           onNext={(data) => {
             setSimulacro(data);
@@ -48,6 +51,7 @@ export default function App() {
         <Preview
           data={simulacro}
           title="Informe de Simulacro"
+          type="simulacro"
           onBack={() => setScreen('simulacro-form')}
         />
       )}
@@ -55,6 +59,7 @@ export default function App() {
         <Form
           initial={preventivo}
           title="Informe de Preventivo"
+          type="preventivo"
           onChooseAnother={() => setScreen('home')}
           onNext={(data) => {
             setPreventivo(data);
@@ -66,6 +71,7 @@ export default function App() {
         <Preview
           data={preventivo}
           title="Informe de Preventivo"
+          type="preventivo"
           onBack={() => setScreen('preventivo-form')}
         />
       )}
