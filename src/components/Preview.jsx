@@ -1,6 +1,6 @@
 // src/components/Preview.jsx
 import React, { useEffect, useMemo, useRef, useState } from 'react'
-import logoImg from '../assets/logo-gep.png'
+import logoImg from '../assets/logo-nuevo.png'
 import { generateReportPdfmake } from '../pdf/reportPdfmake'
 import { triesKey, htmlKey } from '../utils/keys'
 
