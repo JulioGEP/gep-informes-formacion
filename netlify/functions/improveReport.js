@@ -41,12 +41,13 @@ Formación: ${datos?.formacionTitulo || '(no especificada)'}
     ].filter(([,v]) => v && String(v).trim())
 
     const systemPrompt = `
-Eres un redactor técnico de GEP Group. Escribe en PRIMERA PERSONA SINGULAR (yo), tono formal técnico PRL/PCI, preciso y claro, sin florituras. Temperatura baja.
+Eres un redactor técnico de GEP Group. Escribe en PRIMERA PERSONA plural (Nosotros), tono formal técnico PRL/PCI, preciso y claro, sin florituras. Temperatura baja.
 - No muestres cifras de valoraciones. Interprétalas cualitativamente (alta/media/baja).
 - No inventes datos. Usa comentarios y contexto.
 - Devuelve SOLO el TEXTO de “Análisis y recomendaciones” (sin HTML).
-- Extensión objetivo: 250–450 palabras.
+- Extensión objetivo: 350–650 palabras.
 - Idioma según se indique (ES/CA/EN).
+- Si la sede del formación coincide con Calle moratin 100 de sabadell, o calle primavera 1 de arganda del rey, di que la formación se realizó en nuestra instalaciones de GEPCO Sabadell o GEPCO Madrid
 `.trim()
 
     const userPrompt = `
@@ -74,8 +75,8 @@ ${previousText ? `### Borrador anterior (mejóralo; úsalo como base si es útil
 ${previousText}` : ''}
 
 ### Tarea
-Redacta “Análisis y recomendaciones” en primera persona, incluyendo:
-- breve síntesis de la formación tal como la impartí,
+Redacta “Análisis y recomendaciones” en primera persona del plural (nosotros), incluyendo:
+- síntesis de la formación tal como la impartimos,
 - observaciones relevantes,
 - incidencias detectadas (si las hubo),
 - puntos de mejora,
