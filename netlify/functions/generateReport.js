@@ -47,9 +47,17 @@ const callChatCompletion = async ({ apiKey, temperature, messages }) => {
     }),
   });
 
-  const json = await resp.json();
-  if (!resp.ok) throw new Error(json?.error?.message || 'OpenAI error');
-  return sanitizeContent(json.choices?.[0]?.message?.content || '');
+  const raw = await resp.text();
+  let json;
+  try {
+    json = raw ? JSON.parse(raw) : null;
+  } catch (error) {
+    const snippet = raw ? raw.slice(0, 200) : 'cuerpo vacío';
+    throw new Error(`OpenAI response parse error (${resp.status}): ${snippet}`);
+  }
+
+  if (!resp.ok) throw new Error(json?.error?.message || `OpenAI error ${resp.status}`);
+  return sanitizeContent(json?.choices?.[0]?.message?.content || '');
 };
 
 const buildSimulacroSystem = (idioma) => {
@@ -190,28 +198,40 @@ async function generarHtmlSimulacro({ apiKey, idioma, datos, formador }) {
 
   const promptContext = `Contexto del simulacro:\n${ctx}`;
 
-  const htmlSections = await Promise.all(
-    sections.map(async (section) => {
+  const tasks = sections.map((section) =>
+    (async () => {
       const prompt = `${section.instructions}\n\n${promptContext}`;
-
-      try {
-        const content = await callChatCompletion({
-          apiKey,
-          temperature: section.temperature,
-          messages: [
-            { role: 'system', content: system },
-            { role: 'user', content: prompt },
-          ],
-        });
-        return ensureSection(content, section.title);
-      } catch (error) {
-        console.error(`[generateReport] sección "${section.title}"`, error);
-        return `<section><h3>${section.title}</h3><p>No se pudo generar esta sección de forma automática.</p></section>`;
-      }
-    }),
+      const content = await callChatCompletion({
+        apiKey,
+        temperature: section.temperature,
+        messages: [
+          { role: 'system', content: system },
+          { role: 'user', content: prompt },
+        ],
+      });
+      return sanitizeContent(content);
+    })(),
   );
 
-  return htmlSections.filter(Boolean).join('\n');
+  const results = await Promise.allSettled(tasks);
+
+  const htmlSections = results
+    .map((result, index) => {
+      const section = sections[index];
+
+      if (result.status === 'fulfilled') {
+        const ensured = ensureSection(result.value, section.title);
+        if (ensured) return ensured;
+        console.warn(`[generateReport] sección "${section.title}" vacía tras asegurado`);
+      } else {
+        console.error(`[generateReport] sección "${section.title}"`, result.reason);
+      }
+
+      return `<section><h3>${section.title}</h3><p>No se pudo generar esta sección de forma automática.</p></section>`;
+    })
+    .filter(Boolean);
+
+  return htmlSections.join('\n');
 }
 
 // ───────── Utils mínimas (solo lo necesario) ─────────
