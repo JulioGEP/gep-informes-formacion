@@ -1,7 +1,7 @@
 // src/components/Form.jsx
 import React, { useEffect, useMemo, useRef, useState } from 'react'
 import plantillasBase from '../utils/plantillas.json'
-import logoImg from '../assets/logo-gep.png'
+import logoImg from '../assets/logo-nuevo.png'
 import { triesKey, htmlKey } from '../utils/keys'
 
 const fileToDataURL = (file) =>
