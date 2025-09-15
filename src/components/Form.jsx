@@ -12,8 +12,10 @@ const fileToDataURL = (file) =>
     reader.readAsDataURL(file)
   })
 
-export default function Form({ initial, onNext, title = 'Informe de Formación', onChooseAnother }) {
+export default function Form({ initial, onNext, title = 'Informe de Formación', onChooseAnother, type = 'formacion' }) {
   const formRef = useRef(null)
+
+  const isSimulacro = type === 'simulacro'
 
   const [dealId, setDealId] = useState(initial?.dealId || '')
   const prevDealIdRef = useRef(dealId)
@@ -34,6 +36,8 @@ export default function Form({ initial, onNext, title = 'Informe de Formación',
     formacionTitulo: initial?.datos?.formacionTitulo || '',
     contenidoTeorica: initial?.datos?.contenidoTeorica || [],
     contenidoPractica: initial?.datos?.contenidoPractica || [],
+    desarrollo: initial?.datos?.desarrollo || '',
+    cronologia: initial?.datos?.cronologia || [],
     escalas: initial?.datos?.escalas || { participacion: 7, compromiso: 7, superacion: 7 },
     comentarios: initial?.datos?.comentarios || { c11:'', c12:'', c13:'', c14:'', c15:'', c16:'', c17:'' },
   })
@@ -106,6 +110,24 @@ export default function Form({ initial, onNext, title = 'Informe de Formación',
     try { sessionStorage.setItem('tmpImages', JSON.stringify(list)) } catch {}
   }
 
+  // Cronología para simulacros
+  const addCrono = () => {
+    const now = new Date()
+    const hh = String(now.getHours()).padStart(2, '0')
+    const mm = String(now.getMinutes()).padStart(2, '0')
+    setDatos(d => ({ ...d, cronologia: [...(d.cronologia||[]), { hora: `${hh}:${mm}`, texto: '' }] }))
+  }
+
+  const updateCrono = (idx, field, value) => {
+    setDatos(d => {
+      const arr = [...(d.cronologia || [])]
+      arr[idx] = { ...arr[idx], [field]: value }
+      return { ...d, cronologia: arr }
+    })
+  }
+
+  const removeCrono = (idx) => setDatos(d => ({ ...d, cronologia: d.cronologia.filter((_, i) => i !== idx) }))
+
   // Submit con validación nativa + min
   const onSubmit = (e) => {
     e.preventDefault()
@@ -117,7 +139,7 @@ export default function Form({ initial, onNext, title = 'Informe de Formación',
       const n = Number(v)
       return Number.isFinite(n) && n > 0
     }
-    if (!numOk(datos.sesiones) || !numOk(datos.alumnos) || !numOk(datos.duracion)) {
+    if (!numOk(datos.sesiones) || (!isSimulacro && !numOk(datos.alumnos)) || !numOk(datos.duracion)) {
       alert('Los campos numéricos deben ser mayores que 0.')
       return
     }
@@ -126,7 +148,7 @@ export default function Form({ initial, onNext, title = 'Informe de Formación',
       return
     }
 
-    onNext({ dealId, formador: { nombre: datos.formadorNombre, idioma: datos.idioma }, datos, imagenes })
+    onNext({ type, dealId, formador: { nombre: datos.formadorNombre, idioma: datos.idioma }, datos: { ...datos, tipo: type }, imagenes })
   }
 
   const addTeorica = () => setDatos(d => ({ ...d, contenidoTeorica: [...(d.contenidoTeorica||[]), '' ] }))
@@ -193,7 +215,7 @@ export default function Form({ initial, onNext, title = 'Informe de Formación',
                   <input className="form-control" value={datos.direccionOrg} required onChange={(e)=>setDatos(d=>({...d, direccionOrg:e.target.value}))} />
                 </div>
                 <div className="col-md-6">
-                  <label className="form-label">Dirección de la formación</label>
+                  <label className="form-label">{isSimulacro ? 'Dirección del Simulacro' : 'Dirección de la formación'}</label>
                   <input className="form-control" value={datos.sede} required onChange={(e)=>setDatos(d=>({...d, sede:e.target.value}))} />
                 </div>
               </div>
@@ -208,9 +230,9 @@ export default function Form({ initial, onNext, title = 'Informe de Formación',
               <h2 className="h6">Datos del formador</h2>
 
               <div className="row g-3">
-                {/* Formador/a */}
+                {/* Formador/a o Auditor/a */}
                 <div className="col-12">
-                  <label className="form-label">Formador/a</label>
+                  <label className="form-label">{isSimulacro ? 'Auditor/a' : 'Formador/a'}</label>
                   <input className="form-control" value={datos.formadorNombre} required onChange={(e)=>setDatos(d=>({...d, formadorNombre:e.target.value}))} />
                 </div>
 
@@ -249,18 +271,20 @@ export default function Form({ initial, onNext, title = 'Informe de Formación',
                   />
                 </div>
 
-                {/* Nº alumnos (numérico) */}
-                <div className="col-12 col-md-6">
-                  <label className="form-label">Nº de alumnos</label>
-                  <input
-                    type="number"
-                    min={1}
-                    className="form-control"
-                    value={datos.alumnos}
-                    required
-                    onChange={(e)=>setDatos(d=>({...d, alumnos:e.target.value}))}
-                  />
-                </div>
+                {/* Nº alumnos (solo formación) */}
+                {!isSimulacro && (
+                  <div className="col-12 col-md-6">
+                    <label className="form-label">Nº de alumnos</label>
+                    <input
+                      type="number"
+                      min={1}
+                      className="form-control"
+                      value={datos.alumnos}
+                      required={!isSimulacro}
+                      onChange={(e)=>setDatos(d=>({...d, alumnos:e.target.value}))}
+                    />
+                  </div>
+                )}
 
                 {/* Duración (numérico) */}
                 <div className="col-12 col-md-6">
@@ -281,60 +305,86 @@ export default function Form({ initial, onNext, title = 'Informe de Formación',
         </div>
       </div>
 
-      {/* ===== FORMACIÓN ===== */}
-      <div>
-        <h2 className="h5">Formación realizada</h2>
-        <div className="card"><div className="card-body">
-          <div className="row g-3">
-            <div className="col-md-6">
-              <label className="form-label">Formación</label>
-              <select
-                className="form-select"
-                value={selTitulo}
-                required
-                onChange={(e)=>setSelTitulo(e.target.value)}
-              >
-                <option value="">— Selecciona —</option>
-                {opcionesOrdenadas.map(t => <option key={t} value={t}>{t}</option>)}
-              </select>
-            </div>
+      {isSimulacro ? (
+        <>
+          <h2 className="h5 text-danger">DESARROLLO / INCIDENCIAS / RECOMENDACIONES</h2>
+          <div className="mb-3">
+            <label className="form-label">Desarrollo</label>
+            <textarea className="form-control" required value={datos.desarrollo} onChange={(e)=>setDatos(d=>({...d, desarrollo:e.target.value}))} />
           </div>
-
-          <div className="row g-4 mt-1">
-            <div className="col-md-6">
-              <label className="form-label">Parte Teórica</label>
+          <div>
+            <h2 className="h5">Cronología</h2>
+            <div className="card"><div className="card-body">
+              <label className="form-label">Inicio del Simulacro</label>
               <div className="d-grid gap-2">
-                {(datos.contenidoTeorica || []).map((v,i)=>(
-                  <div className="input-group" key={`t-${i}`}>
-                    <input className="form-control" value={v}
-                      onChange={(e)=>setDatos(d=>{ const arr=[...(d.contenidoTeorica||[])]; arr[i]=e.target.value; return {...d, contenidoTeorica:arr}; })} />
-                    <button type="button" className="btn btn-outline-danger" onClick={()=>setDatos(d=>({...d, contenidoTeorica:d.contenidoTeorica.filter((_,idx)=>idx!==i)}))}>Eliminar</button>
+                {(datos.cronologia || []).map((p,i)=>(
+                  <div className="input-group" key={i}>
+                    <input type="time" className="form-control" value={p.hora} required onChange={(e)=>updateCrono(i,'hora',e.target.value)} />
+                    <input className="form-control" value={p.texto} required onChange={(e)=>updateCrono(i,'texto',e.target.value)} />
+                    <button type="button" className="btn btn-outline-danger" onClick={()=>removeCrono(i)}>Eliminar</button>
                   </div>
                 ))}
-                <button type="button" className="btn btn-outline-primary" onClick={addTeorica}>Añadir punto</button>
+                <button type="button" className="btn btn-outline-primary" onClick={addCrono}>Añadir punto</button>
+              </div>
+              <div className="form-text mt-2">Añade punto a punto la cronología de lo que sucede en el simulacro</div>
+            </div></div>
+          </div>
+        </>
+      ) : (
+        <div>
+          <h2 className="h5">Formación realizada</h2>
+          <div className="card"><div className="card-body">
+            <div className="row g-3">
+              <div className="col-md-6">
+                <label className="form-label">Formación</label>
+                <select
+                  className="form-select"
+                  value={selTitulo}
+                  required
+                  onChange={(e)=>setSelTitulo(e.target.value)}
+                >
+                  <option value="">— Selecciona —</option>
+                  {opcionesOrdenadas.map(t => <option key={t} value={t}>{t}</option>)}
+                </select>
               </div>
             </div>
 
-            <div className="col-md-6">
-              <label className="form-label">Parte Práctica</label>
-              <div className="d-grid gap-2">
-                {(datos.contenidoPractica || []).map((v,i)=>(
-                  <div className="input-group" key={`p-${i}`}>
-                    <input className="form-control" value={v}
-                      onChange={(e)=>setDatos(d=>{ const arr=[...(d.contenidoPractica||[])]; arr[i]=e.target.value; return {...d, contenidoPractica:arr}; })} />
-                    <button type="button" className="btn btn-outline-danger" onClick={()=>setDatos(d=>({...d, contenidoPractica:d.contenidoPractica.filter((_,idx)=>idx!==i)}))}>Eliminar</button>
-                  </div>
-                ))}
-                <button type="button" className="btn btn-outline-primary" onClick={addPractica}>Añadir punto</button>
+            <div className="row g-4 mt-1">
+              <div className="col-md-6">
+                <label className="form-label">Parte Teórica</label>
+                <div className="d-grid gap-2">
+                  {(datos.contenidoTeorica || []).map((v,i)=>(
+                    <div className="input-group" key={`t-${i}`}>
+                      <input className="form-control" value={v}
+                        onChange={(e)=>setDatos(d=>{ const arr=[...(d.contenidoTeorica||[])]; arr[i]=e.target.value; return {...d, contenidoTeorica:arr}; })} />
+                      <button type="button" className="btn btn-outline-danger" onClick={()=>setDatos(d=>({...d, contenidoTeorica:d.contenidoTeorica.filter((_,idx)=>idx!==i)}))}>Eliminar</button>
+                    </div>
+                  ))}
+                  <button type="button" className="btn btn-outline-primary" onClick={addTeorica}>Añadir punto</button>
+                </div>
+              </div>
+
+              <div className="col-md-6">
+                <label className="form-label">Parte Práctica</label>
+                <div className="d-grid gap-2">
+                  {(datos.contenidoPractica || []).map((v,i)=>(
+                    <div className="input-group" key={`p-${i}`}>
+                      <input className="form-control" value={v}
+                        onChange={(e)=>setDatos(d=>{ const arr=[...(d.contenidoPractica||[])]; arr[i]=e.target.value; return {...d, contenidoPractica:arr}; })} />
+                      <button type="button" className="btn btn-outline-danger" onClick={()=>setDatos(d=>({...d, contenidoPractica:d.contenidoPractica.filter((_,idx)=>idx!==i)}))}>Eliminar</button>
+                    </div>
+                  ))}
+                  <button type="button" className="btn btn-outline-primary" onClick={addPractica}>Añadir punto</button>
+                </div>
               </div>
             </div>
-          </div>
 
-          <div className="form-text mt-2">
-            Selecciona la formación realizada. Se añadirán sus “Parte teórica” y “Parte práctica” al borrador. Si falta algún punto, añádelo.
-          </div>
-        </div></div>
-      </div>
+            <div className="form-text mt-2">
+              Selecciona la formación realizada. Se añadirán sus “Parte teórica” y “Parte práctica” al borrador. Si falta algún punto, añádelo.
+            </div>
+          </div></div>
+        </div>
+      )}
 
       {/* ===== VALORACIÓN ===== */}
       <div>
@@ -372,42 +422,79 @@ export default function Form({ initial, onNext, title = 'Informe de Formación',
               </div>
             </div>
 
-            {/* Preguntas abiertas: ahora obligatorias */}
-            <div className="col-md-6">
-              <label className="form-label">Puntos fuertes de los alumnos a destacar</label>
-              <textarea className="form-control" required value={datos.comentarios.c11}
-                onChange={(e)=>setDatos(d=>({...d, comentarios:{...d.comentarios, c11:e.target.value}}))} />
-            </div>
-            <div className="col-md-6">
-              <label className="form-label">Incidencias: Referentes a la asistencia</label>
-              <textarea className="form-control" required value={datos.comentarios.c12}
-                onChange={(e)=>setDatos(d=>({...d, comentarios:{...d.comentarios, c12:e.target.value}}))} />
-            </div>
-            <div className="col-md-6">
-              <label className="form-label">Incidencias: Referentes a la puntualidad</label>
-              <textarea className="form-control" required value={datos.comentarios.c13}
-                onChange={(e)=>setDatos(d=>({...d, comentarios:{...d.comentarios, c13:e.target.value}}))} />
-            </div>
-            <div className="col-md-6">
-              <label className="form-label">Incidencias: Accidentes</label>
-              <textarea className="form-control" required value={datos.comentarios.c14}
-                onChange={(e)=>setDatos(d=>({...d, comentarios:{...d.comentarios, c14:e.target.value}}))} />
-            </div>
-            <div className="col-md-4">
-              <label className="form-label">Recomendaciones: Formaciones Futuras</label>
-              <textarea className="form-control" required value={datos.comentarios.c15}
-                onChange={(e)=>setDatos(d=>({...d, comentarios:{...d.comentarios, c15:e.target.value}}))} />
-            </div>
-            <div className="col-md-4">
-              <label className="form-label">Recomendaciones: Del entorno de Trabajo</label>
-              <textarea className="form-control" required value={datos.comentarios.c16}
-                onChange={(e)=>setDatos(d=>({...d, comentarios:{...d.comentarios, c16:e.target.value}}))} />
-            </div>
-            <div className="col-md-4">
-              <label className="form-label">Recomendaciones: De Materiales</label>
-              <textarea className="form-control" required value={datos.comentarios.c17}
-                onChange={(e)=>setDatos(d=>({...d, comentarios:{...d.comentarios, c17:e.target.value}}))} />
-            </div>
+            {/* Comentarios */}
+            {isSimulacro ? (
+              <>
+                <div className="col-md-6">
+                  <label className="form-label">Incidencias detectadas</label>
+                  <textarea className="form-control" required value={datos.comentarios.c12}
+                    onChange={(e)=>setDatos(d=>({...d, comentarios:{...d.comentarios, c12:e.target.value}}))} />
+                </div>
+                <div className="col-md-6">
+                  <label className="form-label">Incidencias: Accidentes</label>
+                  <textarea className="form-control" required value={datos.comentarios.c14}
+                    onChange={(e)=>setDatos(d=>({...d, comentarios:{...d.comentarios, c14:e.target.value}}))} />
+                </div>
+                <div className="col-md-4">
+                  <label className="form-label">Recomendaciones: Formaciones</label>
+                  <textarea className="form-control" required value={datos.comentarios.c15}
+                    onChange={(e)=>setDatos(d=>({...d, comentarios:{...d.comentarios, c15:e.target.value}}))} />
+                </div>
+                <div className="col-md-4">
+                  <label className="form-label">Recomendaciones: Del entorno de Trabajo</label>
+                  <textarea className="form-control" required value={datos.comentarios.c16}
+                    onChange={(e)=>setDatos(d=>({...d, comentarios:{...d.comentarios, c16:e.target.value}}))} />
+                </div>
+                <div className="col-md-4">
+                  <label className="form-label">Recomendaciones: De Materiales</label>
+                  <textarea className="form-control" required value={datos.comentarios.c17}
+                    onChange={(e)=>setDatos(d=>({...d, comentarios:{...d.comentarios, c17:e.target.value}}))} />
+                </div>
+                <div className="col-12">
+                  <label className="form-label">Observaciones generales</label>
+                  <textarea className="form-control" required value={datos.comentarios.c11}
+                    onChange={(e)=>setDatos(d=>({...d, comentarios:{...d.comentarios, c11:e.target.value}}))} />
+                </div>
+              </>
+            ) : (
+              <>
+                <div className="col-md-6">
+                  <label className="form-label">Puntos fuertes de los alumnos a destacar</label>
+                  <textarea className="form-control" required value={datos.comentarios.c11}
+                    onChange={(e)=>setDatos(d=>({...d, comentarios:{...d.comentarios, c11:e.target.value}}))} />
+                </div>
+                <div className="col-md-6">
+                  <label className="form-label">Incidencias: Referentes a la asistencia</label>
+                  <textarea className="form-control" required value={datos.comentarios.c12}
+                    onChange={(e)=>setDatos(d=>({...d, comentarios:{...d.comentarios, c12:e.target.value}}))} />
+                </div>
+                <div className="col-md-6">
+                  <label className="form-label">Incidencias: Referentes a la puntualidad</label>
+                  <textarea className="form-control" required value={datos.comentarios.c13}
+                    onChange={(e)=>setDatos(d=>({...d, comentarios:{...d.comentarios, c13:e.target.value}}))} />
+                </div>
+                <div className="col-md-6">
+                  <label className="form-label">Incidencias: Accidentes</label>
+                  <textarea className="form-control" required value={datos.comentarios.c14}
+                    onChange={(e)=>setDatos(d=>({...d, comentarios:{...d.comentarios, c14:e.target.value}}))} />
+                </div>
+                <div className="col-md-4">
+                  <label className="form-label">Recomendaciones: Formaciones Futuras</label>
+                  <textarea className="form-control" required value={datos.comentarios.c15}
+                    onChange={(e)=>setDatos(d=>({...d, comentarios:{...d.comentarios, c15:e.target.value}}))} />
+                </div>
+                <div className="col-md-4">
+                  <label className="form-label">Recomendaciones: Del entorno de Trabajo</label>
+                  <textarea className="form-control" required value={datos.comentarios.c16}
+                    onChange={(e)=>setDatos(d=>({...d, comentarios:{...d.comentarios, c16:e.target.value}}))} />
+                </div>
+                <div className="col-md-4">
+                  <label className="form-label">Recomendaciones: De Materiales</label>
+                  <textarea className="form-control" required value={datos.comentarios.c17}
+                    onChange={(e)=>setDatos(d=>({...d, comentarios:{...d.comentarios, c17:e.target.value}}))} />
+                </div>
+              </>
+            )}
 
             {/* Imágenes (opcional) */}
             <div className="col-12">

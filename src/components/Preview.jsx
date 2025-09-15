@@ -38,9 +38,11 @@ function EditableHtml({ dealId, initialHtml, onChange }) {
 
 // Acepta draft o data (compat con tu App)
 export default function Preview(props) {
-  const { onBack, title = 'Informe de Formación' } = props
+  const { onBack, title = 'Informe de Formación', type: propType } = props
   const draft = props.draft ?? props.data ?? {}
-  const { datos, imagenes, formador, dealId } = draft
+  const { datos, imagenes, formador, dealId, type: draftType } = draft
+  const type = propType || draftType || 'formacion'
+  const isSimulacro = type === 'simulacro'
 
   const [aiHtml, setAiHtml] = useState(null)
   const [aiBusy, setAiBusy] = useState(false)
@@ -72,12 +74,20 @@ export default function Preview(props) {
 
   const tieneContenido = useMemo(() => {
     if (!datos) return false
+    if (isSimulacro) {
+      return (
+        (datos.cronologia?.length || 0) > 0 ||
+        (datos.desarrollo || '').trim() !== '' ||
+        Object.values(datos?.comentarios || {}).some(v => (v || '').trim() !== '') ||
+        (Array.isArray(imagenes) && imagenes.length > 0)
+      )
+    }
     return (
       (datos.formacionTitulo && (datos.contenidoTeorica?.length || datos.contenidoPractica?.length)) ||
       Object.values(datos?.comentarios || {}).some(v => (v || '').trim() !== '') ||
       (Array.isArray(imagenes) && imagenes.length > 0)
     )
-  }, [datos, imagenes])
+  }, [datos, imagenes, isSimulacro])
 
   const mejorarInforme = async () => {
     if (dealId && tries >= maxTries) return
@@ -116,7 +126,7 @@ export default function Preview(props) {
 
   const descargarPDF = async () => {
   try {
-    await generateReportPdfmake({ dealId, datos, formador, imagenes })
+    await generateReportPdfmake({ dealId, datos, formador, imagenes, type })
   } catch (e) {
     console.error('Error generando PDF (pdfmake):', e)
     alert('No se ha podido generar el PDF.')
@@ -174,7 +184,7 @@ export default function Preview(props) {
                   <div className="col-md-7"><strong>Cliente:</strong> {datos?.cliente || '—'}</div>
                   <div className="col-md-5"><strong>CIF:</strong> {datos?.cif || '—'}</div>
                   <div className="col-md-6"><strong>Dirección fiscal:</strong> {datos?.direccionOrg || '—'}</div>
-                  <div className="col-md-6"><strong>Dirección formación:</strong> {datos?.sede || '—'}</div>
+                  <div className="col-md-6"><strong>{isSimulacro ? 'Dirección del simulacro' : 'Dirección formación'}:</strong> {datos?.sede || '—'}</div>
                   <div className="col-md-6"><strong>Persona de contacto:</strong> {datos?.contacto || '—'}</div>
                   <div className="col-md-6"><strong>Comercial:</strong> {datos?.comercial || '—'}</div>
                 </div>
@@ -185,70 +195,96 @@ export default function Preview(props) {
               <div className="border rounded p-3 w-100 h-100">
                 <h6 className="mb-3">Datos del formador</h6>
                 <div className="row g-2">
-  <div className="col-12">
-    <strong>Formador/a:</strong> {formador?.nombre || '—'}
-  </div>
-
-  {/* Fecha a ancho completo */}
-  <div className="col-12">
-    <strong>Fecha:</strong> {datos?.fecha || '—'}
-  </div>
-
-  {/* Debajo de Fecha → Sesiones */}
-  <div className="col-12">
-    <strong>Sesiones:</strong> {datos?.sesiones || '—'}
-  </div>
-
-  {/* Debajo de Sesiones → Duración (h) */}
-  <div className="col-12">
-    <strong>Duración (h):</strong> {datos?.duracion || '—'}
-  </div>
-
-  {/* Luego Nº de alumnos */}
-  <div className="col-12">
-    <strong>Nº de alumnos:</strong> {datos?.alumnos || '—'}
-  </div>
-</div>
+                  <div className="col-12">
+                    <strong>{isSimulacro ? 'Auditor/a' : 'Formador/a'}:</strong> {formador?.nombre || '—'}
+                  </div>
+                  <div className="col-12">
+                    <strong>Fecha:</strong> {datos?.fecha || '—'}
+                  </div>
+                  <div className="col-12">
+                    <strong>Sesiones:</strong> {datos?.sesiones || '—'}
+                  </div>
+                  <div className="col-12">
+                    <strong>Duración (h):</strong> {datos?.duracion || '—'}
+                  </div>
+                  {!isSimulacro && (
+                    <div className="col-12">
+                      <strong>Nº de alumnos:</strong> {datos?.alumnos || '—'}
+                    </div>
+                  )}
+                </div>
                 
               </div>
             </div>
           </div>
 
-          <hr className="my-4" />
-          <h5 className="card-title mb-3">Formación realizada</h5>
-          <p className="mb-2"><strong>Formación:</strong> {datos?.formacionTitulo || '—'}</p>
-          <div className="row g-4">
-            <div className="col-md-6">
-              <h6>Parte Teórica</h6>
-              <ul className="mb-0">
-                {(datos?.contenidoTeorica || []).map((p, i) => <li key={`t-${i}`}>{p || '—'}</li>)}
-              </ul>
-            </div>
-            <div className="col-md-6">
-              <h6>Parte Práctica</h6>
-              <ul className="mb-0">
-                {(datos?.contenidoPractica || []).map((p, i) => <li key={`p-${i}`}>{p || '—'}</li>)}
-              </ul>
-            </div>
-          </div>
-
-          {/* Si no hay IA, mostramos lo literal del formulario */}
-          {!aiHtml && (
+          {isSimulacro ? (
             <>
               <hr className="my-4" />
-              <h5 className="card-title mb-3">Valoración y observaciones</h5>
-              <div className="row g-3">
-                <div className="col-md-4"><strong>Participación:</strong> {datos?.escalas?.participacion || '—'}</div>
-                <div className="col-md-4"><strong>Compromiso:</strong> {datos?.escalas?.compromiso || '—'}</div>
-                <div className="col-md-4"><strong>Superación:</strong> {datos?.escalas?.superacion || '—'}</div>
-                <div className="col-md-6"><strong>Puntos fuertes:</strong> <div>{datos?.comentarios?.c11 || '—'}</div></div>
-                <div className="col-md-6"><strong>Asistencia:</strong> <div>{datos?.comentarios?.c12 || '—'}</div></div>
-                <div className="col-md-6"><strong>Puntualidad:</strong> <div>{datos?.comentarios?.c13 || '—'}</div></div>
-                <div className="col-md-6"><strong>Accidentes:</strong> <div>{datos?.comentarios?.c14 || '—'}</div></div>
-                <div className="col-md-4"><strong>Formaciones futuras:</strong> <div>{datos?.comentarios?.c15 || '—'}</div></div>
-                <div className="col-md-4"><strong>Entorno de trabajo:</strong> <div>{datos?.comentarios?.c16 || '—'}</div></div>
-                <div className="col-md-4"><strong>Materiales:</strong> <div>{datos?.comentarios?.c17 || '—'}</div></div>
+              <h5 className="card-title mb-3 text-danger">DESARROLLO / INCIDENCIAS / RECOMENDACIONES</h5>
+              <h5 className="card-title mb-3">Desarrollo</h5>
+              <p>{datos?.desarrollo || '—'}</p>
+              <h5 className="card-title mb-3">Cronología</h5>
+              <ul className="mb-0">
+                {(datos?.cronologia || []).map((p, i) => <li key={i}>{p.hora} {p.texto}</li>)}
+              </ul>
+              {!aiHtml && (
+                <>
+                  <hr className="my-4" />
+                  <h5 className="card-title mb-3">Valoración</h5>
+                  <div className="row g-3">
+                    <div className="col-md-4"><strong>Participación:</strong> {datos?.escalas?.participacion || '—'}</div>
+                    <div className="col-md-4"><strong>Compromiso:</strong> {datos?.escalas?.compromiso || '—'}</div>
+                    <div className="col-md-4"><strong>Superación:</strong> {datos?.escalas?.superacion || '—'}</div>
+                    <div className="col-md-6"><strong>Incidencias detectadas:</strong> <div>{datos?.comentarios?.c12 || '—'}</div></div>
+                    <div className="col-md-6"><strong>Accidentes:</strong> <div>{datos?.comentarios?.c14 || '—'}</div></div>
+                    <div className="col-md-4"><strong>Recomendaciones: Formaciones:</strong> <div>{datos?.comentarios?.c15 || '—'}</div></div>
+                    <div className="col-md-4"><strong>Recomendaciones: Entorno de trabajo:</strong> <div>{datos?.comentarios?.c16 || '—'}</div></div>
+                    <div className="col-md-4"><strong>Recomendaciones: Materiales:</strong> <div>{datos?.comentarios?.c17 || '—'}</div></div>
+                    <div className="col-12"><strong>Observaciones generales:</strong> <div>{datos?.comentarios?.c11 || '—'}</div></div>
+                  </div>
+                </>
+              )}
+            </>
+          ) : (
+            <>
+              <hr className="my-4" />
+              <h5 className="card-title mb-3">Formación realizada</h5>
+              <p className="mb-2"><strong>Formación:</strong> {datos?.formacionTitulo || '—'}</p>
+              <div className="row g-4">
+                <div className="col-md-6">
+                  <h6>Parte Teórica</h6>
+                  <ul className="mb-0">
+                    {(datos?.contenidoTeorica || []).map((p, i) => <li key={`t-${i}`}>{p || '—'}</li>)}
+                  </ul>
+                </div>
+                <div className="col-md-6">
+                  <h6>Parte Práctica</h6>
+                  <ul className="mb-0">
+                    {(datos?.contenidoPractica || []).map((p, i) => <li key={`p-${i}`}>{p || '—'}</li>)}
+                  </ul>
+                </div>
               </div>
+
+              {/* Si no hay IA, mostramos lo literal del formulario */}
+              {!aiHtml && (
+                <>
+                  <hr className="my-4" />
+                  <h5 className="card-title mb-3">Valoración y observaciones</h5>
+                  <div className="row g-3">
+                    <div className="col-md-4"><strong>Participación:</strong> {datos?.escalas?.participacion || '—'}</div>
+                    <div className="col-md-4"><strong>Compromiso:</strong> {datos?.escalas?.compromiso || '—'}</div>
+                    <div className="col-md-4"><strong>Superación:</strong> {datos?.escalas?.superacion || '—'}</div>
+                    <div className="col-md-6"><strong>Puntos fuertes:</strong> <div>{datos?.comentarios?.c11 || '—'}</div></div>
+                    <div className="col-md-6"><strong>Asistencia:</strong> <div>{datos?.comentarios?.c12 || '—'}</div></div>
+                    <div className="col-md-6"><strong>Puntualidad:</strong> <div>{datos?.comentarios?.c13 || '—'}</div></div>
+                    <div className="col-md-6"><strong>Accidentes:</strong> <div>{datos?.comentarios?.c14 || '—'}</div></div>
+                    <div className="col-md-4"><strong>Formaciones futuras:</strong> <div>{datos?.comentarios?.c15 || '—'}</div></div>
+                    <div className="col-md-4"><strong>Entorno de trabajo:</strong> <div>{datos?.comentarios?.c16 || '—'}</div></div>
+                    <div className="col-md-4"><strong>Materiales:</strong> <div>{datos?.comentarios?.c17 || '—'}</div></div>
+                  </div>
+                </>
+              )}
             </>
           )}
 
