@@ -319,8 +319,21 @@ export default function Form({ initial, onNext, title = 'Informe de Formación',
               <div className="d-grid gap-2">
                 {(datos.cronologia || []).map((p,i)=>(
                   <div className="input-group" key={i}>
-                    <input type="time" className="form-control" value={p.hora} required onChange={(e)=>updateCrono(i,'hora',e.target.value)} />
-                    <input className="form-control" value={p.texto} required onChange={(e)=>updateCrono(i,'texto',e.target.value)} />
+                    <input
+                      type="time"
+                      className="form-control"
+                      value={p.hora}
+                      required
+                      onChange={(e)=>updateCrono(i,'hora',e.target.value)}
+                      style={{ flex: '0 0 120px', maxWidth: 120 }}
+                    />
+                    <input
+                      className="form-control"
+                      value={p.texto}
+                      required
+                      onChange={(e)=>updateCrono(i,'texto',e.target.value)}
+                      style={{ flex: '1 1 auto', minWidth: 0 }}
+                    />
                     <button type="button" className="btn btn-outline-danger" onClick={()=>removeCrono(i)}>Eliminar</button>
                   </div>
                 ))}
