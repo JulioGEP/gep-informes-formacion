@@ -149,6 +149,7 @@ const buildDocDefinition = ({
         h1: { fontSize:16, bold:true, margin:[0,0,0,6] },
         h2: { fontSize:13, bold:true, margin:[0,14,0,6], color:'#E1062C' },
         h3: { fontSize:11, bold:true, margin:[0,10,0,4] },
+        h4: { fontSize:10, bold:true, margin:[0,8,0,2] },
         small: { fontSize:9, color:'#666' },
         caption: { fontSize:8, color:'#666' },
         k: { bold:true },
@@ -231,10 +232,15 @@ const buildDocDefinition = ({
         { text: datos?.comentarios?.c17 || '—', margin:[0,0,0,4] },
         { text:'Observaciones generales', style:'h3' },
         { text: datos?.comentarios?.c11 || '—', margin:[0,0,0,8] },
-        ...(Array.isArray(imagenes) && imagenes.length ? [{ text:'Imágenes de apoyo', style:'h2', color:'#000' }, ...imageRows] : []),
         { text:'Atentamente,', margin:[0,18,0,2] },
-        { text:'Jaime', style:'k' },
+        { text:'Jaime Martret', style:'k' },
         { text:'Responsable de formaciones', color:'#E1062C', margin:[0,2,0,0] },
+        ...(Array.isArray(imagenes) && imagenes.length
+          ? [
+              { text:'Anexos — Imágenes de apoyo', style:'h2', color:'#000', margin:[0,18,0,6], pageBreak:'before' },
+              ...imageRows,
+            ]
+          : []),
       ],
     }
   }
@@ -247,6 +253,7 @@ const buildDocDefinition = ({
       h1: { fontSize: 16, bold: true, margin: [0, 0, 0, 6] },
       h2: { fontSize: 13, bold: true, margin: [0, 14, 0, 6] },
       h3: { fontSize: 11, bold: true, margin: [0, 10, 0, 4] },
+      h4: { fontSize: 10, bold: true, margin: [0, 8, 0, 2] },
       small: { fontSize: 9, color: '#666' },
       caption: { fontSize: 8, color: '#666' },
       k: { bold: true },
@@ -400,15 +407,15 @@ const buildDocDefinition = ({
         margin: [0, 0, 0, 8],
       },
 
-      // ===== Imágenes de apoyo (si hay)
-      ...(Array.isArray(imagenes) && imagenes.length
-        ? [{ text: 'Imágenes de apoyo', style: 'h2' }, ...imageRows]
-        : []),
-
       // ===== Firma
       { text: 'Atentamente,', margin: [0, 18, 0, 2] },
-      { text: 'Jaime', style: 'k' },
+      { text: 'Jaime Martret', style: 'k' },
       { text: 'Responsable de formaciones', color: '#E1062C', margin: [0, 2, 0, 0] },
+
+      // ===== Anexos (imágenes)
+      ...(Array.isArray(imagenes) && imagenes.length
+        ? [{ text: 'Anexos — Imágenes de apoyo', style: 'h2', margin: [0, 18, 0, 6], pageBreak: 'before' }, ...imageRows]
+        : []),
     ],
   }
 }

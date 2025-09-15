@@ -296,10 +296,17 @@ export default function Preview(props) {
             </>
           )}
 
+          <hr className="my-4" />
+          <div>
+            <p className="mb-1">Atentamente,</p>
+            <strong>Jaime Martret</strong>
+            <div className="text-danger">Responsable de formaciones</div>
+          </div>
+
           {Array.isArray(imagenes) && imagenes.length > 0 && (
             <>
               <hr className="my-4" />
-              <h5 className="card-title mb-3">Imágenes de apoyo</h5>
+              <h5 className="card-title mb-3">Anexos — Imágenes de apoyo</h5>
               <div className="d-flex flex-wrap gap-2">
                 {imagenes.map((img, i) => (
                   <div key={i} className="border rounded p-1" style={{ width: 120 }}>
