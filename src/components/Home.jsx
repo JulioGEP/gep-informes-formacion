@@ -1,4 +1,5 @@
 import React from 'react'
+import logoImg from '../assets/logo-nuevo.png'
 
 export default function Home({ onSelect }) {
   return (
@@ -7,18 +8,11 @@ export default function Home({ onSelect }) {
         className="border-bottom d-flex align-items-center gap-3 sticky-top bg-white py-3 my-3"
         style={{ top: 0, zIndex: 10 }}
       >
-        <div
-          style={{
-            width: 180,
-            height: 52,
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-            fontWeight: 'bold',
-          }}
-        >
-          GEP Group
-        </div>
+        <img
+          src={logoImg}
+          alt="GEP Group"
+          style={{ width: 180, height: 52, objectFit: 'contain', display: 'block' }}
+        />
         <div className="flex-grow-1">
           <h1 className="h5 mb-0">Informes GEP</h1>
           <small className="text-muted">GEP Group — Formación y Servicios</small>
