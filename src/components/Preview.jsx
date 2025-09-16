@@ -59,7 +59,8 @@ const escapeHtml = (value = '') =>
     .replace(/>/g, '&gt;')
     .replace(/"/g, '&quot;')
 
-const preventivoTextToHtml = (text = '', idioma = 'ES') => {
+const preventivoTextToHtml = (text = '', idioma = 'ES', options = {}) => {
+  const { hasImages = true } = options
   const lang = (idioma || 'ES').toUpperCase()
   const labels = preventivoHeadings[lang] || preventivoHeadings.ES
   const order = [
@@ -75,6 +76,9 @@ const preventivoTextToHtml = (text = '', idioma = 'ES') => {
   const generalKey = normalizeText(labels.generales)
   const lookup = new Map(order.map((title) => [normalizeText(title), title]))
   const skipTitles = new Set([generalKey])
+  if (!hasImages && labels.anexos) {
+    skipTitles.add(normalizeText(labels.anexos))
+  }
 
   const lines = String(text || '').split(/\r?\n/)
   const parts = []
@@ -132,14 +136,14 @@ const preventivoTextToHtml = (text = '', idioma = 'ES') => {
     lines.forEach((rawLine) => {
       const trimmed = rawLine.trim()
       const normalized = normalizeText(trimmed.replace(/[:：]\s*$/, ''))
-      if (!skipping && normalized && normalized === generalKey) {
+      if (!skipping && normalized && skipTitles.has(normalized)) {
         skipping = true
         return
       }
       if (skipping) {
         if (!trimmed) {
           skipping = false
-        } else if (lookup.has(normalized) && normalized !== generalKey) {
+        } else if (lookup.has(normalized) && !skipTitles.has(normalized)) {
           skipping = false
         }
       }
@@ -286,7 +290,8 @@ export default function Preview(props) {
       if (!html) throw new Error('La IA devolvió un informe vacío.')
 
       if (isPreventivo) {
-        html = preventivoTextToHtml(html, idioma)
+        const hasImages = Array.isArray(imagenes) && imagenes.length > 0
+        html = preventivoTextToHtml(html, idioma, { hasImages })
       }
 
       setAiHtml(html)
