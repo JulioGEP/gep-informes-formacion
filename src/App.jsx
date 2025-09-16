@@ -58,7 +58,7 @@ export default function App() {
       {screen === 'preventivo-form' && (
         <Form
           initial={preventivo}
-          title="Informe de Preventivo"
+          title="Informe de Preventivos"
           type="preventivo"
           onChooseAnother={() => setScreen('home')}
           onNext={(data) => {
@@ -70,7 +70,7 @@ export default function App() {
       {screen === 'preventivo-preview' && (
         <Preview
           data={preventivo}
-          title="Informe de Preventivo"
+          title="Informe de Preventivos"
           type="preventivo"
           onBack={() => setScreen('preventivo-form')}
         />

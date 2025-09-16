@@ -84,6 +84,68 @@ const buildSimulacroSystem = (idioma) => {
   return 'Eres un redactor técnico de GEP Group, experto en auditar simulacros. Responde siempre en primera persona plural (nosotros) con tono formal técnico PRL/PCI y emergencias. Devuelve únicamente HTML usando <section>, <h3>, <h4>, <p>, <ul>, <li>. No muestres puntuaciones numéricas ni inventes datos.';
 };
 
+const preventivoHeadings = {
+  ES: {
+    generales: 'Datos generales',
+    registro: 'Registro',
+    trabajos: 'Trabajos',
+    tareas: 'Tareas',
+    observaciones: 'Observaciones',
+    incidencias: 'Incidencias',
+    firma: 'Firma',
+    anexos: 'Anexo de imágenes',
+  },
+  CA: {
+    generales: 'Dades generals',
+    registro: 'Registre',
+    trabajos: 'Treballs',
+    tareas: 'Tasques',
+    observaciones: 'Observacions',
+    incidencias: 'Incidències',
+    firma: 'Signatura',
+    anexos: "Annex d'imatges",
+  },
+  EN: {
+    generales: 'General information',
+    registro: 'Logbook',
+    trabajos: 'Works performed',
+    tareas: 'Tasks',
+    observaciones: 'Observations',
+    incidencias: 'Incidents',
+    firma: 'Signature',
+    anexos: 'Image annex',
+  },
+};
+
+const buildPreventivoSystem = (idioma) => {
+  const lang = (idioma || 'ES').toUpperCase();
+  if (lang === 'EN') {
+    return [
+      'You are a technical writer for GEP Group, specialised in preventive emergency drills.',
+      'Always write in first-person plural (we) with a formal PRL/PCI emergency tone: precise, direct and without embellishment.',
+      'Do not invent information. Correct grammar and spelling. Output plain text only, no HTML.',
+      'Use exactly the headings provided, one per line, and keep the sections “Works performed”, “Tasks”, “Observations” and “Incidents” between 350 and 450 words each.',
+      'Close with the corporate signature “Jaime Martret. Head of Training” and mention the image annex after the signature.',
+    ].join('\n');
+  }
+  if (lang === 'CA') {
+    return [
+      'Ets un redactor tècnic de GEP Group especialitzat en exercicis preventius.',
+      'Escriu sempre en primera persona del plural (nosaltres) amb to formal tècnic PRL/PCI: precís, directe i sense floritures.',
+      'No inventis dades. Corregeix ortografia i gramàtica. Respon només amb text pla, sense HTML.',
+      'Fes servir exactament els encapçalaments indicats, un per línia, i mantén les seccions “Treballs”, “Tasques”, “Observacions” i “Incidències” entre 350 i 450 paraules cadascuna.',
+      'Tanca amb la signatura corporativa “Jaime Martret. Responsable de formacions” i cita l’annex d’imatges després de la signatura.',
+    ].join('\n');
+  }
+  return [
+    'Eres un redactor técnico de GEP Group especializado en ejercicios preventivos.',
+    'Escribe siempre en primera persona del plural (nosotros) con un tono formal técnico PRL/PCI: preciso, directo y sin florituras.',
+    'No inventes datos. Corrige ortografía y gramática. Devuelve únicamente texto plano, sin HTML.',
+    'Utiliza exactamente los encabezados indicados, uno por línea, y mantén las secciones “Trabajos”, “Tareas”, “Observaciones” e “Incidencias” entre 350 y 450 palabras cada una.',
+    'Cierra con la firma corporativa “Jaime Martret. Responsable de formaciones” y menciona el anexo de imágenes después de la firma.',
+  ].join('\n');
+};
+
 async function generarHtmlSimulacro({ apiKey, baseUrl, idioma, datos, formador }) {
   const lang = (idioma || 'ES').toUpperCase();
   const safe = (value) => {
@@ -228,6 +290,73 @@ async function generarHtmlSimulacro({ apiKey, baseUrl, idioma, datos, formador }
   return htmlSections.filter(Boolean).join('\n');
 }
 
+async function generarInformePreventivo({ apiKey, baseUrl, idioma, datos, formador }) {
+  const lang = (idioma || 'ES').toUpperCase();
+  const headings = preventivoHeadings[lang] || preventivoHeadings.ES;
+  const system = buildPreventivoSystem(lang);
+
+  const safe = (value) => {
+    if (value === null || value === undefined) return '-';
+    const text = typeof value === 'string' ? value : String(value);
+    const compact = text.replace(/\s+/g, ' ').trim();
+    return compact || '-';
+  };
+
+  const bloque = (titulo, contenido) => `${titulo} (original):\n${(contenido || '').trim() || '-'}`;
+
+  const prev = datos?.preventivo || {};
+
+  const contexto = [
+    `Cliente: ${safe(datos?.cliente)} | CIF: ${safe(datos?.cif)}`,
+    `Dirección fiscal: ${safe(datos?.direccionOrg)}`,
+    `Dirección del simulacro: ${safe(datos?.sede)}`,
+    `Persona de contacto: ${safe(datos?.contacto)} | Comercial: ${safe(datos?.comercial)}`,
+    `Bombero/a responsable: ${safe(formador?.nombre)} | Idioma solicitado: ${lang}`,
+    `Fecha del ejercicio: ${safe(datos?.fecha)}`,
+    '',
+    bloque(headings.trabajos, prev.trabajos),
+    '',
+    bloque(headings.tareas, prev.tareas),
+    '',
+    bloque(headings.observaciones, prev.observaciones),
+    '',
+    bloque(headings.incidencias, prev.incidencias),
+  ].join('\n');
+
+  const prompt = `
+Encabezados obligatorios en este orden (una línea por encabezado, sin numeración, y sin añadir otros títulos):
+${headings.generales}
+${headings.registro}
+${headings.trabajos}
+${headings.tareas}
+${headings.observaciones}
+${headings.incidencias}
+${headings.firma}
+${headings.anexos}
+
+Indicaciones:
+- En "${headings.generales}" resume los datos clave del cliente y el objetivo del ejercicio.
+- En "${headings.registro}" contextualiza el servicio prestado por nuestro equipo y la fecha de realización.
+- Reescribe "${headings.trabajos}", "${headings.tareas}", "${headings.observaciones}" e "${headings.incidencias}" con una extensión de entre 350 y 450 palabras cada sección, interpretando profesionalmente el material original.
+- Si falta información relevante en alguna sección, explica cómo afecta al análisis sin inventar datos.
+- En "${headings.firma}" cierra con la fórmula corporativa “Jaime Martret. Responsable de formaciones”.
+- En "${headings.anexos}" indica que las imágenes quedan adjuntas como anexo posterior a la firma.
+
+Contexto disponible:
+${contexto}
+`.trim();
+
+  return callChatCompletion({
+    apiKey,
+    baseUrl,
+    temperature: 0.5,
+    messages: [
+      { role: 'system', content: system },
+      { role: 'user', content: prompt },
+    ],
+  });
+}
+
 // ───────── Utils mínimas (solo lo necesario) ─────────
 const normalize = (s = '') =>
   s.normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase().replace(/\s+/g, ' ').trim();
@@ -270,6 +399,15 @@ export async function handler(event) {
         statusCode: 200,
         headers: { 'Content-Type': 'application/json', ...cors },
         body: JSON.stringify({ html }),
+      };
+    }
+
+    if (tipo === 'preventivo') {
+      const texto = await generarInformePreventivo({ apiKey: API_KEY, baseUrl: BASE_URL, idioma, datos, formador });
+      return {
+        statusCode: 200,
+        headers: { 'Content-Type': 'application/json', ...cors },
+        body: JSON.stringify({ html: texto }),
       };
     }
 
