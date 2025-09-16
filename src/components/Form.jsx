@@ -151,15 +151,13 @@ export default function Form({ initial, onNext, title = 'Informe de Formación',
       return Number.isFinite(n) && n > 0
     }
 
-    if ((isSimulacro || isFormacion) && !numOk(datos.sesiones)) {
-      alert('Los campos numéricos deben ser mayores que 0.')
-      return
-    }
-    if (isFormacion && !numOk(datos.alumnos)) {
-      alert('Los campos numéricos deben ser mayores que 0.')
-      return
-    }
-    if ((isSimulacro || isFormacion) && !numOk(datos.duracion)) {
+    const numericChecks = [
+      { applies: isSimulacro || isFormacion, value: datos.sesiones },
+      { applies: isFormacion, value: datos.alumnos },
+      { applies: isSimulacro || isFormacion, value: datos.duracion },
+    ]
+
+    if (numericChecks.some((check) => check.applies && !numOk(check.value))) {
       alert('Los campos numéricos deben ser mayores que 0.')
       return
     }
