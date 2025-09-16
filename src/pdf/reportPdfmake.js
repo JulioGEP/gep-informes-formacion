@@ -114,6 +114,126 @@ const stripHtml = (html) =>
     .replace(/&nbsp;/g, ' ')
     .trim()
 
+const footerSimulacro = () => ({
+  margin: [58, 0, 58, 18],
+  stack: [
+    {
+      table: {
+        widths: ['*', '*', '*'],
+        body: [
+          [
+            {
+              stack: [
+                { text: 'BARCELONA', color: '#E1062C', bold: true, fontSize: 9 },
+                { text: 'C. Moratín, 100 · 08206 Sabadell · Barcelona', fontSize: 8 },
+                { text: 'Tel. +34 935 604 636', fontSize: 8 },
+              ],
+            },
+            {
+              stack: [
+                { text: 'MADRID', color: '#E1062C', bold: true, fontSize: 9 },
+                { text: 'C. Primavera, 1 · 28500 Arganda del Rey · Madrid', fontSize: 8 },
+                { text: 'Tel. +34 918 283 898', fontSize: 8 },
+              ],
+            },
+            {
+              stack: [
+                { text: 'CÁDIZ', color: '#E1062C', bold: true, fontSize: 9 },
+                { text: 'C. Hungría, 11 Nave 1B · 11011 Cádiz', fontSize: 8 },
+                { text: ' ', fontSize: 8 },
+              ],
+            },
+          ],
+        ],
+      },
+      columnGap: 18,
+      layout: {
+        hLineWidth: () => 0,
+        vLineWidth: () => 0,
+        paddingLeft: () => 8,
+        paddingRight: () => 8,
+        paddingTop: () => 6,
+        paddingBottom: () => 6,
+        fillColor: () => '#F5F5F5',
+      },
+    },
+    {
+      text: 'www.gepservices.es',
+      alignment: 'right',
+      color: '#E1062C',
+      bold: true,
+      margin: [0, 6, 0, 0],
+      fontSize: 9,
+    },
+  ],
+})
+
+const preventivoPdfLabels = {
+  ES: {
+    titulo: 'INFORME PREVENTIVO',
+    fecha: 'Fecha del ejercicio',
+    generales: 'Datos generales',
+    registro: 'Registro',
+    trabajos: 'Trabajos',
+    tareas: 'Tareas',
+    observaciones: 'Observaciones',
+    incidencias: 'Incidencias',
+    firma: 'Firma',
+    anexos: 'Anexo de imágenes',
+    bombero: 'Bombero/a',
+    idioma: 'Idioma',
+    presupuesto: 'Nº Presupuesto',
+    cliente: 'Cliente',
+    cif: 'CIF',
+    direccionFiscal: 'Dirección fiscal',
+    direccionSimulacro: 'Dirección del simulacro',
+    contacto: 'Persona de contacto',
+    comercial: 'Comercial',
+  },
+  CA: {
+    titulo: 'INFORME PREVENTIU',
+    fecha: "Data de l'exercici",
+    generales: 'Dades generals',
+    registro: 'Registre',
+    trabajos: 'Treballs',
+    tareas: 'Tasques',
+    observaciones: 'Observacions',
+    incidencias: 'Incidències',
+    firma: 'Signatura',
+    anexos: "Annex d'imatges",
+    bombero: 'Bomber/a',
+    idioma: 'Idioma',
+    presupuesto: 'Núm. de pressupost',
+    cliente: 'Client',
+    cif: 'NIF/CIF',
+    direccionFiscal: 'Adreça fiscal',
+    direccionSimulacro: 'Adreça del simulacre',
+    contacto: 'Persona de contacte',
+    comercial: 'Comercial',
+  },
+  EN: {
+    titulo: 'PREVENTIVE REPORT',
+    fecha: 'Exercise date',
+    generales: 'General information',
+    registro: 'Logbook',
+    trabajos: 'Works performed',
+    tareas: 'Tasks',
+    observaciones: 'Observations',
+    incidencias: 'Incidents',
+    firma: 'Signature',
+    anexos: 'Image annex',
+    bombero: 'Firefighter',
+    idioma: 'Language',
+    presupuesto: 'Budget ID',
+    cliente: 'Customer',
+    cif: 'Tax ID',
+    direccionFiscal: 'Fiscal address',
+    direccionSimulacro: 'Drill address',
+    contacto: 'Contact person',
+    comercial: 'Account manager',
+  },
+}
+
 // ---------- docDefinition ----------
 const buildDocDefinition = ({
   dealId,
@@ -141,60 +261,6 @@ const buildDocDefinition = ({
   }))
 
   if (datos?.tipo === 'simulacro') {
-    const footerSimulacro = () => ({
-      margin: [58, 0, 58, 18],
-      stack: [
-        {
-          table: {
-            widths: ['*', '*', '*'],
-            body: [
-              [
-                {
-                  stack: [
-                    { text: 'BARCELONA', color: '#E1062C', bold: true, fontSize: 9 },
-                    { text: 'C. Moratín, 100 · 08206 Sabadell · Barcelona', fontSize: 8 },
-                    { text: 'Tel. +34 935 604 636', fontSize: 8 },
-                  ],
-                },
-                {
-                  stack: [
-                    { text: 'MADRID', color: '#E1062C', bold: true, fontSize: 9 },
-                    { text: 'C. Primavera, 1 · 28500 Arganda del Rey · Madrid', fontSize: 8 },
-                    { text: 'Tel. +34 918 283 898', fontSize: 8 },
-                  ],
-                },
-                {
-                  stack: [
-                    { text: 'CÁDIZ', color: '#E1062C', bold: true, fontSize: 9 },
-                    { text: 'C. Hungría, 11 Nave 1B · 11011 Cádiz', fontSize: 8 },
-                    { text: ' ', fontSize: 8 },
-                  ],
-                },
-              ],
-            ],
-          },
-          columnGap: 18,
-          layout: {
-            hLineWidth: () => 0,
-            vLineWidth: () => 0,
-            paddingLeft: () => 8,
-            paddingRight: () => 8,
-            paddingTop: () => 6,
-            paddingBottom: () => 6,
-            fillColor: () => '#F5F5F5',
-          },
-        },
-        {
-          text: 'www.gepservices.es',
-          alignment: 'right',
-          color: '#E1062C',
-          bold: true,
-          margin: [0, 6, 0, 0],
-          fontSize: 9,
-        },
-      ],
-    });
-
     return {
       pageSize: 'A4',
       pageMargins: [58,110,58,90],
@@ -280,6 +346,99 @@ const buildDocDefinition = ({
         ...(Array.isArray(imagenes) && imagenes.length
           ? [
               { text:'Anexos — Imágenes de apoyo', style:'h2', color:'#000', margin:[0,18,0,6], pageBreak:'before' },
+              ...imageRows,
+            ]
+          : []),
+      ],
+    }
+  }
+
+  if (datos?.tipo === 'preventivo') {
+    const idioma = (datos?.idioma || formador?.idioma || 'ES').toUpperCase()
+    const labels = preventivoPdfLabels[idioma] || preventivoPdfLabels.ES
+    const idiomaTexto = idioma === 'CA' ? 'Català' : idioma === 'EN' ? 'English' : 'Castellano'
+    const prev = datos?.preventivo || {}
+
+    return {
+      pageSize: 'A4',
+      pageMargins: [58,110,58,90],
+      defaultStyle: { fontSize:10, lineHeight:1.25, font:'Poppins' },
+      styles: {
+        h1: { fontSize:16, bold:true, margin:[0,0,0,6] },
+        h2: { fontSize:13, bold:true, margin:[0,14,0,6], color:'#E1062C' },
+        h3: { fontSize:11, bold:true, margin:[0,10,0,4] },
+        h4: { fontSize:10, bold:true, margin:[0,8,0,2] },
+        small: { fontSize:9, color:'#666' },
+        caption: { fontSize:8, color:'#666' },
+        k: { bold:true },
+      },
+      header: () => ({ image: headerDataUrl, width:479, alignment:'center', margin:[0,18,0,0] }),
+      footer: footerSimulacro,
+      pageBreakBefore: (currentNode) => {
+        if (currentNode.id === 'informeTecnico') {
+          const sp = currentNode.startPosition
+          if (sp && sp.pageNumber === 1) return true
+        }
+        return false
+      },
+      content: [
+        { text: labels.titulo, style:'h1' },
+        { text: [{ text: `${labels.fecha}: `, bold:true }, { text: datos?.fecha || '—' }], margin:[0,0,0,6] },
+        {
+          table: {
+            widths: ['*'],
+            body: [[{
+              stack: [
+                { text: labels.generales, style:'h3', margin:[0,0,0,6] },
+                {
+                  columns: [
+                    {
+                      width:'50%',
+                      stack: [
+                        { columns: kv(labels.presupuesto, dealId) },
+                        { columns: kv(labels.cliente, datos?.cliente) },
+                        { columns: kv(labels.cif, datos?.cif) },
+                        { columns: kv(labels.direccionFiscal, datos?.direccionOrg) },
+                        { columns: kv(labels.direccionSimulacro, datos?.sede) },
+                      ],
+                    },
+                    {
+                      width:'50%',
+                      stack: [
+                        { text: labels.registro, style:'h4', margin:[0,0,0,4] },
+                        { columns: kv(labels.bombero, formador?.nombre) },
+                        { columns: kv(labels.idioma, idiomaTexto) },
+                        { columns: kv(labels.fecha, datos?.fecha) },
+                        { columns: kv(labels.contacto, datos?.contacto) },
+                        { columns: kv(labels.comercial, datos?.comercial) },
+                      ],
+                    },
+                  ],
+                  columnGap:20,
+                },
+              ],
+              fillColor:'#F3F3F3',
+              margin:[8,8,8,8],
+            }]],
+          },
+          layout:{ hLineWidth:()=>0, vLineWidth:()=>0, paddingTop:()=>0, paddingBottom:()=>0, paddingLeft:()=>0, paddingRight:()=>0 },
+          margin:[0,8,0,0],
+        },
+        { text: labels.trabajos, style:'h2' },
+        { text: prev.trabajos || '—', margin:[0,0,0,6] },
+        { text: labels.tareas, style:'h2' },
+        { text: prev.tareas || '—', margin:[0,0,0,6] },
+        { text: labels.observaciones, style:'h2' },
+        { text: prev.observaciones || '—', margin:[0,0,0,6] },
+        { text: labels.incidencias, style:'h2' },
+        { text: prev.incidencias || '—', margin:[0,0,0,12] },
+        ...(aiContent ? [{ id:'informeTecnico', stack:Array.isArray(aiContent)?aiContent:[aiContent] }] : []),
+        { text:'Atentamente,', margin:[0,18,0,2] },
+        { text:'Jaime Martret', style:'k' },
+        { text:'Responsable de formaciones', color:'#E1062C', margin:[0,2,0,0] },
+        ...(Array.isArray(imagenes) && imagenes.length
+          ? [
+              { text: labels.anexos, style:'h2', color:'#000', margin:[0,18,0,6], pageBreak:'before' },
               ...imageRows,
             ]
           : []),
@@ -507,7 +666,13 @@ export async function generateReportPdfmake(draft) {
 
   const fecha = (datos?.fecha || '').slice(0, 10)
   const cliente = (datos?.cliente || '').replace(/[^\w\s\-._]/g, '').trim() || 'Cliente'
-  const titulo = (datos?.formacionTitulo || 'Formación').replace(/[^\w\s\-._]/g, '').trim()
+  const rawTipo = datos?.tipo || type
+  const baseTitulo = rawTipo === 'preventivo'
+    ? 'Preventivo'
+    : rawTipo === 'simulacro'
+      ? 'Simulacro'
+      : (datos?.formacionTitulo || 'Formación')
+  const titulo = baseTitulo.replace(/[^\w\s\-._]/g, '').trim()
   const nombre = `GEP Group – ${dealId || 'SinPresu'} – ${cliente} – ${titulo} – ${fecha || 'fecha'}.pdf`
 
   pdfMake.createPdf(docDefinition).download(nombre)

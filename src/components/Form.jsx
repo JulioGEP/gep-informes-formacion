@@ -16,11 +16,21 @@ export default function Form({ initial, onNext, title = 'Informe de Formación',
   const formRef = useRef(null)
 
   const isSimulacro = type === 'simulacro'
+  const isPreventivo = type === 'preventivo'
+  const isFormacion = type === 'formacion'
 
   const [dealId, setDealId] = useState(initial?.dealId || '')
   const prevDealIdRef = useRef(dealId)
 
-  const [datos, setDatos] = useState({
+  const defaultComentarios = initial?.datos?.comentarios || { c11: '', c12: '', c13: '', c14: '', c15: '', c16: '', c17: '' }
+  const defaultPreventivo = initial?.datos?.preventivo || {
+    trabajos: initial?.datos?.comentarios?.c11 || '',
+    tareas: initial?.datos?.comentarios?.c12 || '',
+    observaciones: initial?.datos?.comentarios?.c13 || '',
+    incidencias: initial?.datos?.comentarios?.c14 || '',
+  }
+
+  const [datos, setDatos] = useState(() => ({
     cliente: initial?.datos?.cliente || '',
     cif: initial?.datos?.cif || '',
     direccionOrg: initial?.datos?.direccionOrg || '',
@@ -39,11 +49,12 @@ export default function Form({ initial, onNext, title = 'Informe de Formación',
     desarrollo: initial?.datos?.desarrollo || '',
     cronologia: initial?.datos?.cronologia || [],
     escalas: initial?.datos?.escalas || { participacion: 7, compromiso: 7, superacion: 7 },
-    comentarios: initial?.datos?.comentarios || { c11:'', c12:'', c13:'', c14:'', c15:'', c16:'', c17:'' },
-  })
+    comentarios: defaultComentarios,
+    preventivo: defaultPreventivo,
+  }))
 
   const [imagenes, setImagenes] = useState(initial?.imagenes || [])
-  const [selTitulo, setSelTitulo] = useState(datos.formacionTitulo || '')
+  const [selTitulo, setSelTitulo] = useState(isFormacion ? (datos.formacionTitulo || '') : '')
   const [loadingDeal, setLoadingDeal] = useState(false)
 
   // Reset de intentos/HTML si cambia el dealId
@@ -59,7 +70,7 @@ export default function Form({ initial, onNext, title = 'Informe de Formación',
 
   // Cargar plantilla al seleccionar formación
   useEffect(() => {
-    if (!selTitulo) return
+    if (!isFormacion || !selTitulo) return
     const p = plantillasBase[selTitulo]
     setDatos(d => ({
       ...d,
@@ -67,7 +78,7 @@ export default function Form({ initial, onNext, title = 'Informe de Formación',
       contenidoTeorica: p?.teorica || [],
       contenidoPractica: p?.practica || [],
     }))
-  }, [selTitulo])
+  }, [selTitulo, isFormacion])
 
   // Pipedrive
   const rellenarDesdePipedrive = async () => {
@@ -139,16 +150,43 @@ export default function Form({ initial, onNext, title = 'Informe de Formación',
       const n = Number(v)
       return Number.isFinite(n) && n > 0
     }
-    if (!numOk(datos.sesiones) || (!isSimulacro && !numOk(datos.alumnos)) || !numOk(datos.duracion)) {
+
+    if ((isSimulacro || isFormacion) && !numOk(datos.sesiones)) {
       alert('Los campos numéricos deben ser mayores que 0.')
       return
     }
+    if (isFormacion && !numOk(datos.alumnos)) {
+      alert('Los campos numéricos deben ser mayores que 0.')
+      return
+    }
+    if ((isSimulacro || isFormacion) && !numOk(datos.duracion)) {
+      alert('Los campos numéricos deben ser mayores que 0.')
+      return
+    }
+
     if (!datos.fecha) {
       alert('La fecha es obligatoria.')
       return
     }
 
-    onNext({ type, dealId, formador: { nombre: datos.formadorNombre, idioma: datos.idioma }, datos: { ...datos, tipo: type }, imagenes })
+    const nextDatos = {
+      ...datos,
+      tipo: type,
+      comentarios: isPreventivo
+        ? {
+            ...datos.comentarios,
+            c11: datos.preventivo?.trabajos || '',
+            c12: datos.preventivo?.tareas || '',
+            c13: datos.preventivo?.observaciones || '',
+            c14: datos.preventivo?.incidencias || '',
+            c15: '',
+            c16: '',
+            c17: '',
+          }
+        : datos.comentarios,
+    }
+
+    onNext({ type, dealId, formador: { nombre: datos.formadorNombre, idioma: datos.idioma }, datos: nextDatos, imagenes })
   }
 
   const addTeorica = () => setDatos(d => ({ ...d, contenidoTeorica: [...(d.contenidoTeorica||[]), '' ] }))
@@ -157,6 +195,188 @@ export default function Form({ initial, onNext, title = 'Informe de Formación',
   const opcionesOrdenadas = useMemo(() =>
     Object.keys(plantillasBase).sort((a,b)=>a.localeCompare(b,'es',{sensitivity:'base'}))
   , [])
+
+  const renderContenidoEspecifico = () => {
+    if (isSimulacro) {
+      return (
+        <>
+          <h2 className="h5 text-danger">DESARROLLO / INCIDENCIAS / RECOMENDACIONES</h2>
+          <div className="mb-3">
+            <label className="form-label">Desarrollo</label>
+            <textarea className="form-control" required value={datos.desarrollo} onChange={(e)=>setDatos(d=>({...d, desarrollo:e.target.value}))} />
+          </div>
+          <div>
+            <h2 className="h5">Cronología</h2>
+            <div className="card"><div className="card-body">
+              <label className="form-label">Inicio del Simulacro</label>
+              <div className="d-grid gap-2">
+                {(datos.cronologia || []).map((p,i)=>(
+                  <div className="input-group" key={i}>
+                    <input
+                      type="time"
+                      className="form-control"
+                      value={p.hora}
+                      required
+                      onChange={(e)=>updateCrono(i,'hora',e.target.value)}
+                      style={{ flex: '0 0 120px', maxWidth: 120 }}
+                    />
+                    <input
+                      className="form-control"
+                      value={p.texto}
+                      required
+                      onChange={(e)=>updateCrono(i,'texto',e.target.value)}
+                      style={{ flex: '1 1 auto', minWidth: 0 }}
+                    />
+                    <button type="button" className="btn btn-outline-danger" onClick={()=>removeCrono(i)}>Eliminar</button>
+                  </div>
+                ))}
+                <button type="button" className="btn btn-outline-primary" onClick={addCrono}>Añadir punto</button>
+              </div>
+              <div className="form-text mt-2">Añade punto a punto la cronología de lo que sucede en el simulacro</div>
+            </div></div>
+          </div>
+        </>
+      )
+    }
+
+    if (isPreventivo) {
+      return (
+        <div>
+          <h2 className="h5">Informe de preventivos</h2>
+          <div className="card">
+            <div className="card-body d-grid gap-4">
+              <div>
+                <label className="form-label">Trabajos</label>
+                <textarea
+                  className="form-control"
+                  required
+                  rows={6}
+                  value={datos.preventivo?.trabajos || ''}
+                  onChange={(e)=>setDatos(d=>({
+                    ...d,
+                    preventivo: { ...d.preventivo, trabajos: e.target.value },
+                  }))}
+                />
+              </div>
+              <div>
+                <label className="form-label">Tareas</label>
+                <textarea
+                  className="form-control"
+                  required
+                  rows={6}
+                  value={datos.preventivo?.tareas || ''}
+                  onChange={(e)=>setDatos(d=>({
+                    ...d,
+                    preventivo: { ...d.preventivo, tareas: e.target.value },
+                  }))}
+                />
+              </div>
+              <div>
+                <label className="form-label">Observaciones</label>
+                <textarea
+                  className="form-control"
+                  required
+                  rows={6}
+                  value={datos.preventivo?.observaciones || ''}
+                  onChange={(e)=>setDatos(d=>({
+                    ...d,
+                    preventivo: { ...d.preventivo, observaciones: e.target.value },
+                  }))}
+                />
+              </div>
+              <div>
+                <label className="form-label">Incidencias</label>
+                <textarea
+                  className="form-control"
+                  required
+                  rows={6}
+                  value={datos.preventivo?.incidencias || ''}
+                  onChange={(e)=>setDatos(d=>({
+                    ...d,
+                    preventivo: { ...d.preventivo, incidencias: e.target.value },
+                  }))}
+                />
+              </div>
+              <div>
+                <label className="form-label">Imágenes de apoyo (opcional)</label>
+                <input type="file" accept="image/*" multiple className="form-control" onChange={addImagenes} />
+                {imagenes.length > 0 && (
+                  <div className="mt-2 d-flex flex-wrap gap-2">
+                    {imagenes.map((img, idx) => (
+                      <div key={idx} className="border rounded p-1" style={{ width: 120 }}>
+                        <img src={img.dataUrl} alt={img.name} className="img-fluid rounded" />
+                        <div className="d-flex justify-content-between align-items-center mt-1">
+                          <small className="text-truncate" style={{ maxWidth: 80 }} title={img.name}>{img.name}</small>
+                          <button type="button" className="btn btn-sm btn-outline-danger" onClick={()=>removeImagen(idx)}>x</button>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                )}
+                <div className="form-text">Se añadirán al final del informe bajo “Imágenes de apoyo”.</div>
+              </div>
+            </div>
+          </div>
+        </div>
+      )
+    }
+
+    return (
+      <div>
+        <h2 className="h5">Formación realizada</h2>
+        <div className="card"><div className="card-body">
+          <div className="row g-3">
+            <div className="col-md-6">
+              <label className="form-label">Formación</label>
+              <select
+                className="form-select"
+                value={selTitulo}
+                required
+                onChange={(e)=>setSelTitulo(e.target.value)}
+              >
+                <option value="">— Selecciona —</option>
+                {opcionesOrdenadas.map(t => <option key={t} value={t}>{t}</option>)}
+              </select>
+            </div>
+          </div>
+
+          <div className="row g-4 mt-1">
+            <div className="col-md-6">
+              <label className="form-label">Parte Teórica</label>
+              <div className="d-grid gap-2">
+                {(datos.contenidoTeorica || []).map((v,i)=>(
+                  <div className="input-group" key={`t-${i}`}>
+                    <input className="form-control" value={v}
+                      onChange={(e)=>setDatos(d=>{ const arr=[...(d.contenidoTeorica||[])]; arr[i]=e.target.value; return {...d, contenidoTeorica:arr}; })} />
+                    <button type="button" className="btn btn-outline-danger" onClick={()=>setDatos(d=>({...d, contenidoTeorica:d.contenidoTeorica.filter((_,idx)=>idx!==i)}))}>Eliminar</button>
+                  </div>
+                ))}
+                <button type="button" className="btn btn-outline-primary" onClick={addTeorica}>Añadir punto</button>
+              </div>
+            </div>
+
+            <div className="col-md-6">
+              <label className="form-label">Parte Práctica</label>
+              <div className="d-grid gap-2">
+                {(datos.contenidoPractica || []).map((v,i)=>(
+                  <div className="input-group" key={`p-${i}`}>
+                    <input className="form-control" value={v}
+                      onChange={(e)=>setDatos(d=>{ const arr=[...(d.contenidoPractica||[])]; arr[i]=e.target.value; return {...d, contenidoPractica:arr}; })} />
+                    <button type="button" className="btn btn-outline-danger" onClick={()=>setDatos(d=>({...d, contenidoPractica:d.contenidoPractica.filter((_,idx)=>idx!==i)}))}>Eliminar</button>
+                  </div>
+                ))}
+                <button type="button" className="btn btn-outline-primary" onClick={addPractica}>Añadir punto</button>
+              </div>
+            </div>
+          </div>
+
+          <div className="form-text mt-2">
+            Selecciona la formación realizada. Se añadirán sus “Parte teórica” y “Parte práctica” al borrador. Si falta algún punto, añádelo.
+          </div>
+        </div></div>
+      </div>
+    )
+  }
 
   return (
     <form ref={formRef} className="d-grid gap-4" onSubmit={onSubmit}>
@@ -215,7 +435,7 @@ export default function Form({ initial, onNext, title = 'Informe de Formación',
                   <input className="form-control" value={datos.direccionOrg} required onChange={(e)=>setDatos(d=>({...d, direccionOrg:e.target.value}))} />
                 </div>
                 <div className="col-md-6">
-                  <label className="form-label">{isSimulacro ? 'Dirección del Simulacro' : 'Dirección de la formación'}</label>
+                  <label className="form-label">{(isSimulacro || isPreventivo) ? 'Dirección del Simulacro' : 'Dirección de la formación'}</label>
                   <input className="form-control" value={datos.sede} required onChange={(e)=>setDatos(d=>({...d, sede:e.target.value}))} />
                 </div>
               </div>
@@ -223,16 +443,16 @@ export default function Form({ initial, onNext, title = 'Informe de Formación',
           </div>
         </div>
 
-        {/* DATOS DEL FORMADOR */}
+        {/* DATOS DEL FORMADOR / REGISTRO */}
         <div className="col-md-6 d-flex">
           <div className="card w-100 h-100">
             <div className="card-body">
-              <h2 className="h6">Datos del formador</h2>
+              <h2 className="h6">{isPreventivo ? 'Registro' : (isSimulacro ? 'Datos del auditor' : 'Datos del formador')}</h2>
 
               <div className="row g-3">
                 {/* Formador/a o Auditor/a */}
                 <div className="col-12">
-                  <label className="form-label">{isSimulacro ? 'Auditor/a' : 'Formador/a'}</label>
+                  <label className="form-label">{isPreventivo ? 'Bombero/a' : (isSimulacro ? 'Auditor/a' : 'Formador/a')}</label>
                   <input className="form-control" value={datos.formadorNombre} required onChange={(e)=>setDatos(d=>({...d, formadorNombre:e.target.value}))} />
                 </div>
 
@@ -248,7 +468,7 @@ export default function Form({ initial, onNext, title = 'Informe de Formación',
 
                 {/* Fecha */}
                 <div className="col-12 col-md-6">
-                  <label className="form-label">Fecha</label>
+                  <label className="form-label">{isPreventivo ? 'Fecha ejercicio' : 'Fecha'}</label>
                   <input
                     type="date"
                     className="form-control"
@@ -258,151 +478,60 @@ export default function Form({ initial, onNext, title = 'Informe de Formación',
                   />
                 </div>
 
-                {/* Sesiones */}
-                <div className="col-12 col-md-6">
-                  <label className="form-label">Sesiones</label>
-                  <input
-                    type="number"
-                    min={1}
-                    className="form-control"
-                    value={datos.sesiones}
-                    required
-                    onChange={(e)=>setDatos(d=>({...d, sesiones:Number(e.target.value||1)}))}
-                  />
-                </div>
+                {!isPreventivo && (
+                  <>
+                    <div className="col-12 col-md-6">
+                      <label className="form-label">Sesiones</label>
+                      <input
+                        type="number"
+                        min={1}
+                        className="form-control"
+                        value={datos.sesiones}
+                        required
+                        onChange={(e)=>setDatos(d=>({...d, sesiones:Number(e.target.value||1)}))}
+                      />
+                    </div>
 
-                {/* Nº alumnos (solo formación) */}
-                {!isSimulacro && (
-                  <div className="col-12 col-md-6">
-                    <label className="form-label">Nº de alumnos</label>
-                    <input
-                      type="number"
-                      min={1}
-                      className="form-control"
-                      value={datos.alumnos}
-                      required={!isSimulacro}
-                      onChange={(e)=>setDatos(d=>({...d, alumnos:e.target.value}))}
-                    />
-                  </div>
+                    {!isSimulacro && (
+                      <div className="col-12 col-md-6">
+                        <label className="form-label">Nº de alumnos</label>
+                        <input
+                          type="number"
+                          min={1}
+                          className="form-control"
+                          value={datos.alumnos}
+                          required={!isSimulacro}
+                          onChange={(e)=>setDatos(d=>({...d, alumnos:e.target.value}))}
+                        />
+                      </div>
+                    )}
+
+                    <div className="col-12 col-md-6">
+                      <label className="form-label">Duración (horas)</label>
+                      <input
+                        type="number"
+                        min={1}
+                        step="0.5"
+                        className="form-control"
+                        value={datos.duracion}
+                        required
+                        onChange={(e)=>setDatos(d=>({...d, duracion:e.target.value}))}
+                      />
+                    </div>
+                  </>
                 )}
-
-                {/* Duración (numérico) */}
-                <div className="col-12 col-md-6">
-                  <label className="form-label">Duración (horas)</label>
-                  <input
-                    type="number"
-                    min={1}
-                    step="0.5"
-                    className="form-control"
-                    value={datos.duracion}
-                    required
-                    onChange={(e)=>setDatos(d=>({...d, duracion:e.target.value}))}
-                  />
-                </div>
               </div>
             </div>
           </div>
         </div>
       </div>
 
-      {isSimulacro ? (
-        <>
-          <h2 className="h5 text-danger">DESARROLLO / INCIDENCIAS / RECOMENDACIONES</h2>
-          <div className="mb-3">
-            <label className="form-label">Desarrollo</label>
-            <textarea className="form-control" required value={datos.desarrollo} onChange={(e)=>setDatos(d=>({...d, desarrollo:e.target.value}))} />
-          </div>
-          <div>
-            <h2 className="h5">Cronología</h2>
-            <div className="card"><div className="card-body">
-              <label className="form-label">Inicio del Simulacro</label>
-              <div className="d-grid gap-2">
-                {(datos.cronologia || []).map((p,i)=>(
-                  <div className="input-group" key={i}>
-                    <input
-                      type="time"
-                      className="form-control"
-                      value={p.hora}
-                      required
-                      onChange={(e)=>updateCrono(i,'hora',e.target.value)}
-                      style={{ flex: '0 0 120px', maxWidth: 120 }}
-                    />
-                    <input
-                      className="form-control"
-                      value={p.texto}
-                      required
-                      onChange={(e)=>updateCrono(i,'texto',e.target.value)}
-                      style={{ flex: '1 1 auto', minWidth: 0 }}
-                    />
-                    <button type="button" className="btn btn-outline-danger" onClick={()=>removeCrono(i)}>Eliminar</button>
-                  </div>
-                ))}
-                <button type="button" className="btn btn-outline-primary" onClick={addCrono}>Añadir punto</button>
-              </div>
-              <div className="form-text mt-2">Añade punto a punto la cronología de lo que sucede en el simulacro</div>
-            </div></div>
-          </div>
-        </>
-      ) : (
+      {renderContenidoEspecifico()}
+
+      {!isPreventivo && (
         <div>
-          <h2 className="h5">Formación realizada</h2>
+          <h2 className="h5">Valoración</h2>
           <div className="card"><div className="card-body">
-            <div className="row g-3">
-              <div className="col-md-6">
-                <label className="form-label">Formación</label>
-                <select
-                  className="form-select"
-                  value={selTitulo}
-                  required
-                  onChange={(e)=>setSelTitulo(e.target.value)}
-                >
-                  <option value="">— Selecciona —</option>
-                  {opcionesOrdenadas.map(t => <option key={t} value={t}>{t}</option>)}
-                </select>
-              </div>
-            </div>
-
-            <div className="row g-4 mt-1">
-              <div className="col-md-6">
-                <label className="form-label">Parte Teórica</label>
-                <div className="d-grid gap-2">
-                  {(datos.contenidoTeorica || []).map((v,i)=>(
-                    <div className="input-group" key={`t-${i}`}>
-                      <input className="form-control" value={v}
-                        onChange={(e)=>setDatos(d=>{ const arr=[...(d.contenidoTeorica||[])]; arr[i]=e.target.value; return {...d, contenidoTeorica:arr}; })} />
-                      <button type="button" className="btn btn-outline-danger" onClick={()=>setDatos(d=>({...d, contenidoTeorica:d.contenidoTeorica.filter((_,idx)=>idx!==i)}))}>Eliminar</button>
-                    </div>
-                  ))}
-                  <button type="button" className="btn btn-outline-primary" onClick={addTeorica}>Añadir punto</button>
-                </div>
-              </div>
-
-              <div className="col-md-6">
-                <label className="form-label">Parte Práctica</label>
-                <div className="d-grid gap-2">
-                  {(datos.contenidoPractica || []).map((v,i)=>(
-                    <div className="input-group" key={`p-${i}`}>
-                      <input className="form-control" value={v}
-                        onChange={(e)=>setDatos(d=>{ const arr=[...(d.contenidoPractica||[])]; arr[i]=e.target.value; return {...d, contenidoPractica:arr}; })} />
-                      <button type="button" className="btn btn-outline-danger" onClick={()=>setDatos(d=>({...d, contenidoPractica:d.contenidoPractica.filter((_,idx)=>idx!==i)}))}>Eliminar</button>
-                    </div>
-                  ))}
-                  <button type="button" className="btn btn-outline-primary" onClick={addPractica}>Añadir punto</button>
-                </div>
-              </div>
-            </div>
-
-            <div className="form-text mt-2">
-              Selecciona la formación realizada. Se añadirán sus “Parte teórica” y “Parte práctica” al borrador. Si falta algún punto, añádelo.
-            </div>
-          </div></div>
-        </div>
-      )}
-
-      {/* ===== VALORACIÓN ===== */}
-      <div>
-        <h2 className="h5">Valoración</h2>
-        <div className="card"><div className="card-body">
           <div className="row g-3">
             <div className="col-md-4">
               <div className="input-group">
@@ -530,7 +659,8 @@ export default function Form({ initial, onNext, title = 'Informe de Formación',
             </div>
           </div>
         </div></div>
-      </div>
+        </div>
+      )}
 
       <div className="d-flex justify-content-between">
         <button type="button" className="btn btn-secondary" onClick={onChooseAnother}>Elegir otro informe</button>
