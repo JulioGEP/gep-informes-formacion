@@ -4,6 +4,25 @@ const cors = {
   'Access-Control-Allow-Headers': 'content-type',
 };
 
+// ───────── Utils mínimas (solo lo necesario) ─────────
+const normalize = (s = '') =>
+  s.normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase().replace(/\s+/g, ' ').trim();
+
+const formatFechaDDMMYYYY = (iso) => {
+  if (!iso) return '';
+  const m = /^(\d{4})-(\d{2})-(\d{2})/.exec(iso);
+  if (!m) return iso;
+  const [, y, mo, d] = m;
+  return `${d}/${mo}/${y}`;
+};
+
+const esInstalacionGEPCO = (direccion = '') => {
+  const n = normalize(direccion);
+  const a = n.includes('primavera, 1') && n.includes('arganda del rey') && n.includes('madrid');
+  const b = n.includes('moratin, 100') && n.includes('sabadell') && n.includes('barcelona');
+  return a || b;
+};
+
 const MODEL = 'gpt-4o-mini';
 
 const sanitizeContent = (content = '') =>
@@ -18,12 +37,6 @@ const compactText = (value) => {
   return str.replace(/\s+/g, ' ').trim();
 };
 
-const pickLabel = (idioma, es, ca, en) => {
-  if ((idioma || '').toUpperCase() === 'CA') return ca;
-  if ((idioma || '').toUpperCase() === 'EN') return en;
-  return es;
-};
-
 const escapeHtml = (value = '') =>
   value
     .replace(/&/g, '&amp;')
@@ -31,6 +44,13 @@ const escapeHtml = (value = '') =>
     .replace(/>/g, '&gt;')
     .replace(/"/g, '&quot;')
     .replace(/'/g, '&#39;');
+
+const pickLabel = (idioma, es, ca, en) => {
+  const lang = (idioma || '').toUpperCase();
+  if (lang === 'CA') return ca;
+  if (lang === 'EN') return en;
+  return es;
+};
 
 const ensureSection = (html, title) => {
   const trimmed = sanitizeContent(html);
@@ -85,188 +105,6 @@ const buildSimulacroSystem = (idioma) => {
   return 'Eres un redactor técnico de GEP Group, experto en auditar simulacros. Responde siempre en primera persona plural (nosotros) con tono formal técnico PRL/PCI y emergencias. Devuelve únicamente HTML usando <section>, <h3>, <h4>, <p>, <ul>, <li>. No muestres puntuaciones numéricas ni inventes datos.';
 };
 
-async function generarHtmlSimulacro({ apiKey, idioma, datos, formador }) {
-  const lang = (idioma || 'ES').toUpperCase();
-  const safe = (value) => {
-    const text = compactText(value);
-    return text === '' ? '-' : text;
-  };
-
-  const cronologiaArray = Array.isArray(datos?.cronologia) ? datos.cronologia : [];
-  const cronologiaJson = JSON.stringify(cronologiaArray, null, 2);
-  const cronologiaListado = cronologiaArray
-    .map((c, idx) => {
-      const hora = safe(c?.hora);
-      const texto = safe(c?.texto);
-      return `${idx + 1}. ${hora} — ${texto}`;
-    })
-    .join('\n');
-
-  const ctx = [
-    `Cliente: ${safe(datos?.cliente)}`,
-    `CIF: ${safe(datos?.cif)} | Dirección: ${safe(datos?.sede)}`,
-    `Auditor: ${safe(formador?.nombre)} | Idioma: ${lang}`,
-    `Sesiones: ${safe(datos?.sesiones)} | Duración(h): ${safe(datos?.duracion)}`,
-    '',
-    'Desarrollo propuesto:',
-    safe(datos?.desarrollo),
-    '',
-    'Cronología declarada:',
-    cronologiaListado ? `- ${cronologiaListado.split('\n').join('\n- ')}` : '- Sin cronología registrada',
-    '',
-    `Valoraciones (1-10): Participación=${datos?.escalas?.participacion ?? 0}, Compromiso=${datos?.escalas?.compromiso ?? 0}, Superación=${datos?.escalas?.superacion ?? 0}`,
-    '',
-    `Incidencias detectadas: ${safe(datos?.comentarios?.c12)}`,
-    `Accidentes: ${safe(datos?.comentarios?.c14)}`,
-    `Recomendaciones formaciones: ${safe(datos?.comentarios?.c15)}`,
-    `Recomendaciones entorno: ${safe(datos?.comentarios?.c16)}`,
-    `Recomendaciones materiales: ${safe(datos?.comentarios?.c17)}`,
-    `Observaciones generales: ${safe(datos?.comentarios?.c11)}`,
-  ]
-    .join('\n')
-    .trim();
-
-  const system = buildSimulacroSystem(idioma);
-
-  const participacion = datos?.escalas?.participacion ?? '';
-  const compromiso = datos?.escalas?.compromiso ?? '';
-  const superacion = datos?.escalas?.superacion ?? '';
-
-  const incidenciasTexto = safe(datos?.comentarios?.c12);
-  const accidentesTexto = safe(datos?.comentarios?.c14);
-  const observacionesTexto = safe(datos?.comentarios?.c11);
-  const recForm = safe(datos?.comentarios?.c15);
-  const recEntorno = safe(datos?.comentarios?.c16);
-  const recMateriales = safe(datos?.comentarios?.c17);
-  const desarrolloOriginal = safe(datos?.desarrollo);
-
-  const desarrolloTitle = pickLabel(idioma, 'DESARROLLO', 'DESENVOLUPAMENT', 'DEVELOPMENT');
-  const cronologiaTitle = pickLabel(idioma, 'CRONOLOGÍA', 'CRONOLOGIA', 'TIMELINE');
-  const incidenciasTitle = pickLabel(idioma, 'INCIDENCIAS DETECTADAS', 'INCIDÈNCIES DETECTADES', 'DETECTED INCIDENTS');
-  const observacionesTitle = pickLabel(idioma, 'OBSERVACIONES', 'OBSERVACIONS', 'OBSERVATIONS');
-  const recomendacionesTitle = pickLabel(idioma, 'RECOMENDACIONES', 'RECOMANACIONS', 'RECOMMENDATIONS');
-
-  const sections = [
-    {
-      title: desarrolloTitle,
-      temperature: 0.4,
-      instructions: [
-        `Genera la sección HTML "${desarrolloTitle}" del informe del simulacro.`,
-        '- El primer elemento debe ser un <h3> con el título exacto.',
-        `- Contenido original del campo "Desarrollo": "${desarrolloOriginal}". Resúmelo y amplíalo sin copiar literalmente.`,
-        '- Describe el escenario, el problema simulado y la respuesta que debíamos ensayar.',
-        '- Añade detalles sobre los riesgos principales y qué podía salir mal si no se seguían los procedimientos.',
-        '- Redacta en primera persona plural y no inventes datos nuevos.',
-      ].join('\n'),
-    },
-    {
-      title: cronologiaTitle,
-      temperature: 0.4,
-      instructions: [
-        `Genera la sección HTML "${cronologiaTitle}" del informe del simulacro.`,
-        '- El primer elemento debe ser un <h3> con el título exacto.',
-        '- Empieza con un <p> muy breve (máximo dos frases) que contextualice la cronología.',
-        '- Luego, crea un subapartado independiente por cada entrada de la cronología original en el mismo orden.',
-        '- Cada subapartado debe usar un <section> con un <h4> que combine la hora y un subtítulo orientado al riesgo, seguido de un <p> que detalle lo más relevante y qué podría ocurrir si se gestiona mal.',
-        '- Si no hay cronología, incluye un <p> indicando que no se registraron eventos.',
-        `Cronología original (JSON):\n${cronologiaJson}`,
-      ].join('\n'),
-    },
-    {
-      title: incidenciasTitle,
-      temperature: 0.6,
-      instructions: [
-        `Genera la sección HTML "${incidenciasTitle}".`,
-        '- El primer elemento debe ser un <h3> con el título exacto.',
-        `- Analiza las incidencias y accidentes registrados: incidencias="${incidenciasTexto}", accidentes="${accidentesTexto}".`,
-        '- Explica causas probables, impacto y riesgos de no corregirlas, enlazándolas con la cronología cuando corresponda.',
-        '- Redacta varios párrafos o una lista con <ul>/<li> si existen varios puntos críticos.',
-        '- Si no hubo incidencias, indica qué controles funcionaron y por qué.',
-      ].join('\n'),
-    },
-    {
-      title: observacionesTitle,
-      temperature: 0.7,
-      instructions: [
-        `Genera la sección HTML "${observacionesTitle}".`,
-        '- El primer elemento debe ser un <h3> con el título exacto.',
-        `- Amplía las observaciones generales (contenido: "${observacionesTexto}") con comentarios técnicos sobre coordinación, participación y tiempos de respuesta.`,
-        `- Interpreta las valoraciones numéricas en términos cualitativos (participación=${participacion}, compromiso=${compromiso}, superación=${superacion}) sin mostrar cifras.`,
-        '- Desarrolla la reflexión en varios párrafos, añadiendo matices profesionales.',
-        '- Si faltan observaciones, explica que no se registraron y justifica la ausencia con los datos disponibles.',
-      ].join('\n'),
-    },
-    {
-      title: recomendacionesTitle,
-      temperature: 0.7,
-      instructions: [
-        `Genera la sección HTML "${recomendacionesTitle}".`,
-        '- El primer elemento debe ser un <h3> con el título exacto.',
-        `- Construye recomendaciones justificadas a partir de: formaciones="${recForm}", entorno="${recEntorno}", materiales="${recMateriales}".`,
-        '- Por cada recomendación, justifica por qué es necesaria y qué riesgo mitiga; usa <ul>/<li> si precisas listar acciones.',
-        '- Mantén un enfoque proactivo orientado a la mejora continua.',
-        '- Si no se propusieron recomendaciones, sugiere un plan mínimo coherente con el contexto sin inventar datos externos.',
-      ].join('\n'),
-    },
-  ];
-
-  const promptContext = `Contexto del simulacro:\n${ctx}`;
-
-  const tasks = sections.map((section) =>
-    (async () => {
-      const prompt = `${section.instructions}\n\n${promptContext}`;
-      const content = await callChatCompletion({
-        apiKey,
-        temperature: section.temperature,
-        messages: [
-          { role: 'system', content: system },
-          { role: 'user', content: prompt },
-        ],
-      });
-      return content;
-    })(),
-  );
-
-  const results = await Promise.allSettled(tasks);
-
-  const htmlSections = results
-    .map((result, index) => {
-      const section = sections[index];
-
-      if (result.status === 'fulfilled') {
-        const ensured = ensureSection(result.value, section.title);
-        if (ensured) return ensured;
-        console.warn(`[generateReport] sección "${section.title}" vacía tras asegurado`);
-      } else {
-        console.error(`[generateReport] sección "${section.title}"`, result.reason);
-      }
-
-      return `<section><h3>${section.title}</h3><p>No se pudo generar esta sección de forma automática.</p></section>`;
-    })
-    .filter(Boolean);
-
-  return htmlSections.join('\n');
-}
-
-// ───────── Utils mínimas (solo lo necesario) ─────────
-const normalize = (s = '') =>
-  s.normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase().replace(/\s+/g, ' ').trim();
-
-const formatFechaDDMMYYYY = (iso) => {
-  if (!iso) return '';
-  const m = /^(\d{4})-(\d{2})-(\d{2})/.exec(iso);
-  if (!m) return iso;
-  const [, y, mo, d] = m;
-  return `${d}/${mo}/${y}`;
-};
-
-const esInstalacionGEPCO = (direccion = '') => {
-  const n = normalize(direccion);
-  const a = n.includes('primavera, 1') && n.includes('arganda del rey') && n.includes('madrid');
-  const b = n.includes('moratin, 100') && n.includes('sabadell') && n.includes('barcelona');
-  return a || b;
-};
-
 export async function handler(event) {
   if (event.httpMethod === 'OPTIONS') return { statusCode: 204, headers: cors };
   if (event.httpMethod !== 'POST') return { statusCode: 405, headers: cors, body: 'Method Not Allowed' };
@@ -282,19 +120,151 @@ export async function handler(event) {
     const fechaFmt = formatFechaDDMMYYYY(datos?.fecha || '');
     const sede = datos?.sede || '-';
     const sedeEsGEPCO = esInstalacionGEPCO(sede);
+    const sedeRedactada = sedeEsGEPCO ? `nuestras instalaciones de GEPCO (${sede})` : sede;
+
+    let html = '';
 
     if (tipo === 'simulacro') {
-      const html = await generarHtmlSimulacro({ apiKey: API_KEY, idioma, datos, formador });
-      return {
-        statusCode: 200,
-        headers: { 'Content-Type': 'application/json', ...cors },
-        body: JSON.stringify({ html }),
+      const safe = (value) => {
+        const text = compactText(value);
+        return text === '' ? '-' : text;
       };
-    }
 
-    const ctx = `
+      const cronologiaArray = Array.isArray(datos?.cronologia) ? datos.cronologia : [];
+      const cronologiaListado = cronologiaArray
+        .map((c, idx) => {
+          const hora = safe(c?.hora);
+          const texto = safe(c?.texto);
+          return `${idx + 1}. ${hora} — ${texto}`;
+        })
+        .join('\n');
+
+      const ctx = [
+        `Cliente: ${safe(datos?.cliente)}`,
+        `CIF: ${safe(datos?.cif)} | Dirección: ${safe(sedeRedactada)}`,
+        `Auditor: ${safe(formador?.nombre)} | Idioma: ${idioma}`,
+        `Sesiones: ${safe(datos?.sesiones)} | Duración(h): ${safe(datos?.duracion)}`,
+        '',
+        `Desarrollo declarado: ${safe(datos?.desarrollo)}`,
+        '',
+        'Cronología declarada:',
+        cronologiaListado ? cronologiaListado : 'Sin cronología registrada',
+        '',
+        `Incidencias detectadas: ${safe(datos?.comentarios?.c12)}`,
+        `Accidentes: ${safe(datos?.comentarios?.c14)}`,
+        `Observaciones generales: ${safe(datos?.comentarios?.c11)}`,
+        `Recomendaciones formaciones: ${safe(datos?.comentarios?.c15)}`,
+        `Recomendaciones entorno: ${safe(datos?.comentarios?.c16)}`,
+        `Recomendaciones materiales: ${safe(datos?.comentarios?.c17)}`,
+      ]
+        .join('\n')
+        .trim();
+
+      const system = buildSimulacroSystem(idioma);
+      const cronologiaJson = JSON.stringify(cronologiaArray, null, 2);
+      const desarrolloOriginal = safe(datos?.desarrollo);
+      const incidenciasTexto = safe(datos?.comentarios?.c12);
+      const observacionesTexto = safe(datos?.comentarios?.c11);
+      const recForm = safe(datos?.comentarios?.c15);
+      const recEntorno = safe(datos?.comentarios?.c16);
+      const recMateriales = safe(datos?.comentarios?.c17);
+
+      const desarrolloTitle = pickLabel(idioma, 'DESARROLLO', 'DESENVOLUPAMENT', 'DEVELOPMENT');
+      const cronologiaTitle = pickLabel(idioma, 'CRONOLOGÍA', 'CRONOLOGIA', 'TIMELINE');
+      const incidenciasTitle = pickLabel(idioma, 'INCIDENCIAS DETECTADAS', 'INCIDÈNCIES DETECTADES', 'DETECTED INCIDENTS');
+      const observacionesTitle = pickLabel(idioma, 'OBSERVACIONES', 'OBSERVACIONS', 'OBSERVATIONS');
+      const recomendacionesTitle = pickLabel(idioma, 'RECOMENDACIONES', 'RECOMANACIONS', 'RECOMMENDATIONS');
+
+      const sections = [
+        {
+          title: desarrolloTitle,
+          temperature: 0.4,
+          instructions: [
+            `Genera la sección HTML "${desarrolloTitle}" del informe del simulacro.`,
+            '- El primer nodo debe ser un <h3> con el título exacto.',
+            `- Resume y amplía el campo "Desarrollo": "${desarrolloOriginal}" explicando el escenario y el problema que se ensayó.`,
+            '- Incluye un breve contexto de la cronología en un único párrafo inicial y destaca los riesgos principales si se ejecuta mal.',
+            '- Usa subtítulos con <h4> seguidos de <p> para desarrollar cada idea relevante.',
+          ].join('\n'),
+        },
+        {
+          title: cronologiaTitle,
+          temperature: 0.4,
+          instructions: [
+            `Genera la sección HTML "${cronologiaTitle}" del simulacro.`,
+            '- Empieza con un <h3> con el título.',
+            '- A partir de la cronología declarada crea un bloque por cada punto usando <h4> con la hora y un resumen breve, seguido de un <p> que explique lo sucedido y las consecuencias de ejecutarlo incorrectamente.',
+            '- No inventes eventos nuevos, solo reordena o resume los existentes.',
+            '- Si no hay cronología registrada, explica en un único párrafo por qué es imprescindible documentarla.',
+            `- Cronología en JSON: ${cronologiaJson}`,
+          ].join('\n'),
+        },
+        {
+          title: incidenciasTitle,
+          temperature: 0.6,
+          instructions: [
+            `Desarrolla la sección "${incidenciasTitle}" del informe.`,
+            '- Introduce el título en <h3> y utiliza <h4> con <p> para cada incidencia relevante.',
+            `- Contexto de incidencias detectadas: "${incidenciasTexto}" y accidentes: "${safe(datos?.comentarios?.c14)}".`,
+            '- Analiza qué impacto tienen sobre la seguridad y el cumplimiento de los procedimientos.',
+            '- Amplía la información con recomendaciones inmediatas sin inventar sucesos.',
+          ].join('\n'),
+        },
+        {
+          title: observacionesTitle,
+          temperature: 0.7,
+          instructions: [
+            `Redacta la sección "${observacionesTitle}" en formato HTML.`,
+            '- Incluye <h3> y subsecciones con <h4> y <p> para desarrollar cada observación.',
+            `- Observaciones aportadas: "${observacionesTexto}".`,
+            '- Añade análisis cualitativo sobre el comportamiento del equipo y aspectos organizativos.',
+          ].join('\n'),
+        },
+        {
+          title: recomendacionesTitle,
+          temperature: 0.7,
+          instructions: [
+            `Elabora la sección "${recomendacionesTitle}" justificando cada punto.`,
+            '- Empieza con <h3> y emplea <h4> con <p> explicativos para cada recomendación.',
+            `- Recomendaciones formativas: "${recForm}".`,
+            `- Recomendaciones sobre entorno: "${recEntorno}".`,
+            `- Recomendaciones sobre materiales: "${recMateriales}".`,
+            '- Indica brevemente por qué cada recomendación es necesaria para corregir riesgos detectados.',
+          ].join('\n'),
+        },
+      ];
+
+      const promptContext = `Contexto del simulacro:\n${ctx}`;
+
+      const generated = await Promise.allSettled(
+        sections.map(async (section) => {
+          const prompt = `${section.instructions}\n\n${promptContext}`;
+
+          const content = await callChatCompletion({
+            apiKey: API_KEY,
+            temperature: section.temperature,
+            messages: [
+              { role: 'system', content: system },
+              { role: 'user', content: prompt },
+            ],
+          });
+
+          return ensureSection(content, section.title);
+        }),
+      );
+
+      html = generated
+        .map((result, idx) => {
+          if (result.status === 'fulfilled' && result.value) return result.value;
+          console.error(`[generateReport] sección "${sections[idx].title}"`, result.reason);
+          return `<section><h3>${sections[idx].title}</h3><p>No se pudo generar esta sección de forma automática.</p></section>`;
+        })
+        .filter(Boolean)
+        .join('\n');
+    } else {
+      const ctx = `
 Deal: ${datos?.cliente || '-'} | CIF: ${datos?.cif || '-'}
-Sede: ${datos?.sede || '-'} | Fecha: ${datos?.fecha || '-'}
+Sede: ${sedeRedactada || '-'} | Fecha: ${datos?.fecha || '-'}
 Formador/a: ${formador?.nombre || '-'} | Idioma: ${idioma}
 Sesiones: ${datos?.sesiones || '-'} | Alumnos: ${datos?.alumnos || '-'} | Duración(h): ${datos?.duracion || '-'}
 
@@ -319,13 +289,13 @@ Comentarios:
 - Materiales: ${datos?.comentarios?.c17 || '-'}
 `.trim();
 
-    const system = (idioma === 'EN')
-      ? 'You are a technical writer. Write in first person as the trainer, formal and precise. Temperature 0.3. Never show numeric scores.'
-      : (idioma === 'CA')
-        ? 'Ets un redactor tècnic. Escriu en primera persona com a formador, to formal i precís. Temperatura 0.3. No mostris puntuacions numèriques.'
-        : 'Eres un redactor técnico. Escribe en primera persona como el formador, tono formal y preciso. Temperatura 0.3. No muestres puntuaciones numéricas.';
+      const system = (idioma === 'EN')
+        ? 'You are a technical writer. Write in first person as the trainer, formal and precise. Never show numeric scores. Respond using HTML with <section>, <h3>, <p>, <ul>, <li>.'
+        : (idioma === 'CA')
+          ? 'Ets un redactor tècnic. Escriu en primera persona com a formador, to formal i precís. No mostris puntuacions numèriques. Respon amb HTML utilitzant <section>, <h3>, <p>, <ul>, <li>.'
+          : 'Eres un redactor técnico. Escribe en primera persona como el formador, tono formal y preciso. No muestres puntuaciones numéricas. Devuelve HTML usando <section>, <h3>, <p>, <ul>, <li>.';
 
-    const prompt = `
+      const prompt = `
 Redacta un INFORME TÉCNICO en primera persona (yo) basado en el contexto.
 No muestres números de las escalas; interpreta en texto (“participación alta/media/baja”, etc.).
 
@@ -343,20 +313,21 @@ IMPORTANTE:
 - Si la sede de la formación corresponde a:
   • C/ Primavera, 1, 28500, Arganda del Rey, Madrid
   • Carrer de Moratín, 100, 08206 Sabadell, Barcelona
-  entonces son **nuestras instalaciones** (GEPCO).Sino, di que "en sus instalaciones"
+  entonces son **nuestras instalaciones** (GEPCO). Si no, indica "en sus instalaciones".
 
 Contexto:
 ${ctx}
 `.trim();
 
-    const html = await callChatCompletion({
-      apiKey: API_KEY,
-      temperature: 0.3,
-      messages: [
-        { role: 'system', content: system },
-        { role: 'user', content: prompt },
-      ],
-    });
+      html = await callChatCompletion({
+        apiKey: API_KEY,
+        temperature: 0.3,
+        messages: [
+          { role: 'system', content: system },
+          { role: 'user', content: prompt },
+        ],
+      });
+    }
 
     return {
       statusCode: 200,
