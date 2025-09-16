@@ -141,6 +141,60 @@ const buildDocDefinition = ({
   }))
 
   if (datos?.tipo === 'simulacro') {
+    const footerSimulacro = () => ({
+      margin: [58, 0, 58, 18],
+      stack: [
+        {
+          table: {
+            widths: ['*', '*', '*'],
+            body: [
+              [
+                {
+                  stack: [
+                    { text: 'BARCELONA', color: '#E1062C', bold: true, fontSize: 9 },
+                    { text: 'C. Moratín, 100 · 08206 Sabadell · Barcelona', fontSize: 8 },
+                    { text: 'Tel. +34 935 604 636', fontSize: 8 },
+                  ],
+                },
+                {
+                  stack: [
+                    { text: 'MADRID', color: '#E1062C', bold: true, fontSize: 9 },
+                    { text: 'C. Primavera, 1 · 28500 Arganda del Rey · Madrid', fontSize: 8 },
+                    { text: 'Tel. +34 918 283 898', fontSize: 8 },
+                  ],
+                },
+                {
+                  stack: [
+                    { text: 'CÁDIZ', color: '#E1062C', bold: true, fontSize: 9 },
+                    { text: 'C. Hungría, 11 Nave 1B · 11011 Cádiz', fontSize: 8 },
+                    { text: ' ', fontSize: 8 },
+                  ],
+                },
+              ],
+            ],
+          },
+          columnGap: 18,
+          layout: {
+            hLineWidth: () => 0,
+            vLineWidth: () => 0,
+            paddingLeft: () => 8,
+            paddingRight: () => 8,
+            paddingTop: () => 6,
+            paddingBottom: () => 6,
+            fillColor: () => '#F5F5F5',
+          },
+        },
+        {
+          text: 'www.gepservices.es',
+          alignment: 'right',
+          color: '#E1062C',
+          bold: true,
+          margin: [0, 6, 0, 0],
+          fontSize: 9,
+        },
+      ],
+    });
+
     return {
       pageSize: 'A4',
       pageMargins: [58,110,58,90],
@@ -155,7 +209,7 @@ const buildDocDefinition = ({
         k: { bold:true },
       },
       header: () => ({ image: headerDataUrl, width:479, alignment:'center', margin:[0,18,0,0] }),
-      footer: () => ({ image: footerDataUrl, width:479, alignment:'center', margin:[0,0,0,18] }),
+      footer: footerSimulacro,
       content: [
         { text: 'INFORME SIMULACRO', style:'h1' },
         { text: [{ text:'Fecha del simulacro: ', bold:true }, { text: datos?.fecha || '—' }], margin:[0,0,0,6] },
@@ -198,7 +252,7 @@ const buildDocDefinition = ({
           layout:{ hLineWidth:()=>0, vLineWidth:()=>0, paddingTop:()=>0, paddingBottom:()=>0, paddingLeft:()=>0, paddingRight:()=>0 },
           margin:[0,8,0,0],
         },
-        { text:'DESARROLLO / INCIDENCIAS / RECOMENDACIONES', style:'h2' },
+        { text:'DESARROLLO Y ANÁLISIS', style:'h2' },
         { text:'Desarrollo', style:'h3' },
         { text: datos?.desarrollo || '—', margin:[0,0,0,6] },
         { text:'Cronología', style:'h3' },
@@ -220,18 +274,6 @@ const buildDocDefinition = ({
           layout:'lightHorizontalLines',
           margin:[0,0,0,8],
         },
-        { text:'Incidencias detectadas', style:'h3' },
-        { text: datos?.comentarios?.c12 || '—', margin:[0,0,0,4] },
-        { text:'Accidentes', style:'h3' },
-        { text: datos?.comentarios?.c14 || '—', margin:[0,0,0,4] },
-        { text:'Recomendaciones: Formaciones', style:'h3' },
-        { text: datos?.comentarios?.c15 || '—', margin:[0,0,0,4] },
-        { text:'Recomendaciones: Del entorno de Trabajo', style:'h3' },
-        { text: datos?.comentarios?.c16 || '—', margin:[0,0,0,4] },
-        { text:'Recomendaciones: De Materiales', style:'h3' },
-        { text: datos?.comentarios?.c17 || '—', margin:[0,0,0,4] },
-        { text:'Observaciones generales', style:'h3' },
-        { text: datos?.comentarios?.c11 || '—', margin:[0,0,0,8] },
         { text:'Atentamente,', margin:[0,18,0,2] },
         { text:'Jaime Martret', style:'k' },
         { text:'Responsable de formaciones', color:'#E1062C', margin:[0,2,0,0] },
