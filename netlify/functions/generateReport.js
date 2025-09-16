@@ -37,15 +37,14 @@ const ensureSection = (html, title) => {
   if (!trimmed) return '';
   if (/<section[\s>]/i.test(trimmed)) return trimmed;
 
-  const hasHtmlTags = /<([a-z][a-z0-9]*)\b[^>]*>/i.test(trimmed);
-  if (hasHtmlTags) {
-    const body = /<h[1-6][^>]*>/i.test(trimmed) ? trimmed : `<h3>${title}</h3>${trimmed}`;
+  if (/<([a-z][a-z0-9]*)\b[^>]*>/i.test(trimmed)) {
+    const needsHeading = !/<h[1-6][^>]*>/i.test(trimmed);
+    const body = needsHeading ? `<h3>${title}</h3>${trimmed}` : trimmed;
     return `<section>${body}</section>`;
   }
 
   const safe = compactText(trimmed);
-  if (!safe) return '';
-  return `<section><h3>${title}</h3><p>${escapeHtml(safe)}</p></section>`;
+  return safe ? `<section><h3>${title}</h3><p>${escapeHtml(safe)}</p></section>` : '';
 };
 
 const callChatCompletion = async ({ apiKey, temperature, messages }) => {
@@ -224,7 +223,7 @@ async function generarHtmlSimulacro({ apiKey, idioma, datos, formador }) {
           { role: 'user', content: prompt },
         ],
       });
-      return sanitizeContent(content);
+      return content;
     })(),
   );
 
