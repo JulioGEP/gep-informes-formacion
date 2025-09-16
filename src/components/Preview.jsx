@@ -98,10 +98,24 @@ export default function Preview(props) {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ formador, datos }),
       })
-      const data = await r.json()
-      if (!r.ok) throw new Error(data?.error || 'Error IA')
+      const raw = await r.text()
+      let data = null
+      if (raw) {
+        try {
+          data = JSON.parse(raw)
+        } catch (parseError) {
+          console.error('Respuesta IA no JSON:', parseError, raw)
+        }
+      }
 
-      const html = (data.html || '').trim()
+      if (!r.ok) {
+        const msg = data?.error || data?.message || raw || 'Error IA'
+        throw new Error(msg)
+      }
+
+      const html = (data?.html || '').trim()
+      if (!html) throw new Error('La IA devolvió un informe vacío.')
+
       setAiHtml(html)
       if (dealId) {
         try { sessionStorage.setItem(htmlKey(dealId), html) } catch {}
@@ -111,7 +125,8 @@ export default function Preview(props) {
       }
     } catch (e) {
       console.error(e)
-      alert('No se ha podido mejorar el informe.')
+      const message = e?.message ? `No se ha podido mejorar el informe.\n${e.message}` : 'No se ha podido mejorar el informe.'
+      alert(message)
     } finally {
       setAiBusy(false)
     }
