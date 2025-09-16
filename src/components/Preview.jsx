@@ -6,6 +6,126 @@ import { triesKey, htmlKey } from '../utils/keys'
 
 const maxTries = 3
 
+const preventivoHeadings = {
+  ES: {
+    generales: 'Datos generales',
+    registro: 'Registro',
+    trabajos: 'Trabajos',
+    tareas: 'Tareas',
+    observaciones: 'Observaciones',
+    incidencias: 'Incidencias',
+    firma: 'Firma',
+    anexos: 'Anexo de imágenes',
+  },
+  CA: {
+    generales: 'Dades generals',
+    registro: 'Registre',
+    trabajos: 'Treballs',
+    tareas: 'Tasques',
+    observaciones: 'Observacions',
+    incidencias: 'Incidències',
+    firma: 'Signatura',
+    anexos: "Annex d'imatges",
+  },
+  EN: {
+    generales: 'General information',
+    registro: 'Logbook',
+    trabajos: 'Works performed',
+    tareas: 'Tasks',
+    observaciones: 'Observations',
+    incidencias: 'Incidents',
+    firma: 'Signature',
+    anexos: 'Image annex',
+  },
+}
+
+const preventivoCardLabels = {
+  ES: { registro: 'Registro', bombero: 'Bombero/a', fecha: 'Fecha ejercicio' },
+  CA: { registro: 'Registre', bombero: 'Bomber/a', fecha: "Data de l'exercici" },
+  EN: { registro: 'Logbook', bombero: 'Firefighter', fecha: 'Exercise date' },
+}
+
+const normalizeText = (value = '') =>
+  value
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .trim()
+    .toLowerCase()
+
+const escapeHtml = (value = '') =>
+  value
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+
+const preventivoTextToHtml = (text = '', idioma = 'ES') => {
+  const lang = (idioma || 'ES').toUpperCase()
+  const labels = preventivoHeadings[lang] || preventivoHeadings.ES
+  const order = [
+    labels.generales,
+    labels.registro,
+    labels.trabajos,
+    labels.tareas,
+    labels.observaciones,
+    labels.incidencias,
+    labels.firma,
+    labels.anexos,
+  ]
+  const lookup = new Map(order.map((title) => [normalizeText(title), title]))
+
+  const lines = String(text || '').split(/\r?\n/)
+  const parts = []
+  let buffer = []
+  let currentTitle = null
+
+  const flushBuffer = () => {
+    const raw = buffer.join('\n').trim()
+    buffer = []
+    if (!raw) return
+    const paragraphs = raw.split(/\n{2,}/)
+    paragraphs.forEach((paragraph) => {
+      const trimmed = paragraph.trim()
+      if (!trimmed) return
+      const html = escapeHtml(trimmed).replace(/\n/g, '<br />')
+      parts.push(`<p>${html}</p>`)
+    })
+  }
+
+  const closeSection = () => {
+    flushBuffer()
+    if (currentTitle) {
+      parts.push('</section>')
+      currentTitle = null
+    }
+  }
+
+  const openSection = (title) => {
+    closeSection()
+    parts.push(`<section><h3>${title}</h3>`)
+    currentTitle = title
+  }
+
+  lines.forEach((rawLine) => {
+    const trimmed = rawLine.trim()
+    const heading = lookup.get(normalizeText(trimmed.replace(/[:：]\s*$/, '')))
+    if (heading) {
+      openSection(heading)
+    } else {
+      buffer.push(rawLine)
+    }
+  })
+
+  closeSection()
+
+  if (!parts.length) {
+    const fallback = escapeHtml(String(text || '').trim())
+    return fallback ? `<p>${fallback.replace(/\n/g, '<br />')}</p>` : ''
+  }
+
+  return parts.join('')
+}
+
 /**
  * Editor NO controlado para el HTML de IA (sin saltos de cursor):
  * - Inicializa innerHTML con initialHtml (o lo guardado).
@@ -47,6 +167,11 @@ export default function Preview(props) {
   const { datos, imagenes, formador, dealId, type: draftType } = draft
   const type = propType || draftType || 'formacion'
   const isSimulacro = type === 'simulacro'
+  const isPreventivo = type === 'preventivo'
+  const idioma = (datos?.idioma || formador?.idioma || 'ES').toUpperCase()
+  const idiomaLabel = idioma === 'CA' ? 'Català' : idioma === 'EN' ? 'English' : 'Castellano'
+  const preventivoLabels = preventivoHeadings[idioma] || preventivoHeadings.ES
+  const preventivoCard = preventivoCardLabels[idioma] || preventivoCardLabels.ES
 
   const [aiHtml, setAiHtml] = useState(null)
   const [aiBusy, setAiBusy] = useState(false)
@@ -86,12 +211,19 @@ export default function Preview(props) {
         (Array.isArray(imagenes) && imagenes.length > 0)
       )
     }
+    if (isPreventivo) {
+      const secciones = datos?.preventivo || {}
+      return (
+        Object.values(secciones).some(v => (v || '').trim() !== '') ||
+        (Array.isArray(imagenes) && imagenes.length > 0)
+      )
+    }
     return (
       (datos.formacionTitulo && (datos.contenidoTeorica?.length || datos.contenidoPractica?.length)) ||
       Object.values(datos?.comentarios || {}).some(v => (v || '').trim() !== '') ||
       (Array.isArray(imagenes) && imagenes.length > 0)
     )
-  }, [datos, imagenes, isSimulacro])
+  }, [datos, imagenes, isPreventivo, isSimulacro])
 
   const mejorarInforme = async () => {
     if (dealId && tries >= maxTries) return
@@ -117,8 +249,12 @@ export default function Preview(props) {
         throw new Error(msg)
       }
 
-      const html = (data?.html || '').trim()
+      let html = (data?.html || '').trim()
       if (!html) throw new Error('La IA devolvió un informe vacío.')
+
+      if (isPreventivo) {
+        html = preventivoTextToHtml(html, idioma)
+      }
 
       setAiHtml(html)
       if (dealId) {
@@ -144,13 +280,13 @@ export default function Preview(props) {
     .trim()
 
   const descargarPDF = async () => {
-  try {
-    await generateReportPdfmake({ dealId, datos, formador, imagenes, type })
-  } catch (e) {
-    console.error('Error generando PDF (pdfmake):', e)
-    alert('No se ha podido generar el PDF.')
+    try {
+      await generateReportPdfmake({ dealId, datos, formador, imagenes, type })
+    } catch (e) {
+      console.error('Error generando PDF (pdfmake):', e)
+      alert('No se ha podido generar el PDF.')
+    }
   }
-}
   const triesLabel = `${dealId ? tries : 0}/${maxTries}`
   const quedanIntentos = dealId ? tries < maxTries : true
 
@@ -192,7 +328,7 @@ export default function Preview(props) {
       <div className="card">
         <div className="card-body">
           {/* ===== Datos generales (dos columnas, textos pedidos) ===== */}
-          <h5 className="card-title mb-3">Datos generales</h5>
+          <h5 className="card-title mb-3">{isPreventivo ? preventivoLabels.generales : 'Datos generales'}</h5>
           <div className="row g-3 align-items-stretch">
             {/* Izquierda: Cliente */}
             <div className="col-md-6 d-flex">
@@ -203,36 +339,43 @@ export default function Preview(props) {
                   <div className="col-md-7"><strong>Cliente:</strong> {datos?.cliente || '—'}</div>
                   <div className="col-md-5"><strong>CIF:</strong> {datos?.cif || '—'}</div>
                   <div className="col-md-6"><strong>Dirección fiscal:</strong> {datos?.direccionOrg || '—'}</div>
-                  <div className="col-md-6"><strong>{isSimulacro ? 'Dirección del simulacro' : 'Dirección formación'}:</strong> {datos?.sede || '—'}</div>
+                  <div className="col-md-6"><strong>{(isSimulacro || isPreventivo) ? 'Dirección del simulacro' : 'Dirección formación'}:</strong> {datos?.sede || '—'}</div>
                   <div className="col-md-6"><strong>Persona de contacto:</strong> {datos?.contacto || '—'}</div>
                   <div className="col-md-6"><strong>Comercial:</strong> {datos?.comercial || '—'}</div>
                 </div>
               </div>
             </div>
-            {/* Derecha: Formador */}
+            {/* Derecha: Formador / Registro */}
             <div className="col-md-6 d-flex">
               <div className="border rounded p-3 w-100 h-100">
-                <h6 className="mb-3">Datos del formador</h6>
+                <h6 className="mb-3">{isPreventivo ? preventivoCard.registro : (isSimulacro ? 'Datos del auditor' : 'Datos del formador')}</h6>
                 <div className="row g-2">
                   <div className="col-12">
-                    <strong>{isSimulacro ? 'Auditor/a' : 'Formador/a'}:</strong> {formador?.nombre || '—'}
+                    <strong>{isPreventivo ? preventivoCard.bombero : (isSimulacro ? 'Auditor/a' : 'Formador/a')}:</strong> {formador?.nombre || '—'}
                   </div>
                   <div className="col-12">
-                    <strong>Fecha:</strong> {datos?.fecha || '—'}
+                    <strong>{isPreventivo ? preventivoCard.fecha : 'Fecha'}:</strong> {datos?.fecha || '—'}
                   </div>
                   <div className="col-12">
-                    <strong>Sesiones:</strong> {datos?.sesiones || '—'}
+                    <strong>Idioma:</strong> {idiomaLabel}
                   </div>
-                  <div className="col-12">
-                    <strong>Duración (h):</strong> {datos?.duracion || '—'}
-                  </div>
-                  {!isSimulacro && (
-                    <div className="col-12">
-                      <strong>Nº de alumnos:</strong> {datos?.alumnos || '—'}
-                    </div>
+                  {!isPreventivo && (
+                    <>
+                      <div className="col-12">
+                        <strong>Sesiones:</strong> {datos?.sesiones || '—'}
+                      </div>
+                      <div className="col-12">
+                        <strong>Duración (h):</strong> {datos?.duracion || '—'}
+                      </div>
+                      {!isSimulacro && (
+                        <div className="col-12">
+                          <strong>Nº de alumnos:</strong> {datos?.alumnos || '—'}
+                        </div>
+                      )}
+                    </>
                   )}
                 </div>
-                
+
               </div>
             </div>
           </div>
@@ -264,6 +407,28 @@ export default function Preview(props) {
                   </div>
                 </>
               )}
+            </>
+          ) : isPreventivo ? (
+            <>
+              <hr className="my-4" />
+              <div className="d-grid gap-3">
+                <div className="border rounded p-3 bg-light">
+                  <h5 className="card-title mb-2">{preventivoLabels.trabajos}</h5>
+                  <p className="mb-0" style={{ whiteSpace: 'pre-wrap' }}>{datos?.preventivo?.trabajos || '—'}</p>
+                </div>
+                <div className="border rounded p-3 bg-light">
+                  <h5 className="card-title mb-2">{preventivoLabels.tareas}</h5>
+                  <p className="mb-0" style={{ whiteSpace: 'pre-wrap' }}>{datos?.preventivo?.tareas || '—'}</p>
+                </div>
+                <div className="border rounded p-3 bg-light">
+                  <h5 className="card-title mb-2">{preventivoLabels.observaciones}</h5>
+                  <p className="mb-0" style={{ whiteSpace: 'pre-wrap' }}>{datos?.preventivo?.observaciones || '—'}</p>
+                </div>
+                <div className="border rounded p-3 bg-light">
+                  <h5 className="card-title mb-2">{preventivoLabels.incidencias}</h5>
+                  <p className="mb-0" style={{ whiteSpace: 'pre-wrap' }}>{datos?.preventivo?.incidencias || '—'}</p>
+                </div>
+              </div>
             </>
           ) : (
             <>

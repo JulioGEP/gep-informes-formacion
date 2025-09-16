@@ -84,6 +84,74 @@ const buildSimulacroSystem = (idioma) => {
   return 'Eres un redactor técnico de GEP Group, experto en auditar simulacros. Responde siempre en primera persona plural (nosotros) con tono formal técnico PRL/PCI y emergencias. Devuelve únicamente HTML usando <section>, <h3>, <h4>, <p>, <ul>, <li>. No muestres puntuaciones numéricas ni inventes datos.';
 };
 
+const preventivoHeadings = {
+  ES: {
+    generales: 'Datos generales',
+    registro: 'Registro',
+    trabajos: 'Trabajos',
+    tareas: 'Tareas',
+    observaciones: 'Observaciones',
+    incidencias: 'Incidencias',
+    firma: 'Firma',
+    anexos: 'Anexo de imágenes',
+  },
+  CA: {
+    generales: 'Dades generals',
+    registro: 'Registre',
+    trabajos: 'Treballs',
+    tareas: 'Tasques',
+    observaciones: 'Observacions',
+    incidencias: 'Incidències',
+    firma: 'Signatura',
+    anexos: "Annex d'imatges",
+  },
+  EN: {
+    generales: 'General information',
+    registro: 'Logbook',
+    trabajos: 'Works performed',
+    tareas: 'Tasks',
+    observaciones: 'Observations',
+    incidencias: 'Incidents',
+    firma: 'Signature',
+    anexos: 'Image annex',
+  },
+};
+
+const buildPreventivoSystem = (idioma) => {
+  const lang = (idioma || 'ES').toUpperCase();
+  if (lang === 'EN') {
+    return [
+      'You are a technical writer for GEP Group, specialised in auditing preventive emergency drills executed by private firefighters.',
+      'Write in first-person plural (we) as the team reporting to the customer after the exercise.',
+      'Adopt a formal PRL/PCI emergency tone: precise, clear and without embellishment, keeping a medium creative temperature.',
+      'Never invent information. Interpret only the provided context, correcting grammar and spelling issues.',
+      'Return plain text only (no HTML or Markdown).',
+      'Respect exactly the supplied headings, one per line. The sections “Works performed”, “Tasks”, “Observations” and “Incidents” must each contain between 350 and 450 words.',
+      'After the corporate signature “Jaime Martret. Head of Training”, state that the image annex follows the signature.',
+    ].join('\n');
+  }
+  if (lang === 'CA') {
+    return [
+      'Ets un redactor tècnic de GEP Group expert en auditar exercicis preventius realitzats per bombers privats.',
+      'Escriu sempre en primera persona del plural (nosaltres) com a equip que informa al client després de l’exercici.',
+      'Mantén un to formal tècnic PRL/PCI i emergències: precís, clar i sense floritures, amb una temperatura creativa mitjana.',
+      'No inventis dades. Treballa només amb el context disponible i corregeix ortografia i gramàtica.',
+      'Respon exclusivament amb text pla, sense HTML ni Markdown.',
+      'Respecta exactament els encapçalaments indicats, un per línia. Les seccions “Treballs”, “Tasques”, “Observacions” i “Incidències” han de tenir entre 350 i 450 paraules cadascuna.',
+      'Després de la signatura corporativa “Jaime Martret. Responsable de formacions”, indica que l’annex d’imatges s’adjunta a continuació.',
+    ].join('\n');
+  }
+  return [
+    'Eres un redactor técnico de GEP Group, experto en auditar ejercicios preventivos realizados por bomberos privados.',
+    'Escribe siempre en primera persona del plural (nosotros) como el equipo que informa al cliente tras el ejercicio.',
+    'Mantén un tono formal técnico PRL/PCI y emergencias: preciso, claro y sin florituras, con una temperatura creativa media.',
+    'No inventes datos. Trabaja únicamente con el contexto entregado y corrige ortografía y gramática.',
+    'Devuelve solo texto plano, sin HTML ni Markdown.',
+    'Respeta exactamente los encabezados indicados, uno por línea. Las secciones “Trabajos”, “Tareas”, “Observaciones” e “Incidencias” deben tener entre 350 y 450 palabras cada una.',
+    'Tras la firma corporativa “Jaime Martret. Responsable de formaciones”, indica que el anexo de imágenes se adjunta a continuación.',
+  ].join('\n');
+};
+
 async function generarHtmlSimulacro({ apiKey, baseUrl, idioma, datos, formador }) {
   const lang = (idioma || 'ES').toUpperCase();
   const safe = (value) => {
@@ -228,6 +296,76 @@ async function generarHtmlSimulacro({ apiKey, baseUrl, idioma, datos, formador }
   return htmlSections.filter(Boolean).join('\n');
 }
 
+async function generarInformePreventivo({ apiKey, baseUrl, idioma, datos, formador }) {
+  const lang = (idioma || 'ES').toUpperCase();
+  const headings = preventivoHeadings[lang] || preventivoHeadings.ES;
+  const system = buildPreventivoSystem(lang);
+
+  const safe = (value) => {
+    if (value === null || value === undefined) return '-';
+    const text = typeof value === 'string' ? value : String(value);
+    const compact = text.replace(/\s+/g, ' ').trim();
+    return compact || '-';
+  };
+
+  const bloque = (titulo, contenido) => `${titulo} (original):\n${(contenido || '').trim() || '-'}`;
+
+  const prev = datos?.preventivo || {};
+
+  const contexto = [
+    'Informe emitido por el equipo de bomberos preventivos de GEP Group para el cliente.',
+    `Cliente: ${safe(datos?.cliente)} | CIF: ${safe(datos?.cif)}`,
+    `Dirección fiscal: ${safe(datos?.direccionOrg)}`,
+    `Dirección del simulacro: ${safe(datos?.sede)}`,
+    `Persona de contacto: ${safe(datos?.contacto)} | Comercial: ${safe(datos?.comercial)}`,
+    `Bombero/a responsable: ${safe(formador?.nombre)} | Idioma solicitado: ${lang}`,
+    `Fecha del ejercicio: ${safe(datos?.fecha)}`,
+    '',
+    bloque(headings.trabajos, prev.trabajos),
+    '',
+    bloque(headings.tareas, prev.tareas),
+    '',
+    bloque(headings.observaciones, prev.observaciones),
+    '',
+    bloque(headings.incidencias, prev.incidencias),
+  ].join('\n');
+
+  const prompt = `
+Encabezados obligatorios en este orden (una línea por encabezado, sin numeración y sin añadir otros títulos):
+${headings.generales}
+${headings.registro}
+${headings.trabajos}
+${headings.tareas}
+${headings.observaciones}
+${headings.incidencias}
+${headings.firma}
+${headings.anexos}
+
+Indicaciones:
+- Somos bomberos privados de GEP Group informando al cliente tras un ejercicio preventivo.
+- En "${headings.generales}" sintetiza los datos clave del cliente y el propósito del ejercicio.
+- En "${headings.registro}" describe el servicio prestado por nuestro equipo, el lugar y la fecha realizada.
+- Reescribe "${headings.trabajos}", "${headings.tareas}", "${headings.observaciones}" e "${headings.incidencias}" con una extensión de entre 350 y 450 palabras por sección, interpretando profesionalmente el material original.
+- No inventes datos: si falta información, explica el impacto en el análisis.
+- Corrige ortografía y gramática manteniendo el tono formal PRL/PCI y la primera persona plural (nosotros).
+- En "${headings.firma}" utiliza literalmente “Jaime Martret. Responsable de formaciones”.
+- En "${headings.anexos}" indica que las imágenes se adjuntan como anexo posterior a la firma.
+
+Contexto disponible:
+${contexto}
+`.trim();
+
+  return callChatCompletion({
+    apiKey,
+    baseUrl,
+    temperature: 0.5,
+    messages: [
+      { role: 'system', content: system },
+      { role: 'user', content: prompt },
+    ],
+  });
+}
+
 // ───────── Utils mínimas (solo lo necesario) ─────────
 const normalize = (s = '') =>
   s.normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase().replace(/\s+/g, ' ').trim();
@@ -270,6 +408,15 @@ export async function handler(event) {
         statusCode: 200,
         headers: { 'Content-Type': 'application/json', ...cors },
         body: JSON.stringify({ html }),
+      };
+    }
+
+    if (tipo === 'preventivo') {
+      const texto = await generarInformePreventivo({ apiKey: API_KEY, baseUrl: BASE_URL, idioma, datos, formador });
+      return {
+        statusCode: 200,
+        headers: { 'Content-Type': 'application/json', ...cors },
+        body: JSON.stringify({ html: texto }),
       };
     }
 
