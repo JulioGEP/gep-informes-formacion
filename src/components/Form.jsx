@@ -196,6 +196,186 @@ export default function Form({ initial, onNext, title = 'Informe de Formación',
     Object.keys(plantillasBase).sort((a,b)=>a.localeCompare(b,'es',{sensitivity:'base'}))
   , [])
 
+  let mainSection
+  if (isSimulacro) {
+    mainSection = (
+      <>
+        <h2 className="h5 text-danger">DESARROLLO / INCIDENCIAS / RECOMENDACIONES</h2>
+        <div className="mb-3">
+          <label className="form-label">Desarrollo</label>
+          <textarea className="form-control" required value={datos.desarrollo} onChange={(e)=>setDatos(d=>({...d, desarrollo:e.target.value}))} />
+        </div>
+        <div>
+          <h2 className="h5">Cronología</h2>
+          <div className="card"><div className="card-body">
+            <label className="form-label">Inicio del Simulacro</label>
+            <div className="d-grid gap-2">
+              {(datos.cronologia || []).map((p,i)=>(
+                <div className="input-group" key={i}>
+                  <input
+                    type="time"
+                    className="form-control"
+                    value={p.hora}
+                    required
+                    onChange={(e)=>updateCrono(i,'hora',e.target.value)}
+                    style={{ flex: '0 0 120px', maxWidth: 120 }}
+                  />
+                  <input
+                    className="form-control"
+                    value={p.texto}
+                    required
+                    onChange={(e)=>updateCrono(i,'texto',e.target.value)}
+                    style={{ flex: '1 1 auto', minWidth: 0 }}
+                  />
+                  <button type="button" className="btn btn-outline-danger" onClick={()=>removeCrono(i)}>Eliminar</button>
+                </div>
+              ))}
+              <button type="button" className="btn btn-outline-primary" onClick={addCrono}>Añadir punto</button>
+            </div>
+            <div className="form-text mt-2">Añade punto a punto la cronología de lo que sucede en el simulacro</div>
+          </div></div>
+        </div>
+      </>
+    )
+  } else if (isPreventivo) {
+    mainSection = (
+      <div>
+        <h2 className="h5">Informe de preventivos</h2>
+        <div className="card">
+          <div className="card-body d-grid gap-4">
+            <div>
+              <label className="form-label">Trabajos</label>
+              <textarea
+                className="form-control"
+                required
+                rows={8}
+                value={datos.preventivo?.trabajos || ''}
+                onChange={(e)=>setDatos(d=>({
+                  ...d,
+                  preventivo: { ...d.preventivo, trabajos: e.target.value },
+                }))}
+              />
+            </div>
+            <div>
+              <label className="form-label">Tareas</label>
+              <textarea
+                className="form-control"
+                required
+                rows={8}
+                value={datos.preventivo?.tareas || ''}
+                onChange={(e)=>setDatos(d=>({
+                  ...d,
+                  preventivo: { ...d.preventivo, tareas: e.target.value },
+                }))}
+              />
+            </div>
+            <div>
+              <label className="form-label">Observaciones</label>
+              <textarea
+                className="form-control"
+                required
+                rows={8}
+                value={datos.preventivo?.observaciones || ''}
+                onChange={(e)=>setDatos(d=>({
+                  ...d,
+                  preventivo: { ...d.preventivo, observaciones: e.target.value },
+                }))}
+              />
+            </div>
+            <div>
+              <label className="form-label">Incidencias</label>
+              <textarea
+                className="form-control"
+                required
+                rows={8}
+                value={datos.preventivo?.incidencias || ''}
+                onChange={(e)=>setDatos(d=>({
+                  ...d,
+                  preventivo: { ...d.preventivo, incidencias: e.target.value },
+                }))}
+              />
+            </div>
+            <div>
+              <label className="form-label">Imágenes de apoyo (opcional)</label>
+              <input type="file" accept="image/*" multiple className="form-control" onChange={addImagenes} />
+              {imagenes.length > 0 && (
+                <div className="mt-2 d-flex flex-wrap gap-2">
+                  {imagenes.map((img, idx) => (
+                    <div key={idx} className="border rounded p-1" style={{ width: 120 }}>
+                      <img src={img.dataUrl} alt={img.name} className="img-fluid rounded" />
+                      <div className="d-flex justify-content-between align-items-center mt-1">
+                        <small className="text-truncate" style={{ maxWidth: 80 }} title={img.name}>{img.name}</small>
+                        <button type="button" className="btn btn-sm btn-outline-danger" onClick={()=>removeImagen(idx)}>x</button>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
+              <div className="form-text">Se añadirán al final del informe bajo “Imágenes de apoyo”.</div>
+            </div>
+          </div>
+        </div>
+      </div>
+    )
+  } else {
+    mainSection = (
+      <div>
+        <h2 className="h5">Formación realizada</h2>
+        <div className="card"><div className="card-body">
+          <div className="row g-3">
+            <div className="col-md-6">
+              <label className="form-label">Formación</label>
+              <select
+                className="form-select"
+                value={selTitulo}
+                required
+                onChange={(e)=>setSelTitulo(e.target.value)}
+              >
+                <option value="">— Selecciona —</option>
+                {opcionesOrdenadas.map(t => <option key={t} value={t}>{t}</option>)}
+              </select>
+            </div>
+          </div>
+
+          <div className="row g-4 mt-1">
+            <div className="col-md-6">
+              <label className="form-label">Parte Teórica</label>
+              <div className="d-grid gap-2">
+                {(datos.contenidoTeorica || []).map((v,i)=>(
+                  <div className="input-group" key={`t-${i}`}>
+                    <input className="form-control" value={v}
+                      onChange={(e)=>setDatos(d=>{ const arr=[...(d.contenidoTeorica||[])]; arr[i]=e.target.value; return {...d, contenidoTeorica:arr}; })} />
+                    <button type="button" className="btn btn-outline-danger" onClick={()=>setDatos(d=>({...d, contenidoTeorica:d.contenidoTeorica.filter((_,idx)=>idx!==i)}))}>Eliminar</button>
+                  </div>
+                ))}
+                <button type="button" className="btn btn-outline-primary" onClick={addTeorica}>Añadir punto</button>
+              </div>
+            </div>
+
+            <div className="col-md-6">
+              <label className="form-label">Parte Práctica</label>
+              <div className="d-grid gap-2">
+                {(datos.contenidoPractica || []).map((v,i)=>(
+                  <div className="input-group" key={`p-${i}`}>
+                    <input className="form-control" value={v}
+                      onChange={(e)=>setDatos(d=>{ const arr=[...(d.contenidoPractica||[])]; arr[i]=e.target.value; return {...d, contenidoPractica:arr}; })} />
+                    <button type="button" className="btn btn-outline-danger" onClick={()=>setDatos(d=>({...d, contenidoPractica:d.contenidoPractica.filter((_,idx)=>idx!==i)}))}>Eliminar</button>
+                  </div>
+                ))}
+                <button type="button" className="btn btn-outline-primary" onClick={addPractica}>Añadir punto</button>
+              </div>
+            </div>
+          </div>
+
+          <div className="form-text mt-2">
+            Selecciona la formación realizada. Se añadirán sus “Parte teórica” y “Parte práctica” al borrador. Si falta algún punto, añádelo.
+          </div>
+        </div></div>
+      </div>
+    )
+  }
+
+
   return (
     <form ref={formRef} className="d-grid gap-4" onSubmit={onSubmit}>
       {/* Header con logo y título */}
@@ -344,178 +524,7 @@ export default function Form({ initial, onNext, title = 'Informe de Formación',
         </div>
       </div>
 
-      {isSimulacro ? (
-        <>
-          <h2 className="h5 text-danger">DESARROLLO / INCIDENCIAS / RECOMENDACIONES</h2>
-          <div className="mb-3">
-            <label className="form-label">Desarrollo</label>
-            <textarea className="form-control" required value={datos.desarrollo} onChange={(e)=>setDatos(d=>({...d, desarrollo:e.target.value}))} />
-          </div>
-          <div>
-            <h2 className="h5">Cronología</h2>
-            <div className="card"><div className="card-body">
-              <label className="form-label">Inicio del Simulacro</label>
-              <div className="d-grid gap-2">
-                {(datos.cronologia || []).map((p,i)=>(
-                  <div className="input-group" key={i}>
-                    <input
-                      type="time"
-                      className="form-control"
-                      value={p.hora}
-                      required
-                      onChange={(e)=>updateCrono(i,'hora',e.target.value)}
-                      style={{ flex: '0 0 120px', maxWidth: 120 }}
-                    />
-                    <input
-                      className="form-control"
-                      value={p.texto}
-                      required
-                      onChange={(e)=>updateCrono(i,'texto',e.target.value)}
-                      style={{ flex: '1 1 auto', minWidth: 0 }}
-                    />
-                    <button type="button" className="btn btn-outline-danger" onClick={()=>removeCrono(i)}>Eliminar</button>
-                  </div>
-                ))}
-                <button type="button" className="btn btn-outline-primary" onClick={addCrono}>Añadir punto</button>
-              </div>
-              <div className="form-text mt-2">Añade punto a punto la cronología de lo que sucede en el simulacro</div>
-            </div></div>
-          </div>
-        </>
-      ) : (
-        isPreventivo ? (
-          <div>
-            <h2 className="h5">Informe de preventivos</h2>
-            <div className="card">
-              <div className="card-body d-grid gap-4">
-                <div>
-                  <label className="form-label">Trabajos</label>
-                  <textarea
-                    className="form-control"
-                    required
-                    rows={6}
-                    value={datos.preventivo?.trabajos || ''}
-                    onChange={(e)=>setDatos(d=>({
-                      ...d,
-                      preventivo: { ...d.preventivo, trabajos: e.target.value },
-                    }))}
-                  />
-                </div>
-                <div>
-                  <label className="form-label">Tareas</label>
-                  <textarea
-                    className="form-control"
-                    required
-                    rows={6}
-                    value={datos.preventivo?.tareas || ''}
-                    onChange={(e)=>setDatos(d=>({
-                      ...d,
-                      preventivo: { ...d.preventivo, tareas: e.target.value },
-                    }))}
-                  />
-                </div>
-                <div>
-                  <label className="form-label">Observaciones</label>
-                  <textarea
-                    className="form-control"
-                    required
-                    rows={6}
-                    value={datos.preventivo?.observaciones || ''}
-                    onChange={(e)=>setDatos(d=>({
-                      ...d,
-                      preventivo: { ...d.preventivo, observaciones: e.target.value },
-                    }))}
-                  />
-                </div>
-                <div>
-                  <label className="form-label">Incidencias</label>
-                  <textarea
-                    className="form-control"
-                    required
-                    rows={6}
-                    value={datos.preventivo?.incidencias || ''}
-                    onChange={(e)=>setDatos(d=>({
-                      ...d,
-                      preventivo: { ...d.preventivo, incidencias: e.target.value },
-                    }))}
-                  />
-                </div>
-                <div>
-                  <label className="form-label">Imágenes de apoyo (opcional)</label>
-                  <input type="file" accept="image/*" multiple className="form-control" onChange={addImagenes} />
-                  {imagenes.length > 0 && (
-                    <div className="mt-2 d-flex flex-wrap gap-2">
-                      {imagenes.map((img, idx) => (
-                        <div key={idx} className="border rounded p-1" style={{ width: 120 }}>
-                          <img src={img.dataUrl} alt={img.name} className="img-fluid rounded" />
-                          <div className="d-flex justify-content-between align-items-center mt-1">
-                            <small className="text-truncate" style={{ maxWidth: 80 }} title={img.name}>{img.name}</small>
-                            <button type="button" className="btn btn-sm btn-outline-danger" onClick={()=>removeImagen(idx)}>x</button>
-                          </div>
-                        </div>
-                      ))}
-                    </div>
-                  )}
-                  <div className="form-text">Se añadirán al final del informe bajo “Imágenes de apoyo”.</div>
-                </div>
-              </div>
-            </div>
-          </div>
-        ) : (
-          <div>
-            <h2 className="h5">Formación realizada</h2>
-            <div className="card"><div className="card-body">
-              <div className="row g-3">
-                <div className="col-md-6">
-                  <label className="form-label">Formación</label>
-                  <select
-                    className="form-select"
-                    value={selTitulo}
-                    required
-                    onChange={(e)=>setSelTitulo(e.target.value)}
-                  >
-                    <option value="">— Selecciona —</option>
-                    {opcionesOrdenadas.map(t => <option key={t} value={t}>{t}</option>)}
-                  </select>
-                </div>
-              </div>
-
-              <div className="row g-4 mt-1">
-                <div className="col-md-6">
-                  <label className="form-label">Parte Teórica</label>
-                  <div className="d-grid gap-2">
-                    {(datos.contenidoTeorica || []).map((v,i)=>(
-                      <div className="input-group" key={`t-${i}`}>
-                        <input className="form-control" value={v}
-                          onChange={(e)=>setDatos(d=>{ const arr=[...(d.contenidoTeorica||[])]; arr[i]=e.target.value; return {...d, contenidoTeorica:arr}; })} />
-                        <button type="button" className="btn btn-outline-danger" onClick={()=>setDatos(d=>({...d, contenidoTeorica:d.contenidoTeorica.filter((_,idx)=>idx!==i)}))}>Eliminar</button>
-                      </div>
-                    ))}
-                    <button type="button" className="btn btn-outline-primary" onClick={addTeorica}>Añadir punto</button>
-                  </div>
-                </div>
-
-                <div className="col-md-6">
-                  <label className="form-label">Parte Práctica</label>
-                  <div className="d-grid gap-2">
-                    {(datos.contenidoPractica || []).map((v,i)=>(
-                      <div className="input-group" key={`p-${i}`}>
-                        <input className="form-control" value={v}
-                          onChange={(e)=>setDatos(d=>{ const arr=[...(d.contenidoPractica||[])]; arr[i]=e.target.value; return {...d, contenidoPractica:arr}; })} />
-                        <button type="button" className="btn btn-outline-danger" onClick={()=>setDatos(d=>({...d, contenidoPractica:d.contenidoPractica.filter((_,idx)=>idx!==i)}))}>Eliminar</button>
-                      </div>
-                    ))}
-                    <button type="button" className="btn btn-outline-primary" onClick={addPractica}>Añadir punto</button>
-                  </div>
-                </div>
-              </div>
-
-              <div className="form-text mt-2">
-                Selecciona la formación realizada. Se añadirán sus “Parte teórica” y “Parte práctica” al borrador. Si falta algún punto, añádelo.
-              </div>
-            </div></div>
-          </div>
-        )}
+      {mainSection}
 
       {!isPreventivo && (
         <div>
@@ -648,6 +657,7 @@ export default function Form({ initial, onNext, title = 'Informe de Formación',
             </div>
           </div>
         </div></div>
+        </div>
       )}
 
       <div className="d-flex justify-content-between">
