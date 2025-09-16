@@ -141,9 +141,9 @@ async function generarHtmlSimulacro({ apiKey, baseUrl, idioma, datos, formador }
 
   const desarrolloTitle = pickLabel(idioma, 'DESARROLLO', 'DESENVOLUPAMENT', 'DEVELOPMENT');
   const cronologiaTitle = pickLabel(idioma, 'CRONOLOGÍA', 'CRONOLOGIA', 'TIMELINE');
-  const incidenciasTitle = pickLabel(idioma, 'INCIDENCIAS DETECTADAS', 'INCIDÈNCIES DETECTADES', 'DETECTED INCIDENTS');
-  const observacionesTitle = pickLabel(idioma, 'OBSERVACIONES', 'OBSERVACIONS', 'OBSERVATIONS');
-  const recomendacionesTitle = pickLabel(idioma, 'RECOMENDACIONES', 'RECOMANACIONS', 'RECOMMENDATIONS');
+  const contingenciasTitle = pickLabel(idioma, 'Gestión de contingencias', 'Gestió de contingències', 'Contingency management');
+  const mejoraTitle = pickLabel(idioma, 'Líneas de mejora prioritarias', 'Línies de millora prioritàries', 'Priority improvement actions');
+  const cierreTitle = pickLabel(idioma, 'Cierre de la auditoría', "Tancament de l'auditoria", 'Audit closing remarks');
 
   const sections = [
     {
@@ -155,6 +155,7 @@ async function generarHtmlSimulacro({ apiKey, baseUrl, idioma, datos, formador }
         `- Contenido original del campo "Desarrollo": "${desarrolloOriginal}". Resúmelo y amplíalo sin copiar literalmente.`,
         '- Describe el escenario, el problema simulado y la respuesta que debíamos ensayar.',
         '- Añade detalles sobre los riesgos principales y qué podía salir mal si no se seguían los procedimientos.',
+        '- Integra sólo cuando aporte valor las incidencias y accidentes registrados, evitando copiar el texto original.',
         '- Redacta en primera persona plural y no inventes datos nuevos.',
       ].join('\n'),
     },
@@ -164,47 +165,46 @@ async function generarHtmlSimulacro({ apiKey, baseUrl, idioma, datos, formador }
       instructions: [
         `Genera la sección HTML "${cronologiaTitle}" del informe del simulacro.`,
         '- El primer elemento debe ser un <h3> con el título exacto.',
-        '- Empieza con un <p> muy breve (máximo dos frases) que contextualice la cronología.',
-        '- Luego, crea un subapartado independiente por cada entrada de la cronología original en el mismo orden.',
-        '- Cada subapartado debe usar un <section> con un <h4> que combine la hora y un subtítulo orientado al riesgo, seguido de un <p> que detalle lo más relevante y qué podría ocurrir si se gestiona mal.',
-        '- Si no hay cronología, incluye un <p> indicando que no se registraron eventos.',
+        '- Recuerda que la cronología detallada ya figura en el documento antes de este bloque.',
+        '- Redacta únicamente un resumen crítico en uno o dos párrafos que destaque hitos, tiempos de respuesta y riesgos detectados.',
+        '- No enumeres de nuevo cada evento ni crees listas; céntrate en conclusiones e insights.',
+        '- Si no hay cronología, explica por qué no se registraron eventos y cómo afecta al análisis.',
         `Cronología original (JSON):\n${cronologiaJson}`,
       ].join('\n'),
     },
     {
-      title: incidenciasTitle,
+      title: contingenciasTitle,
       temperature: 0.6,
       instructions: [
-        `Genera la sección HTML "${incidenciasTitle}".`,
+        `Genera la sección HTML "${contingenciasTitle}".`,
         '- El primer elemento debe ser un <h3> con el título exacto.',
-        `- Analiza las incidencias y accidentes registrados: incidencias="${incidenciasTexto}", accidentes="${accidentesTexto}".`,
-        '- Explica causas probables, impacto y riesgos de no corregirlas, enlazándolas con la cronología cuando corresponda.',
-        '- Redacta varios párrafos o una lista con <ul>/<li> si existen varios puntos críticos.',
-        '- Si no hubo incidencias, indica qué controles funcionaron y por qué.',
+        `- Analiza cómo se gestionaron incidencias y accidentes: incidencias="${incidenciasTexto}", accidentes="${accidentesTexto}".`,
+        '- Relaciona cada situación con la cronología y el impacto en la seguridad, señalando controles aplicados y riesgos mitigados.',
+        '- Usa párrafos o una lista corta (<ul>/<li>) solo si ayuda a ordenar varios focos críticos.',
+        '- Si no hubo incidencias relevantes, explica qué controles preventivos funcionaron y qué indicadores lo demuestran.',
       ].join('\n'),
     },
     {
-      title: observacionesTitle,
+      title: mejoraTitle,
       temperature: 0.7,
       instructions: [
-        `Genera la sección HTML "${observacionesTitle}".`,
+        `Genera la sección HTML "${mejoraTitle}".`,
         '- El primer elemento debe ser un <h3> con el título exacto.',
-        `- Amplía las observaciones generales (contenido: "${observacionesTexto}") con comentarios técnicos sobre coordinación, participación y tiempos de respuesta.`,
-        `- Interpreta las valoraciones numéricas en términos cualitativos (participación=${participacion}, compromiso=${compromiso}, superación=${superacion}) sin mostrar cifras.`,
-        '- Desarrolla la reflexión en varios párrafos, añadiendo matices profesionales.',
-        '- Si faltan observaciones, explica que no se registraron y justifica la ausencia con los datos disponibles.',
+        `- Fundamenta cada línea de mejora a partir de las propuestas registradas: formaciones="${recForm}", entorno="${recEntorno}", materiales="${recMateriales}".`,
+        '- Reformula y sintetiza estas ideas sin copiar literalmente los textos originales.',
+        '- Explica qué riesgo o brecha cubre cada acción y qué prioridad debería tener.',
+        '- Añade, si procede, observaciones profesionales que refuercen la necesidad de implantarlas.',
       ].join('\n'),
     },
     {
-      title: recomendacionesTitle,
-      temperature: 0.7,
+      title: cierreTitle,
+      temperature: 0.5,
       instructions: [
-        `Genera la sección HTML "${recomendacionesTitle}".`,
+        `Genera la sección HTML "${cierreTitle}".`,
         '- El primer elemento debe ser un <h3> con el título exacto.',
-        `- Construye recomendaciones justificadas a partir de: formaciones="${recForm}", entorno="${recEntorno}", materiales="${recMateriales}".`,
-        '- Por cada recomendación, justifica por qué es necesaria y qué riesgo mitiga; usa <ul>/<li> si precisas listar acciones.',
-        '- Mantén un enfoque proactivo orientado a la mejora continua.',
-        '- Si no se propusieron recomendaciones, sugiere un plan mínimo coherente con el contexto sin inventar datos externos.',
+        `- Sintetiza la evaluación cualitativa interpretando las valoraciones: participación=${participacion}, compromiso=${compromiso}, superación=${superacion} (sin mencionar números).`,
+        `- Integra las observaciones generales registradas ("${observacionesTexto}") para reforzar la conclusión.`,
+        '- Cierra con una valoración global del simulacro y los próximos pasos inmediatos desde la perspectiva del auditor.',
       ].join('\n'),
     },
   ];
