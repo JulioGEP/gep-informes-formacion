@@ -33,8 +33,14 @@ const ensureSection = (html, title) => {
   return `<section><h3>${title}</h3><p>${safe}</p></section>`;
 };
 
-const callChatCompletion = async ({ apiKey, temperature, messages }) => {
-  const resp = await fetch('https://api.openai.com/v1/chat/completions', {
+const resolveOpenAIBase = (baseUrl) => {
+  const raw = baseUrl || process.env.OPENAI_BASE_URL || 'https://api.openai.com/v1';
+  return raw.replace(/\/+$/, '');
+};
+
+const callChatCompletion = async ({ apiKey, baseUrl, temperature, messages }) => {
+  const url = `${resolveOpenAIBase(baseUrl)}/chat/completions`;
+  const resp = await fetch(url, {
     method: 'POST',
     headers: {
       Authorization: `Bearer ${apiKey}`,
@@ -47,9 +53,24 @@ const callChatCompletion = async ({ apiKey, temperature, messages }) => {
     }),
   });
 
-  const json = await resp.json();
-  if (!resp.ok) throw new Error(json?.error?.message || 'OpenAI error');
-  return sanitizeContent(json.choices?.[0]?.message?.content || '');
+  const raw = await resp.text();
+  let data = null;
+  if (raw) {
+    try {
+      data = JSON.parse(raw);
+    } catch (error) {
+      console.error('[callChatCompletion] JSON parse error:', error, raw);
+      if (!resp.ok) throw new Error(raw || 'OpenAI error');
+      throw new Error('Invalid JSON response from OpenAI');
+    }
+  }
+
+  if (!resp.ok) {
+    const message = data?.error?.message || raw || 'OpenAI error';
+    throw new Error(message);
+  }
+
+  return sanitizeContent(data?.choices?.[0]?.message?.content || '');
 };
 
 const buildSimulacroSystem = (idioma) => {
@@ -63,7 +84,7 @@ const buildSimulacroSystem = (idioma) => {
   return 'Eres un redactor técnico de GEP Group, experto en auditar simulacros. Responde siempre en primera persona plural (nosotros) con tono formal técnico PRL/PCI y emergencias. Devuelve únicamente HTML usando <section>, <h3>, <h4>, <p>, <ul>, <li>. No muestres puntuaciones numéricas ni inventes datos.';
 };
 
-async function generarHtmlSimulacro({ apiKey, idioma, datos, formador }) {
+async function generarHtmlSimulacro({ apiKey, baseUrl, idioma, datos, formador }) {
   const lang = (idioma || 'ES').toUpperCase();
   const safe = (value) => {
     const text = compactText(value);
@@ -188,23 +209,23 @@ async function generarHtmlSimulacro({ apiKey, idioma, datos, formador }) {
     },
   ];
 
-  const htmlSections = [];
+  const htmlSections = await Promise.all(
+    sections.map(async (section) => {
+      const prompt = `${section.instructions}\n\nContexto del simulacro:\n${ctx}`;
+      const content = await callChatCompletion({
+        apiKey,
+        baseUrl,
+        temperature: section.temperature,
+        messages: [
+          { role: 'system', content: system },
+          { role: 'user', content: prompt },
+        ],
+      });
+      return ensureSection(content, section.title);
+    })
+  );
 
-  for (const section of sections) {
-    const prompt = `${section.instructions}\n\nContexto del simulacro:\n${ctx}`;
-    const content = await callChatCompletion({
-      apiKey,
-      temperature: section.temperature,
-      messages: [
-        { role: 'system', content: system },
-        { role: 'user', content: prompt },
-      ],
-    });
-    const ensured = ensureSection(content, section.title);
-    if (ensured) htmlSections.push(ensured);
-  }
-
-  return htmlSections.join('\n');
+  return htmlSections.filter(Boolean).join('\n');
 }
 
 // ───────── Utils mínimas (solo lo necesario) ─────────
@@ -232,6 +253,7 @@ export async function handler(event) {
 
   try {
     const API_KEY = process.env.OPENAI_API_KEY;
+    const BASE_URL = process.env.OPENAI_BASE_URL;
     if (!API_KEY) throw new Error('Missing OPENAI_API_KEY');
 
     const { formador, datos } = JSON.parse(event.body || '{}');
@@ -243,7 +265,7 @@ export async function handler(event) {
     const sedeEsGEPCO = esInstalacionGEPCO(sede);
 
     if (tipo === 'simulacro') {
-      const html = await generarHtmlSimulacro({ apiKey: API_KEY, idioma, datos, formador });
+      const html = await generarHtmlSimulacro({ apiKey: API_KEY, baseUrl: BASE_URL, idioma, datos, formador });
       return {
         statusCode: 200,
         headers: { 'Content-Type': 'application/json', ...cors },
@@ -310,6 +332,7 @@ ${ctx}
 
     const html = await callChatCompletion({
       apiKey: API_KEY,
+      baseUrl: BASE_URL,
       temperature: 0.3,
       messages: [
         { role: 'system', content: system },
