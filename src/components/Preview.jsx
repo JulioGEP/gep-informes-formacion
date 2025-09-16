@@ -172,6 +172,11 @@ export default function Preview(props) {
   const idiomaLabel = idioma === 'CA' ? 'Català' : idioma === 'EN' ? 'English' : 'Castellano'
   const preventivoLabels = preventivoHeadings[idioma] || preventivoHeadings.ES
   const preventivoCard = preventivoCardLabels[idioma] || preventivoCardLabels.ES
+  const direccionSedeLabel = isPreventivo
+    ? 'Dirección del Preventivo'
+    : isSimulacro
+      ? 'Dirección del simulacro'
+      : 'Dirección de la formación'
 
   const [aiHtml, setAiHtml] = useState(null)
   const [aiBusy, setAiBusy] = useState(false)
@@ -339,7 +344,7 @@ export default function Preview(props) {
                   <div className="col-md-7"><strong>Cliente:</strong> {datos?.cliente || '—'}</div>
                   <div className="col-md-5"><strong>CIF:</strong> {datos?.cif || '—'}</div>
                   <div className="col-md-6"><strong>Dirección fiscal:</strong> {datos?.direccionOrg || '—'}</div>
-                  <div className="col-md-6"><strong>{(isSimulacro || isPreventivo) ? 'Dirección del simulacro' : 'Dirección formación'}:</strong> {datos?.sede || '—'}</div>
+                  <div className="col-md-6"><strong>{direccionSedeLabel}:</strong> {datos?.sede || '—'}</div>
                   <div className="col-md-6"><strong>Persona de contacto:</strong> {datos?.contacto || '—'}</div>
                   <div className="col-md-6"><strong>Comercial:</strong> {datos?.comercial || '—'}</div>
                 </div>
@@ -411,24 +416,28 @@ export default function Preview(props) {
           ) : isPreventivo ? (
             <>
               <hr className="my-4" />
-              <div className="d-grid gap-3">
-                <div>
-                  <h5 className="card-title mb-2">{preventivoLabels.trabajos}</h5>
-                  <p style={{ whiteSpace: 'pre-wrap' }}>{datos?.preventivo?.trabajos || '—'}</p>
+              {aiHtml ? (
+                <EditableHtml dealId={dealId} initialHtml={aiHtml} onChange={setAiHtml} />
+              ) : (
+                <div className="d-grid gap-3">
+                  <div>
+                    <h5 className="card-title mb-2">{preventivoLabels.trabajos}</h5>
+                    <p style={{ whiteSpace: 'pre-wrap' }}>{datos?.preventivo?.trabajos || '—'}</p>
+                  </div>
+                  <div>
+                    <h5 className="card-title mb-2">{preventivoLabels.tareas}</h5>
+                    <p style={{ whiteSpace: 'pre-wrap' }}>{datos?.preventivo?.tareas || '—'}</p>
+                  </div>
+                  <div>
+                    <h5 className="card-title mb-2">{preventivoLabels.observaciones}</h5>
+                    <p style={{ whiteSpace: 'pre-wrap' }}>{datos?.preventivo?.observaciones || '—'}</p>
+                  </div>
+                  <div>
+                    <h5 className="card-title mb-2">{preventivoLabels.incidencias}</h5>
+                    <p style={{ whiteSpace: 'pre-wrap' }}>{datos?.preventivo?.incidencias || '—'}</p>
+                  </div>
                 </div>
-                <div>
-                  <h5 className="card-title mb-2">{preventivoLabels.tareas}</h5>
-                  <p style={{ whiteSpace: 'pre-wrap' }}>{datos?.preventivo?.tareas || '—'}</p>
-                </div>
-                <div>
-                  <h5 className="card-title mb-2">{preventivoLabels.observaciones}</h5>
-                  <p style={{ whiteSpace: 'pre-wrap' }}>{datos?.preventivo?.observaciones || '—'}</p>
-                </div>
-                <div>
-                  <h5 className="card-title mb-2">{preventivoLabels.incidencias}</h5>
-                  <p style={{ whiteSpace: 'pre-wrap' }}>{datos?.preventivo?.incidencias || '—'}</p>
-                </div>
-              </div>
+              )}
             </>
           ) : (
             <>
@@ -472,7 +481,7 @@ export default function Preview(props) {
             </>
           )}
 
-          {aiHtml && (
+          {aiHtml && !isPreventivo && (
             <>
               <hr className="my-4" />
               {/* EDITABLE: guarda en sessionStorage y actualiza aiHtml */}

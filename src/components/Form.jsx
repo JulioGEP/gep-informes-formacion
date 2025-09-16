@@ -18,6 +18,11 @@ export default function Form({ initial, onNext, title = 'Informe de Formación',
   const isSimulacro = type === 'simulacro'
   const isPreventivo = type === 'preventivo'
   const isFormacion = type === 'formacion'
+  const direccionSedeLabel = isPreventivo
+    ? 'Dirección del Preventivo'
+    : isSimulacro
+      ? 'Dirección del Simulacro'
+      : 'Dirección de la formación'
 
   const [dealId, setDealId] = useState(initial?.dealId || '')
   const prevDealIdRef = useRef(dealId)
@@ -433,7 +438,7 @@ export default function Form({ initial, onNext, title = 'Informe de Formación',
                   <input className="form-control" value={datos.direccionOrg} required onChange={(e)=>setDatos(d=>({...d, direccionOrg:e.target.value}))} />
                 </div>
                 <div className="col-md-6">
-                  <label className="form-label">{(isSimulacro || isPreventivo) ? 'Dirección del Simulacro' : 'Dirección de la formación'}</label>
+                  <label className="form-label">{direccionSedeLabel}</label>
                   <input className="form-control" value={datos.sede} required onChange={(e)=>setDatos(d=>({...d, sede:e.target.value}))} />
                 </div>
               </div>
