@@ -3,6 +3,7 @@ import React, { useState } from "react";
 import Form from "./components/Form";
 import Preview from "./components/Preview";
 import Home from "./components/Home";
+import MatchPlanner from "./components/MatchPlanner.jsx";
 
 export default function App() {
   const [screen, setScreen] = useState('home');
@@ -13,7 +14,18 @@ export default function App() {
   return (
     <div className="container py-4">
       {screen === 'home' && (
-        <Home onSelect={(tipo) => setScreen(`${tipo}-form`)} />
+        <Home
+          onSelect={(tipo) => {
+            if (tipo === 'partidos') {
+              setScreen('match-planner')
+              return
+            }
+            setScreen(`${tipo}-form`)
+          }}
+        />
+      )}
+      {screen === 'match-planner' && (
+        <MatchPlanner onBack={() => setScreen('home')} />
       )}
       {screen === 'formacion-form' && (
         <Form
