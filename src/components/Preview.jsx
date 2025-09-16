@@ -72,17 +72,20 @@ const preventivoTextToHtml = (text = '', idioma = 'ES') => {
     labels.firma,
     labels.anexos,
   ]
+  const generalKey = normalizeText(labels.generales)
   const lookup = new Map(order.map((title) => [normalizeText(title), title]))
+  const skipTitles = new Set([generalKey])
 
   const lines = String(text || '').split(/\r?\n/)
   const parts = []
   let buffer = []
-  let currentTitle = null
+  let currentSection = null
 
   const flushBuffer = () => {
     const raw = buffer.join('\n').trim()
     buffer = []
     if (!raw) return
+    if (currentSection?.skip) return
     const paragraphs = raw.split(/\n{2,}/)
     paragraphs.forEach((paragraph) => {
       const trimmed = paragraph.trim()
@@ -94,16 +97,20 @@ const preventivoTextToHtml = (text = '', idioma = 'ES') => {
 
   const closeSection = () => {
     flushBuffer()
-    if (currentTitle) {
+    if (currentSection && !currentSection.skip) {
       parts.push('</section>')
-      currentTitle = null
     }
+    currentSection = null
   }
 
   const openSection = (title) => {
     closeSection()
-    parts.push(`<section><h3>${title}</h3>`)
-    currentTitle = title
+    const normalized = normalizeText(title)
+    const skip = skipTitles.has(normalized)
+    currentSection = { title, skip }
+    if (!skip) {
+      parts.push(`<section><h3>${title}</h3>`)
+    }
   }
 
   lines.forEach((rawLine) => {
@@ -119,7 +126,28 @@ const preventivoTextToHtml = (text = '', idioma = 'ES') => {
   closeSection()
 
   if (!parts.length) {
-    const fallback = escapeHtml(String(text || '').trim())
+    const sanitizedLines = []
+    let skipping = false
+
+    lines.forEach((rawLine) => {
+      const trimmed = rawLine.trim()
+      const normalized = normalizeText(trimmed.replace(/[:：]\s*$/, ''))
+      if (!skipping && normalized && normalized === generalKey) {
+        skipping = true
+        return
+      }
+      if (skipping) {
+        if (!trimmed) {
+          skipping = false
+        } else if (lookup.has(normalized) && normalized !== generalKey) {
+          skipping = false
+        }
+      }
+      if (!skipping) sanitizedLines.push(rawLine)
+    })
+
+    const fallbackText = sanitizedLines.join('\n').trim()
+    const fallback = escapeHtml(fallbackText)
     return fallback ? `<p>${fallback.replace(/\n/g, '<br />')}</p>` : ''
   }
 

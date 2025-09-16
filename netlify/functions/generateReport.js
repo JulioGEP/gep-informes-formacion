@@ -325,7 +325,6 @@ async function generarInformePreventivo({ apiKey, baseUrl, idioma, datos, formad
 
   const prompt = `
 Encabezados obligatorios en este orden (una línea por encabezado, sin numeración, y sin añadir otros títulos):
-${headings.generales}
 ${headings.registro}
 ${headings.trabajos}
 ${headings.tareas}
@@ -335,8 +334,8 @@ ${headings.firma}
 ${headings.anexos}
 
 Indicaciones:
-- En "${headings.generales}" resume los datos clave del cliente y el objetivo del ejercicio.
-- En "${headings.registro}" contextualiza el servicio prestado por nuestro equipo y la fecha de realización.
+- No incluyas la sección "${headings.generales}" ni ningún otro bloque equivalente; esa información ya aparece al inicio del informe.
+- En "${headings.registro}" contextualiza el servicio prestado por nuestro equipo, la fecha de realización y, si procede, sintetiza en una frase los datos generales sin repetirlos literalmente.
 - Reescribe "${headings.trabajos}", "${headings.tareas}", "${headings.observaciones}" e "${headings.incidencias}" con una extensión de entre 350 y 450 palabras cada sección, interpretando profesionalmente el material original.
 - Si falta información relevante en alguna sección, explica cómo afecta al análisis sin inventar datos.
 - En "${headings.firma}" cierra con la fórmula corporativa “Jaime Martret. Responsable de formaciones”.
