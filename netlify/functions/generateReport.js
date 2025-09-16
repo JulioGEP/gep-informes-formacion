@@ -106,6 +106,9 @@ const buildSimulacroSystem = (idioma) => {
 };
 
 const generarHtmlSimulacro = async ({ apiKey, idioma, datos, formador, sedeRedactada }) => {
+  const sede = datos?.sede || '-';
+  const sedeEsGEPCO = esInstalacionGEPCO(sede);
+  const sedeParaContexto = sedeRedactada ?? (sedeEsGEPCO ? `nuestras instalaciones de GEPCO (${sede})` : sede);
   const safe = (value) => {
     const text = compactText(value);
     return text === '' ? '-' : text;
@@ -122,7 +125,7 @@ const generarHtmlSimulacro = async ({ apiKey, idioma, datos, formador, sedeRedac
 
   const ctx = [
     `Cliente: ${safe(datos?.cliente)}`,
-    `CIF: ${safe(datos?.cif)} | Dirección: ${safe(sedeRedactada)}`,
+    `CIF: ${safe(datos?.cif)} | Dirección: ${safe(sedeParaContexto)}`,
     `Auditor: ${safe(formador?.nombre)} | Idioma: ${idioma}`,
     `Sesiones: ${safe(datos?.sesiones)} | Duración(h): ${safe(datos?.duracion)}`,
     '',
@@ -262,7 +265,7 @@ export async function handler(event) {
     const sedeRedactada = sedeEsGEPCO ? `nuestras instalaciones de GEPCO (${sede})` : sede;
 
     if (tipo === 'simulacro') {
-      const html = await generarHtmlSimulacro({ apiKey: API_KEY, idioma, datos, formador, sedeRedactada });
+      const html = await generarHtmlSimulacro({ apiKey: API_KEY, idioma, datos, formador });
       return {
         statusCode: 200,
         headers: { 'Content-Type': 'application/json', ...cors },
