@@ -15,7 +15,11 @@ function EditableHtml({ dealId, initialHtml, onChange }) {
   const ref = useRef(null)
 
   useEffect(() => {
-    if (ref.current) ref.current.innerHTML = initialHtml || ''
+    if (!ref.current) return
+    const nextHtml = initialHtml || ''
+    if (ref.current.innerHTML !== nextHtml) {
+      ref.current.innerHTML = nextHtml
+    }
   }, [initialHtml, dealId])
 
   const handleInput = () => {
