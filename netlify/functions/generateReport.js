@@ -309,7 +309,7 @@ async function generarInformePreventivo({ apiKey, baseUrl, idioma, datos, formad
   const contexto = [
     `Cliente: ${safe(datos?.cliente)} | CIF: ${safe(datos?.cif)}`,
     `Dirección fiscal: ${safe(datos?.direccionOrg)}`,
-    `Dirección del simulacro: ${safe(datos?.sede)}`,
+    `Dirección del Preventivo: ${safe(datos?.sede)}`,
     `Persona de contacto: ${safe(datos?.contacto)} | Comercial: ${safe(datos?.comercial)}`,
     `Bombero/a responsable: ${safe(formador?.nombre)} | Idioma solicitado: ${lang}`,
     `Fecha del ejercicio: ${safe(datos?.fecha)}`,
