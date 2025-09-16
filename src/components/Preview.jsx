@@ -45,6 +45,12 @@ const preventivoCardLabels = {
   EN: { registro: 'Logbook', bombero: 'Firefighter', fecha: 'Exercise date' },
 }
 
+const signatureTexts = {
+  ES: { closing: 'Atentamente,', signature: 'Jaime Martret. Responsable de formaciones' },
+  CA: { closing: 'Atentament,', signature: 'Jaime Martret. Responsable de formacions' },
+  EN: { closing: 'Sincerely,', signature: 'Jaime Martret. Head of Training' },
+}
+
 const normalizeText = (value = '') =>
   value
     .normalize('NFD')
@@ -172,6 +178,7 @@ export default function Preview(props) {
   const idiomaLabel = idioma === 'CA' ? 'Català' : idioma === 'EN' ? 'English' : 'Castellano'
   const preventivoLabels = preventivoHeadings[idioma] || preventivoHeadings.ES
   const preventivoCard = preventivoCardLabels[idioma] || preventivoCardLabels.ES
+  const signatureText = signatureTexts[idioma] || signatureTexts.ES
 
   const [aiHtml, setAiHtml] = useState(null)
   const [aiBusy, setAiBusy] = useState(false)
@@ -412,21 +419,21 @@ export default function Preview(props) {
             <>
               <hr className="my-4" />
               <div className="d-grid gap-3">
-                <div className="border rounded p-3 bg-light">
+                <div>
                   <h5 className="card-title mb-2">{preventivoLabels.trabajos}</h5>
-                  <p className="mb-0" style={{ whiteSpace: 'pre-wrap' }}>{datos?.preventivo?.trabajos || '—'}</p>
+                  <p style={{ whiteSpace: 'pre-wrap' }}>{datos?.preventivo?.trabajos || '—'}</p>
                 </div>
-                <div className="border rounded p-3 bg-light">
+                <div>
                   <h5 className="card-title mb-2">{preventivoLabels.tareas}</h5>
-                  <p className="mb-0" style={{ whiteSpace: 'pre-wrap' }}>{datos?.preventivo?.tareas || '—'}</p>
+                  <p style={{ whiteSpace: 'pre-wrap' }}>{datos?.preventivo?.tareas || '—'}</p>
                 </div>
-                <div className="border rounded p-3 bg-light">
+                <div>
                   <h5 className="card-title mb-2">{preventivoLabels.observaciones}</h5>
-                  <p className="mb-0" style={{ whiteSpace: 'pre-wrap' }}>{datos?.preventivo?.observaciones || '—'}</p>
+                  <p style={{ whiteSpace: 'pre-wrap' }}>{datos?.preventivo?.observaciones || '—'}</p>
                 </div>
-                <div className="border rounded p-3 bg-light">
+                <div>
                   <h5 className="card-title mb-2">{preventivoLabels.incidencias}</h5>
-                  <p className="mb-0" style={{ whiteSpace: 'pre-wrap' }}>{datos?.preventivo?.incidencias || '—'}</p>
+                  <p style={{ whiteSpace: 'pre-wrap' }}>{datos?.preventivo?.incidencias || '—'}</p>
                 </div>
               </div>
             </>
@@ -482,9 +489,8 @@ export default function Preview(props) {
 
           <hr className="my-4" />
           <div>
-            <p className="mb-1">Atentamente,</p>
-            <strong>Jaime Martret</strong>
-            <div className="text-danger">Responsable de formaciones</div>
+            <p className="mb-1">{signatureText.closing}</p>
+            <p className="mb-0 fw-bold">{signatureText.signature}</p>
           </div>
 
           {Array.isArray(imagenes) && imagenes.length > 0 && (

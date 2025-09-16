@@ -117,38 +117,38 @@ const preventivoHeadings = {
   },
 };
 
+const preventivoSignature = {
+  ES: 'Jaime Martret. Responsable de formaciones',
+  CA: 'Jaime Martret. Responsable de formacions',
+  EN: 'Jaime Martret. Head of Training',
+};
+
 const buildPreventivoSystem = (idioma) => {
   const lang = (idioma || 'ES').toUpperCase();
   if (lang === 'EN') {
     return [
-      'You are a technical writer for GEP Group, specialised in auditing preventive emergency drills executed by private firefighters.',
-      'Write in first-person plural (we) as the team reporting to the customer after the exercise.',
-      'Adopt a formal PRL/PCI emergency tone: precise, clear and without embellishment, keeping a medium creative temperature.',
-      'Never invent information. Interpret only the provided context, correcting grammar and spelling issues.',
-      'Return plain text only (no HTML or Markdown).',
-      'Respect exactly the supplied headings, one per line. The sections “Works performed”, “Tasks”, “Observations” and “Incidents” must each contain between 350 and 450 words.',
-      'After the corporate signature “Jaime Martret. Head of Training”, state that the image annex follows the signature.',
+      'You are a technical writer for GEP Group, specialised in preventive emergency drills.',
+      'Always write in first-person plural (we) with a formal PRL/PCI emergency tone: precise, direct and without embellishment.',
+      'Do not invent information. Correct grammar and spelling. Output plain text only, no HTML.',
+      'Use exactly the headings provided, one per line, and keep the sections “Works performed”, “Tasks”, “Observations” and “Incidents” between 350 and 450 words each.',
+      'Close with the corporate signature “Jaime Martret. Head of Training” and mention the image annex after the signature.',
     ].join('\n');
   }
   if (lang === 'CA') {
     return [
-      'Ets un redactor tècnic de GEP Group expert en auditar exercicis preventius realitzats per bombers privats.',
-      'Escriu sempre en primera persona del plural (nosaltres) com a equip que informa al client després de l’exercici.',
-      'Mantén un to formal tècnic PRL/PCI i emergències: precís, clar i sense floritures, amb una temperatura creativa mitjana.',
-      'No inventis dades. Treballa només amb el context disponible i corregeix ortografia i gramàtica.',
-      'Respon exclusivament amb text pla, sense HTML ni Markdown.',
-      'Respecta exactament els encapçalaments indicats, un per línia. Les seccions “Treballs”, “Tasques”, “Observacions” i “Incidències” han de tenir entre 350 i 450 paraules cadascuna.',
-      'Després de la signatura corporativa “Jaime Martret. Responsable de formacions”, indica que l’annex d’imatges s’adjunta a continuació.',
+      'Ets un redactor tècnic de GEP Group especialitzat en exercicis preventius.',
+      'Escriu sempre en primera persona del plural (nosaltres) amb to formal tècnic PRL/PCI: precís, directe i sense floritures.',
+      'No inventis dades. Corregeix ortografia i gramàtica. Respon només amb text pla, sense HTML.',
+      'Fes servir exactament els encapçalaments indicats, un per línia, i mantén les seccions “Treballs”, “Tasques”, “Observacions” i “Incidències” entre 350 i 450 paraules cadascuna.',
+      'Tanca amb la signatura corporativa “Jaime Martret. Responsable de formacions” i cita l’annex d’imatges després de la signatura.',
     ].join('\n');
   }
   return [
-    'Eres un redactor técnico de GEP Group, experto en auditar ejercicios preventivos realizados por bomberos privados.',
-    'Escribe siempre en primera persona del plural (nosotros) como el equipo que informa al cliente tras el ejercicio.',
-    'Mantén un tono formal técnico PRL/PCI y emergencias: preciso, claro y sin florituras, con una temperatura creativa media.',
-    'No inventes datos. Trabaja únicamente con el contexto entregado y corrige ortografía y gramática.',
-    'Devuelve solo texto plano, sin HTML ni Markdown.',
-    'Respeta exactamente los encabezados indicados, uno por línea. Las secciones “Trabajos”, “Tareas”, “Observaciones” e “Incidencias” deben tener entre 350 y 450 palabras cada una.',
-    'Tras la firma corporativa “Jaime Martret. Responsable de formaciones”, indica que el anexo de imágenes se adjunta a continuación.',
+    'Eres un redactor técnico de GEP Group especializado en ejercicios preventivos.',
+    'Escribe siempre en primera persona del plural (nosotros) con un tono formal técnico PRL/PCI: preciso, directo y sin florituras.',
+    'No inventes datos. Corrige ortografía y gramática. Devuelve únicamente texto plano, sin HTML.',
+    'Utiliza exactamente los encabezados indicados, uno por línea, y mantén las secciones “Trabajos”, “Tareas”, “Observaciones” e “Incidencias” entre 350 y 450 palabras cada una.',
+    'Cierra con la firma corporativa “Jaime Martret. Responsable de formaciones” y menciona el anexo de imágenes después de la firma.',
   ].join('\n');
 };
 
@@ -300,6 +300,8 @@ async function generarInformePreventivo({ apiKey, baseUrl, idioma, datos, formad
   const lang = (idioma || 'ES').toUpperCase();
   const headings = preventivoHeadings[lang] || preventivoHeadings.ES;
   const system = buildPreventivoSystem(lang);
+  const signature = preventivoSignature[lang] || preventivoSignature.ES;
+  const idiomaNombre = lang === 'EN' ? 'inglés' : lang === 'CA' ? 'catalán' : 'castellano';
 
   const safe = (value) => {
     if (value === null || value === undefined) return '-';
@@ -348,8 +350,9 @@ Indicaciones:
 - Reescribe "${headings.trabajos}", "${headings.tareas}", "${headings.observaciones}" e "${headings.incidencias}" con una extensión de entre 350 y 450 palabras por sección, interpretando profesionalmente el material original.
 - No inventes datos: si falta información, explica el impacto en el análisis.
 - Corrige ortografía y gramática manteniendo el tono formal PRL/PCI y la primera persona plural (nosotros).
-- En "${headings.firma}" utiliza literalmente “Jaime Martret. Responsable de formaciones”.
+- En "${headings.firma}" utiliza literalmente “${signature}”.
 - En "${headings.anexos}" indica que las imágenes se adjuntan como anexo posterior a la firma.
+- Redacta el informe íntegramente en ${idiomaNombre}.
 
 Contexto disponible:
 ${contexto}
