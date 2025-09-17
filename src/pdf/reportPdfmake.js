@@ -114,6 +114,30 @@ const stripHtml = (html) =>
     .replace(/&nbsp;/g, ' ')
     .trim()
 
+const blobToBase64 = (blob) =>
+  new Promise((resolve, reject) => {
+    if (!blob) {
+      reject(new Error('Blob inválido al generar el PDF.'))
+      return
+    }
+
+    const reader = new FileReader()
+    reader.onloadend = () => {
+      const { result } = reader
+      if (typeof result !== 'string') {
+        reject(new Error('No se pudo leer el PDF generado.'))
+        return
+      }
+
+      const commaIndex = result.indexOf(',')
+      resolve(commaIndex >= 0 ? result.slice(commaIndex + 1) : result)
+    }
+    reader.onerror = () => {
+      reject(reader.error || new Error('Error al convertir el PDF a base64.'))
+    }
+    reader.readAsDataURL(blob)
+  })
+
 const footerSimulacro = () => ({
   margin: [58, 0, 58, 18],
   stack: [
@@ -675,5 +699,24 @@ export async function generateReportPdfmake(draft) {
   const titulo = baseTitulo.replace(/[^\w\s\-._]/g, '').trim()
   const nombre = `GEP Group – ${dealId || 'SinPresu'} – ${cliente} – ${titulo} – ${fecha || 'fecha'}.pdf`
 
-  pdfMake.createPdf(docDefinition).download(nombre)
+  const pdfDoc = pdfMake.createPdf(docDefinition)
+  const blob = await new Promise((resolve, reject) => {
+    try {
+      pdfDoc.getBlob((generatedBlob) => {
+        if (generatedBlob) {
+          resolve(generatedBlob)
+        } else {
+          reject(new Error('No se ha podido generar el archivo PDF.'))
+        }
+      })
+    } catch (error) {
+      reject(error)
+    }
+  })
+
+  const base64 = await blobToBase64(blob)
+
+  pdfDoc.download(nombre)
+
+  return { fileName: nombre, blob, base64 }
 }

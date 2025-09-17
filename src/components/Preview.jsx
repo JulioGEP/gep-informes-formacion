@@ -3,6 +3,7 @@ import React, { useEffect, useMemo, useRef, useState } from 'react'
 import logoImg from '../assets/logo-nuevo.png'
 import { generateReportPdfmake } from '../pdf/reportPdfmake'
 import { triesKey, htmlKey } from '../utils/keys'
+import ReportEmailModal from './ReportEmailModal'
 
 let warnedMissingReportsToken = false
 const getReportsAuthHeaders = () => {
@@ -226,6 +227,9 @@ export default function Preview(props) {
   const [aiHtml, setAiHtml] = useState(null)
   const [aiBusy, setAiBusy] = useState(false)
   const [tries, setTries] = useState(0)
+  const [pdfAttachment, setPdfAttachment] = useState(null)
+  const [isEmailModalOpen, setEmailModalOpen] = useState(false)
+  const [sendResult, setSendResult] = useState(null)
 
   // Cargar contador + HTML guardado
   useEffect(() => {
@@ -241,6 +245,9 @@ export default function Preview(props) {
     } else {
       setTries(0); setAiHtml(null)
     }
+    setPdfAttachment(null)
+    setEmailModalOpen(false)
+    setSendResult(null)
   }, [dealId])
 
   const resetLocalForDeal = () => {
@@ -249,6 +256,9 @@ export default function Preview(props) {
       sessionStorage.removeItem(htmlKey(dealId))
     } catch {}
     setTries(0); setAiHtml(null)
+    setPdfAttachment(null)
+    setEmailModalOpen(false)
+    setSendResult(null)
   }
 
   const tieneContenido = useMemo(() => {
@@ -332,17 +342,62 @@ export default function Preview(props) {
 
   const descargarPDF = async () => {
     try {
-      await generateReportPdfmake({ dealId, datos, formador, imagenes, type })
+      const pdf = await generateReportPdfmake({ dealId, datos, formador, imagenes, type })
+      if (pdf) {
+        setPdfAttachment(pdf)
+        setSendResult(null)
+        setEmailModalOpen(false)
+      }
     } catch (e) {
       console.error('Error generando PDF (pdfmake):', e)
       alert('No se ha podido generar el PDF.')
+      setPdfAttachment(null)
+      setSendResult(null)
     }
   }
   const triesLabel = `${dealId ? tries : 0}/${maxTries}`
   const quedanIntentos = dealId ? tries < maxTries : true
 
+  const handleBack = () => {
+    setPdfAttachment(null)
+    setEmailModalOpen(false)
+    setSendResult(null)
+    onBack?.()
+  }
+
+  const renderEmailAction = () => {
+    if (!pdfAttachment?.base64 || !pdfAttachment?.fileName) return null
+
+    const statusIcon = sendResult
+      ? (
+          <span
+            className={`align-self-center ${sendResult === 'success' ? 'text-success' : 'text-danger'}`}
+            title={sendResult === 'success' ? 'Correo enviado correctamente' : 'Error al enviar el correo'}
+            aria-label={sendResult === 'success' ? 'Correo enviado correctamente' : 'Error al enviar el correo'}
+            style={{ fontSize: '1.25rem' }}
+          >
+            {sendResult === 'success' ? '✔️' : '❌'}
+          </span>
+        )
+      : null
+
+    return (
+      <>
+        <button
+          className="btn btn-outline-primary"
+          type="button"
+          onClick={() => setEmailModalOpen(true)}
+        >
+          Enviar por mail
+        </button>
+        {statusIcon}
+      </>
+    )
+  }
+
   return (
-    <div className="d-grid gap-4">
+    <>
+      <div className="d-grid gap-4">
       {/* Header con margen superior e inferior simétrico */}
       <div
         className="border-bottom d-flex align-items-center gap-3 sticky-top bg-white py-3 my-3"
@@ -362,7 +417,7 @@ export default function Preview(props) {
       <div className="d-flex align-items-center justify-content-between">
         <h2 className="h5 mb-0">Borrador del informe</h2>
         <div className="d-flex gap-2">
-          <button className="btn btn-secondary" onClick={onBack}>Volver al formulario</button>
+          <button className="btn btn-secondary" onClick={handleBack}>Volver al formulario</button>
           {quedanIntentos && (
             <button className="btn btn-warning" onClick={mejorarInforme} disabled={aiBusy}>
               {aiBusy ? 'Mejorando…' : `Mejorar informe (${triesLabel})`}
@@ -373,6 +428,7 @@ export default function Preview(props) {
               Descargar PDF
             </button>
           )}
+          {renderEmailAction()}
         </div>
       </div>
 
@@ -560,7 +616,7 @@ export default function Preview(props) {
       </div>
 
       <div className="d-flex gap-2 justify-content-end">
-        <button className="btn btn-secondary" onClick={onBack}>Volver al formulario</button>
+        <button className="btn btn-secondary" onClick={handleBack}>Volver al formulario</button>
         {quedanIntentos && (
           <button className="btn btn-warning" onClick={mejorarInforme} disabled={aiBusy}>
             {aiBusy ? 'Mejorando…' : `Mejorar informe (${triesLabel})`}
@@ -571,16 +627,33 @@ export default function Preview(props) {
             Descargar PDF
           </button>
         )}
+        {renderEmailAction()}
       </div>
 
-      {dealId && tries >= maxTries && (
-        <div className="text-muted small">
-          Has agotado las 3 mejoras para este presupuesto.{' '}
-          <button className="btn btn-link p-0 align-baseline" onClick={resetLocalForDeal}>
-            Reiniciar intentos (solo pruebas)
-          </button>
-        </div>
-      )}
-    </div>
+        {dealId && tries >= maxTries && (
+          <div className="text-muted small">
+            Has agotado las 3 mejoras para este presupuesto.{' '}
+            <button className="btn btn-link p-0 align-baseline" onClick={resetLocalForDeal}>
+              Reiniciar intentos (solo pruebas)
+            </button>
+          </div>
+        )}
+      </div>
+      <ReportEmailModal
+        isOpen={isEmailModalOpen}
+        onClose={() => setEmailModalOpen(false)}
+        datos={datos}
+        formador={formador}
+        dealId={dealId}
+        title={title}
+        pdf={pdfAttachment}
+        onResult={(result) => {
+          if (result) {
+            setSendResult(result.ok ? 'success' : 'error')
+          }
+        }}
+        getAuthHeaders={getReportsAuthHeaders}
+      />
+    </>
   )
 }
