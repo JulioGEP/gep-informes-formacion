@@ -8,6 +8,7 @@
   REPORTS_API_TOKEN = ""
   VITE_REPORTS_API_TOKEN = ""
   REPORTS_ALLOWED_ORIGIN = "https://www.gepservices.es"
+  RESEND_API_KEY = ""
 
 [[redirects]]
   from = "/*"

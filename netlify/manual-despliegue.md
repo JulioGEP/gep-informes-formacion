@@ -29,3 +29,13 @@ La aplicación utiliza un flujo de autenticación basado en tokens corporativos.
 4. Si necesitas cerrar sesiones activas, solicita a la persona usuaria que pulse **Cerrar sesión** o elimina manualmente los datos de sesión desde las herramientas del navegador.
 
 > **Nota:** Netlify oculta el valor de la variable tras guardarla. Para rotar un token, vuelve a introducir toda la lista de credenciales y asegúrate de almacenarla en un gestor seguro.
+
+## Configuración del proveedor de correo
+
+El envío del informe por email se realiza desde una función serverless que delega en Resend (o el proveedor configurado). Para que Netlify pueda autenticarse es necesario declarar la variable `RESEND_API_KEY` en el sitio:
+
+1. Accede a **Site settings → Build & deploy → Environment → Environment variables**.
+2. Añade la variable `RESEND_API_KEY` con el token privado generado en Resend.
+3. Guarda los cambios y dispara un nuevo deploy para que la función `sendReportEmail` cargue la credencial.
+
+> Puedes gestionar la clave directamente en Resend (https://resend.com/). Si rotas la credencial, recuerda actualizar el valor en Netlify y volver a desplegar.

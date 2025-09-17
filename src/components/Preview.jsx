@@ -58,6 +58,21 @@ const preventivoCardLabels = {
   EN: { registro: 'Logbook', bombero: 'Firefighter', fecha: 'Exercise date' },
 }
 
+const EMAIL_DEFAULT_MESSAGE = 'Adjuntamos el informe generado.'
+
+const parseEmailList = (value) => {
+  if (!value) return []
+  if (Array.isArray(value)) {
+    return value
+      .map((item) => (typeof item === 'string' ? item.trim() : ''))
+      .filter(Boolean)
+  }
+  return String(value || '')
+    .split(/[,;\n]/)
+    .map((item) => item.trim())
+    .filter(Boolean)
+}
+
 const normalizeText = (value = '') =>
   value
     .normalize('NFD')
@@ -227,6 +242,45 @@ export default function Preview(props) {
   const [aiBusy, setAiBusy] = useState(false)
   const [tries, setTries] = useState(0)
 
+  const emailDefaultSubject = useMemo(() => {
+    const parts = []
+    if (isPreventivo) parts.push('Informe preventivo')
+    else if (isSimulacro) parts.push('Informe de simulacro')
+    else parts.push('Informe de formación')
+    if (dealId) parts.push(`#${dealId}`)
+    if (datos?.cliente) parts.push(datos.cliente)
+    if (!isPreventivo && !isSimulacro && datos?.formacionTitulo) parts.push(datos.formacionTitulo)
+    return parts.filter(Boolean).join(' – ')
+  }, [isPreventivo, isSimulacro, dealId, datos?.cliente, datos?.formacionTitulo])
+
+  const emailResetKey = useMemo(
+    () => [dealId || '', datos?.cliente || '', datos?.formacionTitulo || '', datos?.fecha || '', type].join('|'),
+    [dealId, datos?.cliente, datos?.formacionTitulo, datos?.fecha, type],
+  )
+
+  const [emailForm, setEmailForm] = useState(() => ({
+    from: '',
+    to: '',
+    cc: '',
+    subject: emailDefaultSubject,
+    text: EMAIL_DEFAULT_MESSAGE,
+  }))
+  const [emailStatus, setEmailStatus] = useState('idle')
+  const [emailMessage, setEmailMessage] = useState('')
+  const [emailSending, setEmailSending] = useState(false)
+
+  useEffect(() => {
+    setEmailForm({
+      from: '',
+      to: '',
+      cc: '',
+      subject: emailDefaultSubject,
+      text: EMAIL_DEFAULT_MESSAGE,
+    })
+    setEmailStatus('idle')
+    setEmailMessage('')
+  }, [emailResetKey, emailDefaultSubject])
+
   // Cargar contador + HTML guardado
   useEffect(() => {
     if (dealId) {
@@ -336,6 +390,114 @@ export default function Preview(props) {
     } catch (e) {
       console.error('Error generando PDF (pdfmake):', e)
       alert('No se ha podido generar el PDF.')
+    }
+  }
+  const handleEmailFieldChange = (field) => (event) => {
+    const value = event.target.value
+    setEmailForm((prev) => ({ ...prev, [field]: value }))
+  }
+
+  const emailIndicatorColor =
+    emailStatus === 'success'
+      ? '#198754'
+      : emailStatus === 'error'
+        ? '#dc3545'
+        : emailStatus === 'pending'
+          ? '#ffc107'
+          : '#6c757d'
+
+  const emailIndicatorLabel =
+    emailStatus === 'success'
+      ? 'Último envío correcto'
+      : emailStatus === 'error'
+        ? 'Error en el último envío'
+        : emailStatus === 'pending'
+          ? 'Enviando…'
+          : 'Pendiente de envío'
+
+  const enviarInformePorEmail = async () => {
+    const from = (emailForm.from || '').trim()
+    const toList = parseEmailList(emailForm.to)
+    const ccList = parseEmailList(emailForm.cc)
+    const subject = (emailForm.subject || '').trim()
+    const textRaw = emailForm.text || ''
+
+    if (!from) {
+      setEmailStatus('error')
+      setEmailMessage('Introduce un remitente válido.')
+      return
+    }
+    if (!toList.length) {
+      setEmailStatus('error')
+      setEmailMessage('Introduce al menos un destinatario.')
+      return
+    }
+    if (!subject) {
+      setEmailStatus('error')
+      setEmailMessage('Introduce un asunto para el correo.')
+      return
+    }
+    if (!textRaw.trim()) {
+      setEmailStatus('error')
+      setEmailMessage('Añade un mensaje para el correo.')
+      return
+    }
+
+    setEmailSending(true)
+    setEmailStatus('pending')
+    setEmailMessage('')
+
+    try {
+      const pdf = await generateReportPdfmake({ dealId, datos, formador, imagenes, type }, { output: 'base64' })
+      const pdfBase64 = pdf?.base64 || ''
+      const filename = pdf?.filename || 'informe.pdf'
+      if (!pdfBase64) throw new Error('No se pudo generar el PDF para adjuntar.')
+
+      const payload = {
+        from,
+        to: toList,
+        subject,
+        text: textRaw,
+        attachments: [
+          {
+            filename,
+            content: pdfBase64,
+            contentType: 'application/pdf',
+          },
+        ],
+      }
+      if (ccList.length) payload.cc = ccList
+
+      const response = await fetch('/.netlify/functions/sendReportEmail', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', ...getReportsAuthHeaders() },
+        body: JSON.stringify(payload),
+      })
+
+      const raw = await response.text()
+      let data = null
+      if (raw) {
+        try {
+          data = JSON.parse(raw)
+        } catch (parseError) {
+          console.error('Respuesta sendReportEmail no JSON:', parseError, raw)
+        }
+      }
+
+      if (!response.ok || data?.error) {
+        const message = data?.error || data?.message || raw || 'No se pudo enviar el correo.'
+        throw new Error(message)
+      }
+
+      setEmailStatus('success')
+      setEmailMessage('Correo enviado correctamente.')
+    } catch (error) {
+      console.error('Error enviando informe por email:', error)
+      const message = error?.message ? `No se ha podido enviar el correo. ${error.message}` : 'No se ha podido enviar el correo.'
+      setEmailStatus('error')
+      setEmailMessage(message)
+    } finally {
+      setEmailSending(false)
     }
   }
   const triesLabel = `${dealId ? tries : 0}/${maxTries}`
@@ -555,6 +717,99 @@ export default function Preview(props) {
                 ))}
               </div>
             </>
+          )}
+      </div>
+    </div>
+
+      <div className="card">
+        <div className="card-body">
+          <div className="d-flex flex-column flex-lg-row justify-content-between align-items-start align-items-lg-center gap-3">
+            <h5 className="card-title mb-0">Enviar informe por email</h5>
+            <div className="d-flex align-items-center gap-2">
+              <span
+                className="rounded-circle"
+                style={{ width: 12, height: 12, backgroundColor: emailIndicatorColor, display: 'inline-block' }}
+              />
+              <span
+                className={`small ${
+                  emailStatus === 'error'
+                    ? 'text-danger'
+                    : emailStatus === 'success'
+                      ? 'text-success'
+                      : 'text-muted'
+                }`}
+              >
+                {emailIndicatorLabel}
+              </span>
+            </div>
+          </div>
+
+          <div className="row g-3 mt-2">
+            <div className="col-md-6">
+              <label className="form-label">Remitente</label>
+              <input
+                className="form-control"
+                placeholder="Nombre &lt;correo@dominio&gt;"
+                value={emailForm.from}
+                onChange={handleEmailFieldChange('from')}
+              />
+            </div>
+            <div className="col-md-6">
+              <label className="form-label">Destinatarios (To)</label>
+              <input
+                className="form-control"
+                placeholder="correo1@ejemplo.com, correo2@ejemplo.com"
+                value={emailForm.to}
+                onChange={handleEmailFieldChange('to')}
+              />
+            </div>
+            <div className="col-md-6">
+              <label className="form-label">CC (opcional)</label>
+              <input
+                className="form-control"
+                placeholder="Separar con comas o saltos de línea"
+                value={emailForm.cc}
+                onChange={handleEmailFieldChange('cc')}
+              />
+            </div>
+            <div className="col-md-6">
+              <label className="form-label">Asunto</label>
+              <input
+                className="form-control"
+                value={emailForm.subject}
+                onChange={handleEmailFieldChange('subject')}
+              />
+            </div>
+            <div className="col-12">
+              <label className="form-label">Mensaje</label>
+              <textarea
+                className="form-control"
+                rows={3}
+                value={emailForm.text}
+                onChange={handleEmailFieldChange('text')}
+              />
+            </div>
+          </div>
+
+          {emailMessage && (
+            <div className={`mt-2 small ${emailStatus === 'error' ? 'text-danger' : 'text-success'}`}>
+              {emailMessage}
+            </div>
+          )}
+
+          <div className="d-flex justify-content-end mt-3">
+            <button
+              className="btn btn-primary"
+              onClick={enviarInformePorEmail}
+              disabled={emailSending || !tieneContenido}
+            >
+              {emailSending ? 'Enviando…' : 'Enviar informe por email'}
+            </button>
+          </div>
+          {!tieneContenido && (
+            <div className="text-muted small mt-2">
+              Completa el informe para habilitar el envío por correo.
+            </div>
           )}
         </div>
       </div>

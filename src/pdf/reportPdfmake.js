@@ -622,8 +622,9 @@ const buildDocDefinition = ({
 }
 
 // ---------- API usada por Preview.jsx ----------
-export async function generateReportPdfmake(draft) {
+export async function generateReportPdfmake(draft, options = {}) {
   const { dealId, datos, formador, imagenes, type } = draft || {}
+  const mode = options.output || options.mode || 'download'
 
   const [pdfMake, htmlToPdfmake, headerDataUrl, footerDataUrl] = await Promise.all([
     ensurePdfMake(),
@@ -675,5 +676,20 @@ export async function generateReportPdfmake(draft) {
   const titulo = baseTitulo.replace(/[^\w\s\-._]/g, '').trim()
   const nombre = `GEP Group – ${dealId || 'SinPresu'} – ${cliente} – ${titulo} – ${fecha || 'fecha'}.pdf`
 
-  pdfMake.createPdf(docDefinition).download(nombre)
+  const instance = pdfMake.createPdf(docDefinition)
+
+  if (mode === 'base64') {
+    return new Promise((resolve, reject) => {
+      try {
+        instance.getBase64((data) => {
+          resolve({ base64: data, filename: nombre })
+        })
+      } catch (error) {
+        reject(error)
+      }
+    })
+  }
+
+  instance.download(nombre)
+  return { filename: nombre }
 }
