@@ -3,14 +3,81 @@ import { AuthContext } from "../App";
 
 const DEFAULT_TOKEN = "GEP_Group112";
 
-const resolveAuthorizedToken = () => {
-  const envToken = import.meta.env.VITE_ACCESS_TOKEN;
+const normalizeToken = (token) =>
+  typeof token === "string"
+    ? token
+        .trim()
+        .replace(/^"|"$/g, "")
+    : "";
 
-  if (typeof envToken === "string" && envToken.trim().length > 0) {
-    return envToken.trim();
+const resolveAuthorizedTokens = () => {
+  const envTokens = import.meta.env.VITE_AUTHORIZED_USERS;
+
+  if (typeof envTokens !== "string") {
+    return [DEFAULT_TOKEN];
   }
 
-  return DEFAULT_TOKEN;
+  const trimmed = envTokens.trim();
+
+  if (!trimmed) {
+    return [DEFAULT_TOKEN];
+  }
+
+  try {
+    const parsed = JSON.parse(trimmed);
+
+    if (Array.isArray(parsed)) {
+      const tokens = parsed
+        .map((entry) =>
+          typeof entry === "string"
+            ? normalizeToken(entry)
+            : typeof entry?.token === "string"
+            ? normalizeToken(entry.token)
+            : null,
+        )
+        .filter(Boolean);
+
+      if (tokens.length > 0) {
+        return [...new Set(tokens)];
+      }
+    }
+
+    if (parsed && typeof parsed === "object") {
+      const tokens = Object.values(parsed)
+        .map((value) =>
+          typeof value === "string"
+            ? normalizeToken(value)
+            : Array.isArray(value)
+            ? value
+                .map((nested) =>
+                  typeof nested === "string"
+                    ? normalizeToken(nested)
+                    : null,
+                )
+                .filter(Boolean)
+            : null,
+        )
+        .flat()
+        .filter(Boolean);
+
+      if (tokens.length > 0) {
+        return [...new Set(tokens)];
+      }
+    }
+  } catch (error) {
+    // El valor no es JSON: continuamos con el resto de formatos soportados.
+  }
+
+  const tokens = trimmed
+    .split(/[\n,;]+/)
+    .map((entry) => normalizeToken(entry))
+    .filter(Boolean);
+
+  if (tokens.length === 0) {
+    return [DEFAULT_TOKEN];
+  }
+
+  return [...new Set(tokens)];
 };
 
 export default function Login() {
@@ -19,21 +86,25 @@ export default function Login() {
   const [token, setToken] = useState("");
   const [error, setError] = useState("");
 
-  const authorizedToken = useMemo(() => resolveAuthorizedToken(), []);
+  const authorizedTokens = useMemo(() => resolveAuthorizedTokens(), []);
+  const hasCustomTokens = useMemo(() => {
+    const rawTokens = import.meta.env.VITE_AUTHORIZED_USERS;
+    return typeof rawTokens === "string" && rawTokens.trim().length > 0;
+  }, []);
 
   const handleSubmit = (event) => {
     event.preventDefault();
     setError("");
 
     const normalizedEmail = email.trim().toLowerCase();
-    const normalizedToken = token.trim();
+    const normalizedToken = normalizeToken(token);
 
     if (!normalizedEmail || !normalizedToken) {
       setError("Introduce tu correo electrónico y el token de acceso.");
       return;
     }
 
-    if (normalizedToken === authorizedToken) {
+    if (authorizedTokens.includes(normalizedToken)) {
       login({ email: normalizedEmail });
       setEmail("");
       setToken("");
@@ -51,6 +122,12 @@ export default function Login() {
           <p className="text-muted small text-center mb-4">
             Introduce tu correo electrónico y el token facilitado por el área de Sistemas.
           </p>
+          {!hasCustomTokens && (
+            <div className="alert alert-warning" role="alert">
+              No se encontraron tokens configurados en <code>VITE_AUTHORIZED_USERS</code>. Se usará el token
+              predeterminado <strong>{DEFAULT_TOKEN}</strong>.
+            </div>
+          )}
           {error && (
             <div className="alert alert-danger" role="alert">
               {error}
