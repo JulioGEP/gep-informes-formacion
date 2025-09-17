@@ -2,29 +2,115 @@ import React, { useContext, useMemo, useState } from "react";
 import { AuthContext } from "../App";
 
 const parseCredentials = (rawValue) => {
-  if (!rawValue || typeof rawValue !== "string") {
-    return {};
+  const credentials = {};
+  let detectedEntries = 0;
+
+  const registerCredential = (email, token) => {
+    const normalizedEmail =
+      typeof email === "string" ? email.trim().toLowerCase() : "";
+    const normalizedToken =
+      typeof token === "string" ? token.trim() : token ?? "";
+
+    if (!normalizedEmail || !normalizedToken) {
+      return false;
+    }
+
+    credentials[normalizedEmail] = normalizedToken;
+    return true;
+  };
+
+  const raw =
+    typeof rawValue === "string"
+      ? rawValue
+      : rawValue === null || rawValue === undefined
+        ? ""
+        : String(rawValue);
+  const trimmed = raw.trim();
+
+  if (!trimmed) {
+    return { credentials, detectedEntries };
   }
 
-  return rawValue
-    .split(/[,\n;]/)
+  let parsedFromJson = false;
+
+  if (/^[{\[]/.test(trimmed)) {
+    try {
+      const parsed = JSON.parse(trimmed);
+
+      if (Array.isArray(parsed)) {
+        parsed.forEach((entry) => {
+          if (entry && typeof entry === "object") {
+            const email =
+              entry.email ??
+              entry.correo ??
+              entry.user ??
+              entry.usuario ??
+              entry.login ??
+              entry.name;
+            const token =
+              entry.token ??
+              entry.password ??
+              entry.clave ??
+              entry.pass ??
+              entry.value;
+
+            if (email !== undefined || token !== undefined) {
+              detectedEntries += 1;
+              if (email !== undefined && token !== undefined) {
+                registerCredential(email, token);
+              }
+            }
+          }
+        });
+      } else if (parsed && typeof parsed === "object") {
+        Object.entries(parsed).forEach(([email, token]) => {
+          detectedEntries += 1;
+          registerCredential(email, token);
+        });
+      } else if (typeof parsed === "string") {
+        return parseCredentials(parsed);
+      }
+
+      parsedFromJson = true;
+    } catch (error) {
+      parsedFromJson = false;
+    }
+  }
+
+  if (Object.keys(credentials).length > 0 || (parsedFromJson && detectedEntries > 0)) {
+    return { credentials, detectedEntries };
+  }
+
+  const entries = trimmed
+    .split(/[\n,;]+/)
     .map((entry) => entry.trim())
-    .filter(Boolean)
-    .reduce((accumulator, entry) => {
-      const separatorIndex = entry.indexOf(":");
-      if (separatorIndex === -1) {
-        return accumulator;
-      }
+    .filter(Boolean);
 
-      const email = entry.slice(0, separatorIndex).trim().toLowerCase();
-      const token = entry.slice(separatorIndex + 1).trim();
+  entries.forEach((entry) => {
+    const separatorMatch = entry.match(/^([^:=\s]+)\s*[:=]\s*(.+)$/);
+    if (separatorMatch) {
+      detectedEntries += 1;
+      registerCredential(separatorMatch[1], separatorMatch[2]);
+      return;
+    }
 
-      if (email && token) {
-        accumulator[email] = token;
-      }
+    const spaceIndex = entry.search(/\s/);
+    if (spaceIndex !== -1) {
+      detectedEntries += 1;
+      registerCredential(entry.slice(0, spaceIndex), entry.slice(spaceIndex + 1));
+      return;
+    }
 
-      return accumulator;
-    }, {});
+    if (entry.includes("@")) {
+      detectedEntries += 1;
+      return;
+    }
+
+    detectedEntries += 1;
+    registerCredential("*", entry);
+  });
+
+  return { credentials, detectedEntries };
 };
 
 export default function Login() {
@@ -34,12 +120,16 @@ export default function Login() {
   const [error, setError] = useState("");
   const [isTokenVisible, setIsTokenVisible] = useState(false);
 
-  const credentials = useMemo(
-    () => parseCredentials(import.meta.env.VITE_AUTHORIZED_USERS),
-    [],
+  const rawAuthorizedUsers = import.meta.env.VITE_AUTHORIZED_USERS;
+  const { credentials, detectedEntries } = useMemo(
+    () => parseCredentials(rawAuthorizedUsers),
+    [rawAuthorizedUsers],
   );
 
-  const isConfigured = Object.keys(credentials).length > 0;
+  const hasRawValue =
+    typeof rawAuthorizedUsers === "string" && rawAuthorizedUsers.trim() !== "";
+  const hasValidCredentials = Object.keys(credentials).length > 0;
+  const hasInvalidFormat = hasRawValue && !hasValidCredentials && detectedEntries > 0;
 
   const handleSubmit = (event) => {
     event.preventDefault();
@@ -53,7 +143,7 @@ export default function Login() {
       return;
     }
 
-    const storedToken = credentials[normalizedEmail];
+    const storedToken = credentials[normalizedEmail] ?? credentials["*"];
 
     if (storedToken && storedToken === normalizedToken) {
       login({ email: normalizedEmail });
@@ -79,9 +169,15 @@ export default function Login() {
               {error}
             </div>
           )}
-          {!isConfigured && (
+          {!hasRawValue && (
             <div className="alert alert-warning" role="alert">
               No hay credenciales configuradas en el entorno. Contacta con la persona administradora.
+            </div>
+          )}
+          {hasInvalidFormat && (
+            <div className="alert alert-warning" role="alert">
+              El formato de las credenciales configuradas no es válido. Revisa la variable de entorno
+              <code className="ms-1">VITE_AUTHORIZED_USERS</code>.
             </div>
           )}
           <form className="d-grid gap-3" onSubmit={handleSubmit}>
@@ -136,7 +232,7 @@ export default function Login() {
                 El token distingue mayúsculas y minúsculas. No lo compartas públicamente.
               </div>
             </div>
-            <button className="btn btn-primary" type="submit" disabled={!isConfigured}>
+            <button className="btn btn-primary" type="submit" disabled={!hasValidCredentials}>
               Iniciar sesión
             </button>
           </form>
