@@ -1,5 +1,4 @@
-import React, { useContext, useEffect, useMemo, useState } from 'react'
-import { AuthContext } from '../App'
+import React, { useEffect, useMemo, useState } from 'react'
 
 let warnedMissingReportsToken = false
 const getReportsAuthHeaders = () => {
@@ -92,6 +91,36 @@ const ensurePdfBase64 = async (pdf) => {
   throw new Error('No se ha podido preparar el PDF para enviarlo por correo.')
 }
 
+const normalizeComercial = (value) =>
+  String(value || '')
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .replace(/\s+/g, ' ')
+    .trim()
+    .toLowerCase()
+
+const resolveComercialEmail = (comercial) => {
+  const explicitEmail = String(comercial || '').match(/[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,}/i)
+  if (explicitEmail) {
+    return explicitEmail[0].toLowerCase()
+  }
+
+  const normalized = normalizeComercial(comercial)
+
+  switch (normalized) {
+    case 'elsa viana':
+      return 'elsa@gepgroup.es'
+    case 'lluis vicent':
+      return 'lluis@gepgroup.es'
+    case 'jero riera':
+      return 'jero@gepgroup.es'
+    case 'julio garcia':
+      return 'julio@gepgroup.es'
+    default:
+      return 'sale@gepgroup.es'
+  }
+}
+
 export default function SendEmailModal({
   show,
   onClose,
@@ -100,7 +129,6 @@ export default function SendEmailModal({
   draft,
   title,
 }) {
-  const { user } = useContext(AuthContext)
   const [to, setTo] = useState('')
   const [cc, setCc] = useState('')
   const [bcc, setBcc] = useState('')
@@ -115,15 +143,14 @@ export default function SendEmailModal({
   const contacto = draft?.datos?.contacto || ''
   const comercial = draft?.datos?.comercial || ''
 
-  const defaultTo = useMemo(() => {
-    const email = 'jaime@gepgroup.es'
-    if (comercial.trim()) {
-      return `${comercial.trim()} <${email}>`
-    }
-    return email
-  }, [comercial])
+  const defaultTo = 'jaime@gepgroup.es'
 
-  const defaultCc = useMemo(() => user?.email || '', [user?.email])
+  const defaultCc = useMemo(() => {
+    const email = resolveComercialEmail(comercial)
+    const displayName = comercial.trim()
+    if (!displayName) return email
+    return `${displayName} <${email}>`
+  }, [comercial])
 
   const formattedDate = useMemo(() => {
     if (!fecha) return ''
