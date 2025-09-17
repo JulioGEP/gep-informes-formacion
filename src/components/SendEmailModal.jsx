@@ -168,6 +168,32 @@ export default function SendEmailModal({
     }
   }, [show])
 
+  useEffect(() => {
+    if (!show || typeof document === 'undefined') return undefined
+
+    const { body, documentElement } = document
+    const originalOverflow = body.style.overflow
+    const originalPaddingRight = body.style.paddingRight
+    const hadModalOpenClass = body.classList.contains('modal-open')
+
+    body.classList.add('modal-open')
+
+    const scrollbarWidth = window.innerWidth - documentElement.clientWidth
+    if (scrollbarWidth > 0) {
+      body.style.paddingRight = `${scrollbarWidth}px`
+    }
+
+    body.style.overflow = 'hidden'
+
+    return () => {
+      if (!hadModalOpenClass) {
+        body.classList.remove('modal-open')
+      }
+      body.style.overflow = originalOverflow
+      body.style.paddingRight = originalPaddingRight
+    }
+  }, [show])
+
   const parsedTo = useMemo(() => collectEmails(to), [to])
   const parsedCc = useMemo(() => collectEmails(cc), [cc])
   const parsedBcc = useMemo(() => collectEmails(bcc), [bcc])
