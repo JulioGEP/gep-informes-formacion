@@ -1,7 +1,10 @@
 // netlify/functions/generateReport.js
+const ALLOWED_ORIGIN = process.env.REPORTS_ALLOWED_ORIGIN || 'https://www.gepservices.es';
+
 const cors = {
-  'Access-Control-Allow-Origin': '*',
-  'Access-Control-Allow-Headers': 'content-type',
+  'Access-Control-Allow-Origin': ALLOWED_ORIGIN,
+  'Access-Control-Allow-Headers': 'authorization,content-type',
+  'Access-Control-Expose-Headers': 'content-type',
 };
 
 const MODEL = 'gpt-4o-mini';
@@ -378,6 +381,26 @@ const esInstalacionGEPCO = (direccion = '') => {
 export async function handler(event) {
   if (event.httpMethod === 'OPTIONS') return { statusCode: 204, headers: cors };
   if (event.httpMethod !== 'POST') return { statusCode: 405, headers: cors, body: 'Method Not Allowed' };
+
+  const sharedSecret = process.env.REPORTS_API_TOKEN;
+  if (!sharedSecret) {
+    console.error('[generateReport] Missing REPORTS_API_TOKEN');
+    return {
+      statusCode: 500,
+      headers: { 'Content-Type': 'application/json', ...cors },
+      body: JSON.stringify({ error: 'Server misconfiguration' }),
+    };
+  }
+
+  const authHeader = event.headers?.authorization || event.headers?.Authorization || '';
+  const expectedHeader = `Bearer ${sharedSecret}`;
+  if (authHeader !== expectedHeader) {
+    return {
+      statusCode: 401,
+      headers: { 'Content-Type': 'application/json', ...cors },
+      body: JSON.stringify({ error: 'Unauthorized' }),
+    };
+  }
 
   try {
     const API_KEY = process.env.OPENAI_API_KEY;
