@@ -32,6 +32,7 @@ export default function Login() {
   const [email, setEmail] = useState("");
   const [token, setToken] = useState("");
   const [error, setError] = useState("");
+  const [isTokenVisible, setIsTokenVisible] = useState(false);
 
   const credentials = useMemo(
     () => parseCredentials(import.meta.env.VITE_AUTHORIZED_USERS),
@@ -58,6 +59,7 @@ export default function Login() {
       login({ email: normalizedEmail });
       setEmail("");
       setToken("");
+      setIsTokenVisible(false);
       return;
     }
 
@@ -101,15 +103,35 @@ export default function Login() {
               <label className="form-label" htmlFor="login-token">
                 Token de acceso
               </label>
-              <input
-                id="login-token"
-                type="password"
-                className="form-control"
-                autoComplete="current-password"
-                value={token}
-                onChange={(event) => setToken(event.target.value)}
-                required
-              />
+              <div className="input-group">
+                <input
+                  id="login-token"
+                  type={isTokenVisible ? "text" : "password"}
+                  className="form-control"
+                  autoComplete="current-password"
+                  value={token}
+                  onChange={(event) => setToken(event.target.value)}
+                  required
+                />
+                <button
+                  type="button"
+                  className="btn btn-outline-secondary"
+                  onClick={() => setIsTokenVisible((value) => !value)}
+                  aria-label={
+                    isTokenVisible ? "Ocultar token de acceso" : "Mostrar token de acceso"
+                  }
+                  aria-pressed={isTokenVisible}
+                  title={isTokenVisible ? "Ocultar token" : "Mostrar token"}
+                >
+                  <i
+                    className={`bi ${isTokenVisible ? "bi-eye-slash" : "bi-eye"}`}
+                    aria-hidden="true"
+                  ></i>
+                  <span className="visually-hidden">
+                    {isTokenVisible ? "Ocultar token" : "Mostrar token"}
+                  </span>
+                </button>
+              </div>
               <div className="form-text">
                 El token distingue mayúsculas y minúsculas. No lo compartas públicamente.
               </div>
