@@ -18,15 +18,23 @@ const parseCredentials = (rawValue) => {
     .reduce((accumulator, entry) => {
       const separatorIndex = entry.indexOf(":");
       if (separatorIndex === -1) {
+        accumulator["*"] = entry;
         return accumulator;
       }
 
       const email = entry.slice(0, separatorIndex).trim().toLowerCase();
       const token = entry.slice(separatorIndex + 1).trim();
 
-      if (email && token) {
-        accumulator[email] = token;
+      if (!token) {
+        return accumulator;
       }
+
+      if (!email) {
+        accumulator["*"] = token;
+        return accumulator;
+      }
+
+      accumulator[email] = token;
 
       return accumulator;
     }, {});
@@ -47,10 +55,26 @@ export default function Login() {
   const [error, setError] = useState("");
   const [isTokenVisible, setIsTokenVisible] = useState(false);
 
-  const credentials = useMemo(
-    () => parseCredentials(import.meta.env.VITE_AUTHORIZED_USERS),
-    [],
-  );
+  const credentials = useMemo(() => {
+    const authorizedUsers = import.meta.env.VITE_AUTHORIZED_USERS;
+    if (authorizedUsers && authorizedUsers.trim()) {
+      return parseCredentials(authorizedUsers);
+    }
+
+    const legacyAccessToken = import.meta.env.VITE_ACCESS_TOKEN;
+
+    if (legacyAccessToken && legacyAccessToken.trim()) {
+      if (import.meta.env.DEV) {
+        console.warn(
+          "[Login] Usando VITE_ACCESS_TOKEN por compatibilidad. Migra la configuración a VITE_AUTHORIZED_USERS.",
+        );
+      }
+
+      return parseCredentials(legacyAccessToken);
+    }
+
+    return {};
+  }, []);
 
   const isConfigured = Object.keys(credentials).length > 0;
 
@@ -66,7 +90,8 @@ export default function Login() {
       return;
     }
 
-    const storedToken = credentials[normalizedEmail];
+    const storedToken =
+      credentials[normalizedEmail] ?? credentials["*"] ?? null;
 
     if (storedToken && storedToken === normalizedToken) {
       login({ email: normalizedEmail });
