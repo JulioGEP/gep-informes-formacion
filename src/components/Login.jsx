@@ -24,18 +24,18 @@ const parseCredentials = (rawValue) => {
       }
 
       const email = entry.slice(0, separatorIndex).trim().toLowerCase();
-      const token = entry.slice(separatorIndex + 1).trim();
+      const password = entry.slice(separatorIndex + 1).trim();
 
-      if (!token) {
+      if (!password) {
         return accumulator;
       }
 
       if (!email) {
-        accumulator["*"] = token;
+        accumulator["*"] = password;
         return accumulator;
       }
 
-      accumulator[email] = token;
+      accumulator[email] = password;
 
       return accumulator;
     }, {});
@@ -52,9 +52,9 @@ const parseCredentials = (rawValue) => {
 export default function Login() {
   const { login } = useContext(AuthContext);
   const [email, setEmail] = useState("");
-  const [token, setToken] = useState("");
+  const [password, setPassword] = useState("");
   const [error, setError] = useState("");
-  const [isTokenVisible, setIsTokenVisible] = useState(false);
+  const [isPasswordVisible, setIsPasswordVisible] = useState(false);
 
   useEffect(() => {
     if (typeof window === "undefined") {
@@ -62,9 +62,9 @@ export default function Login() {
     }
 
     const emailInput = document.getElementById("login-email");
-    const tokenInput = document.getElementById("login-token");
+    const passwordInput = document.getElementById("login-password");
 
-    if (!emailInput && !tokenInput) {
+    if (!emailInput && !passwordInput) {
       return;
     }
 
@@ -76,9 +76,9 @@ export default function Login() {
         });
       }
 
-      if (tokenInput) {
-        setToken((previous) => {
-          const next = tokenInput.value;
+      if (passwordInput) {
+        setPassword((previous) => {
+          const next = passwordInput.value;
           return next === previous ? previous : next;
         });
       }
@@ -91,16 +91,16 @@ export default function Login() {
 
     emailInput?.addEventListener("input", syncFromInputs);
     emailInput?.addEventListener("change", syncFromInputs);
-    tokenInput?.addEventListener("input", syncFromInputs);
-    tokenInput?.addEventListener("change", syncFromInputs);
+    passwordInput?.addEventListener("input", syncFromInputs);
+    passwordInput?.addEventListener("change", syncFromInputs);
 
     return () => {
       window.cancelAnimationFrame(frameId);
       window.clearTimeout(timeoutId);
       emailInput?.removeEventListener("input", syncFromInputs);
       emailInput?.removeEventListener("change", syncFromInputs);
-      tokenInput?.removeEventListener("input", syncFromInputs);
-      tokenInput?.removeEventListener("change", syncFromInputs);
+      passwordInput?.removeEventListener("input", syncFromInputs);
+      passwordInput?.removeEventListener("change", syncFromInputs);
     };
   }, []);
 
@@ -132,21 +132,21 @@ export default function Login() {
     setError("");
 
     const normalizedEmail = email.trim().toLowerCase();
-    const normalizedToken = token.trim();
+    const normalizedPassword = password.trim();
 
-    if (!normalizedEmail || !normalizedToken) {
+    if (!normalizedEmail || !normalizedPassword) {
       setError("Introduce tu correo y contraseña.");
       return;
     }
 
-    const storedToken =
+    const storedPassword =
       credentials[normalizedEmail] ?? credentials["*"] ?? null;
 
-    if (storedToken && storedToken === normalizedToken) {
+    if (storedPassword && storedPassword === normalizedPassword) {
       login({ email: normalizedEmail });
       setEmail("");
-      setToken("");
-      setIsTokenVisible(false);
+      setPassword("");
+      setIsPasswordVisible(false);
       return;
     }
 
@@ -201,40 +201,44 @@ export default function Login() {
               />
             </div>
             <div className="d-grid gap-2">
-              <label className="form-label" htmlFor="login-token">
+              <label className="form-label" htmlFor="login-password">
                 Contraseña
               </label>
               <div className="input-group">
                 <input
-                  id="login-token"
+                  id="login-password"
                   name="password"
-                  type={isTokenVisible ? "text" : "password"}
+                  type={isPasswordVisible ? "text" : "password"}
                   className="form-control"
                   autoComplete="current-password"
-                  value={token}
-                  onChange={(event) => setToken(event.target.value)}
+                  value={password}
+                  onChange={(event) => setPassword(event.target.value)}
                   required
                 />
                 <button
                   type="button"
                   className="btn btn-outline-secondary"
-                  onClick={() => setIsTokenVisible((value) => !value)}
+                  onClick={() => setIsPasswordVisible((value) => !value)}
                   aria-label={
-                    isTokenVisible
+                    isPasswordVisible
                       ? "Ocultar contraseña"
                       : "Mostrar contraseña"
                   }
-                  aria-pressed={isTokenVisible}
+                  aria-pressed={isPasswordVisible}
                   title={
-                    isTokenVisible ? "Ocultar contraseña" : "Mostrar contraseña"
+                    isPasswordVisible ? "Ocultar contraseña" : "Mostrar contraseña"
                   }
                 >
                   <i
-                    className={`bi ${isTokenVisible ? "bi-eye-slash" : "bi-eye"}`}
+                    className={`bi ${
+                      isPasswordVisible ? "bi-eye-slash" : "bi-eye"
+                    }`}
                     aria-hidden="true"
                   ></i>
                   <span className="visually-hidden">
-                    {isTokenVisible ? "Ocultar contraseña" : "Mostrar contraseña"}
+                    {isPasswordVisible
+                      ? "Ocultar contraseña"
+                      : "Mostrar contraseña"}
                   </span>
                 </button>
               </div>
