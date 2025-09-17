@@ -1,4 +1,4 @@
-import React, { useContext, useMemo, useState } from "react";
+import React, { useContext, useEffect, useMemo, useState } from "react";
 import { AuthContext } from "../App";
 import logoNuevo from "../assets/logo-nuevo.png";
 
@@ -55,6 +55,54 @@ export default function Login() {
   const [token, setToken] = useState("");
   const [error, setError] = useState("");
   const [isTokenVisible, setIsTokenVisible] = useState(false);
+
+  useEffect(() => {
+    if (typeof window === "undefined") {
+      return;
+    }
+
+    const emailInput = document.getElementById("login-email");
+    const tokenInput = document.getElementById("login-token");
+
+    if (!emailInput && !tokenInput) {
+      return;
+    }
+
+    const syncFromInputs = () => {
+      if (emailInput) {
+        setEmail((previous) => {
+          const next = emailInput.value;
+          return next === previous ? previous : next;
+        });
+      }
+
+      if (tokenInput) {
+        setToken((previous) => {
+          const next = tokenInput.value;
+          return next === previous ? previous : next;
+        });
+      }
+    };
+
+    syncFromInputs();
+
+    const frameId = window.requestAnimationFrame(syncFromInputs);
+    const timeoutId = window.setTimeout(syncFromInputs, 150);
+
+    emailInput?.addEventListener("input", syncFromInputs);
+    emailInput?.addEventListener("change", syncFromInputs);
+    tokenInput?.addEventListener("input", syncFromInputs);
+    tokenInput?.addEventListener("change", syncFromInputs);
+
+    return () => {
+      window.cancelAnimationFrame(frameId);
+      window.clearTimeout(timeoutId);
+      emailInput?.removeEventListener("input", syncFromInputs);
+      emailInput?.removeEventListener("change", syncFromInputs);
+      tokenInput?.removeEventListener("input", syncFromInputs);
+      tokenInput?.removeEventListener("change", syncFromInputs);
+    };
+  }, []);
 
   const credentials = useMemo(() => {
     const authorizedUsers = import.meta.env.VITE_AUTHORIZED_USERS;
@@ -135,6 +183,7 @@ export default function Login() {
             className="d-grid gap-3"
             onSubmit={handleSubmit}
             autoComplete="on"
+            id="login-form"
           >
             <div className="d-grid gap-2">
               <label className="form-label" htmlFor="login-email">
