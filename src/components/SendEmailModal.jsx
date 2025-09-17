@@ -117,7 +117,7 @@ const resolveComercialEmail = (comercial) => {
     case 'julio garcia':
       return 'julio@gepgroup.es'
     default:
-      return 'sale@gepgroup.es'
+      return 'sales@gepgroup.es'
   }
 }
 
