@@ -4,12 +4,21 @@ import { AuthContext } from "../App";
 const parseCredentials = (rawValue) => {
   const credentials = {};
   let detectedEntries = 0;
+  let hasRawValue = false;
 
   const registerCredential = (email, token) => {
     const normalizedEmail =
-      typeof email === "string" ? email.trim().toLowerCase() : "";
+      typeof email === "string"
+        ? email.trim().toLowerCase()
+        : email === null || email === undefined
+          ? ""
+          : String(email).trim().toLowerCase();
     const normalizedToken =
-      typeof token === "string" ? token.trim() : token ?? "";
+      typeof token === "string"
+        ? token.trim()
+        : token === null || token === undefined
+          ? ""
+          : String(token).trim();
 
     if (!normalizedEmail || !normalizedToken) {
       return false;
@@ -25,108 +34,141 @@ const parseCredentials = (rawValue) => {
     }
   };
 
-  const raw =
-    typeof rawValue === "string"
-      ? rawValue
-      : rawValue === null || rawValue === undefined
-        ? ""
-        : String(rawValue);
-  const trimmed = raw.trim();
+  const processTextEntries = (text) => {
+    if (!text) {
+      return;
+    }
 
-  if (!trimmed) {
-    warn("No se encontraron credenciales definidas en VITE_AUTHORIZED_USERS.");
-    return { credentials, detectedEntries };
-  }
+    hasRawValue = true;
 
-  let parsedFromJson = false;
-
-  if (/^[{\[]/.test(trimmed)) {
-    try {
-      const parsed = JSON.parse(trimmed);
-
-      if (Array.isArray(parsed)) {
-        parsed.forEach((entry) => {
-          if (entry && typeof entry === "object") {
-            const email =
-              entry.email ??
-              entry.correo ??
-              entry.user ??
-              entry.usuario ??
-              entry.login ??
-              entry.name;
-            const token =
-              entry.token ??
-              entry.password ??
-              entry.clave ??
-              entry.pass ??
-              entry.value;
-
-            if (email !== undefined || token !== undefined) {
-              detectedEntries += 1;
-              if (email !== undefined && token !== undefined) {
-                registerCredential(email, token);
-              }
-            }
-          }
-        });
-      } else if (parsed && typeof parsed === "object") {
-        Object.entries(parsed).forEach(([email, token]) => {
+    text
+      .split(/[\n,;]+/)
+      .map((entry) => entry.trim())
+      .filter(Boolean)
+      .forEach((entry) => {
+        const separatorMatch = entry.match(/^([^:=\s]+)\s*[:=]\s*(.+)$/);
+        if (separatorMatch) {
           detectedEntries += 1;
-          registerCredential(email, token);
-        });
-      } else if (typeof parsed === "string") {
-        return parseCredentials(parsed);
+          registerCredential(separatorMatch[1], separatorMatch[2]);
+          return;
+        }
+
+        const spaceIndex = entry.search(/\s/);
+        if (spaceIndex !== -1) {
+          detectedEntries += 1;
+          registerCredential(
+            entry.slice(0, spaceIndex),
+            entry.slice(spaceIndex + 1),
+          );
+          return;
+        }
+
+        if (entry.includes("@")) {
+          detectedEntries += 1;
+          return;
+        }
+
+        detectedEntries += 1;
+        registerCredential("*", entry);
+      });
+  };
+
+  const processValue = (value) => {
+    if (value === null || value === undefined) {
+      return;
+    }
+
+    if (typeof value === "string") {
+      const trimmed = value.trim();
+
+      if (!trimmed) {
+        return;
       }
 
-      parsedFromJson = true;
-    } catch (error) {
-      parsedFromJson = false;
+      if (/^[{\[]/.test(trimmed)) {
+        try {
+          processValue(JSON.parse(trimmed));
+          return;
+        } catch (error) {
+          // Fall back to treating the value as plain text.
+        }
+      }
+
+      processTextEntries(trimmed);
+      return;
     }
-  }
 
-  if (Object.keys(credentials).length > 0) {
-    return { credentials, detectedEntries };
-  }
+    if (Array.isArray(value)) {
+      if (value.length > 0) {
+        hasRawValue = true;
+      }
 
-  if (parsedFromJson && detectedEntries > 0) {
+      value.forEach((entry) => {
+        if (entry && typeof entry === "object" && !Array.isArray(entry)) {
+          const email =
+            entry.email ??
+            entry.correo ??
+            entry.user ??
+            entry.usuario ??
+            entry.login ??
+            entry.name;
+          const token =
+            entry.token ??
+            entry.password ??
+            entry.clave ??
+            entry.pass ??
+            entry.value;
+
+          if (email !== undefined || token !== undefined) {
+            detectedEntries += 1;
+            if (email !== undefined && token !== undefined) {
+              registerCredential(email, token);
+            }
+          }
+        } else {
+          processValue(entry);
+        }
+      });
+
+      return;
+    }
+
+    if (typeof value === "object") {
+      const structuredEntries = Object.entries(value);
+
+      if (structuredEntries.length > 0) {
+        hasRawValue = true;
+      }
+
+      structuredEntries.forEach(([email, token]) => {
+        detectedEntries += 1;
+        registerCredential(email, token);
+      });
+
+      return;
+    }
+
+    processTextEntries(String(value));
+  };
+
+  processValue(rawValue);
+
+  const hasValidCredentials = Object.keys(credentials).length > 0;
+  const hasInvalidFormat = hasRawValue && detectedEntries > 0 && !hasValidCredentials;
+
+  if (!hasRawValue || (!hasValidCredentials && detectedEntries === 0)) {
+    warn("No se encontraron credenciales definidas en VITE_AUTHORIZED_USERS.");
+  } else if (!hasValidCredentials) {
     warn("No se encontraron credenciales válidas en VITE_AUTHORIZED_USERS.");
-    return { credentials, detectedEntries };
   }
 
-  const entries = trimmed
-    .split(/[\n,;]+/)
-    .map((entry) => entry.trim())
-    .filter(Boolean);
-
-  entries.forEach((entry) => {
-    const separatorMatch = entry.match(/^([^:=\s]+)\s*[:=]\s*(.+)$/);
-    if (separatorMatch) {
-      detectedEntries += 1;
-      registerCredential(separatorMatch[1], separatorMatch[2]);
-      return;
-    }
-
-    const spaceIndex = entry.search(/\s/);
-    if (spaceIndex !== -1) {
-      detectedEntries += 1;
-      registerCredential(entry.slice(0, spaceIndex), entry.slice(spaceIndex + 1));
-      return;
-    }
-
-    if (entry.includes("@")) {
-      detectedEntries += 1;
-      return;
-    }
-
-    detectedEntries += 1;
-    registerCredential("*", entry);
-  });
-
-  if (detectedEntries > 0) {
-    warn("No se encontraron credenciales válidas en VITE_AUTHORIZED_USERS.");
-  }
-
-  return { credentials, detectedEntries };
+  return {
+    credentials,
+    detectedEntries,
+    hasRawValue,
+    hasValidCredentials,
+    hasInvalidFormat,
+  };
 };
 
 export default function Login() {
@@ -137,15 +179,12 @@ export default function Login() {
   const [isTokenVisible, setIsTokenVisible] = useState(false);
 
   const rawAuthorizedUsers = import.meta.env.VITE_AUTHORIZED_USERS;
-  const { credentials, detectedEntries } = useMemo(
+  const { credentials, hasValidCredentials, hasInvalidFormat } = useMemo(
     () => parseCredentials(rawAuthorizedUsers),
     [rawAuthorizedUsers],
   );
 
-  const hasRawValue =
-    typeof rawAuthorizedUsers === "string" && rawAuthorizedUsers.trim() !== "";
-  const hasValidCredentials = Object.keys(credentials).length > 0;
-  const hasInvalidFormat = hasRawValue && !hasValidCredentials && detectedEntries > 0;
+  const showMissingCredentialsAlert = !hasValidCredentials && !hasInvalidFormat;
 
   const handleSubmit = (event) => {
     event.preventDefault();
@@ -185,7 +224,7 @@ export default function Login() {
               {error}
             </div>
           )}
-          {!hasRawValue && (
+          {showMissingCredentialsAlert && (
             <div className="alert alert-warning" role="alert">
               No hay credenciales configuradas en el entorno. Contacta con la persona administradora.
             </div>
