@@ -8,31 +8,55 @@ import Login from "./components/Login";
 export const AuthContext = createContext({
   isAuthenticated: false,
   user: null,
+  expiresAt: null,
   login: () => {},
   logout: () => {},
 });
 
 const AUTH_STORAGE_KEY = "gep-informes-auth";
+const SESSION_DURATION_MS = 3 * 60 * 60 * 1000;
+
+const createDefaultAuthState = () => ({
+  isAuthenticated: false,
+  user: null,
+  expiresAt: null,
+});
 
 export default function App() {
   const [authState, setAuthState] = useState(() => {
-    if (typeof window !== "undefined") {
-      const stored = window.sessionStorage.getItem(AUTH_STORAGE_KEY);
-      if (stored) {
-        try {
-          const parsed = JSON.parse(stored);
-          if (parsed && typeof parsed === "object") {
-            return {
-              isAuthenticated: Boolean(parsed.isAuthenticated),
-              user: parsed.user || null,
-            };
-          }
-        } catch (error) {
-          console.warn("No se pudo recuperar el estado de autenticación almacenado", error);
-        }
-      }
+    if (typeof window === "undefined") {
+      return createDefaultAuthState();
     }
-    return { isAuthenticated: false, user: null };
+
+    const stored = window.sessionStorage.getItem(AUTH_STORAGE_KEY);
+    if (!stored) {
+      return createDefaultAuthState();
+    }
+
+    try {
+      const parsed = JSON.parse(stored);
+      if (parsed && typeof parsed === "object") {
+        const expiresAt =
+          typeof parsed.expiresAt === "number" ? parsed.expiresAt : null;
+
+        if (expiresAt && expiresAt > Date.now()) {
+          return {
+            isAuthenticated: Boolean(parsed.isAuthenticated),
+            user: parsed.user || null,
+            expiresAt,
+          };
+        }
+
+        window.sessionStorage.removeItem(AUTH_STORAGE_KEY);
+      }
+    } catch (error) {
+      console.warn(
+        "No se pudo recuperar el estado de autenticación almacenado",
+        error,
+      );
+    }
+
+    return createDefaultAuthState();
   });
   const [screen, setScreen] = useState('home');
   const [formacion, setFormacion] = useState(null);
@@ -40,32 +64,69 @@ export default function App() {
   const [preventivo, setPreventivo] = useState(null);
 
   useEffect(() => {
-    if (typeof window !== "undefined") {
-      if (authState.isAuthenticated) {
-        window.sessionStorage.setItem(
-          AUTH_STORAGE_KEY,
-          JSON.stringify({
-            isAuthenticated: authState.isAuthenticated,
-            user: authState.user,
-          }),
-        );
-      } else {
+    if (typeof window === "undefined") {
+      return;
+    }
+
+    if (authState.isAuthenticated && authState.expiresAt) {
+      if (authState.expiresAt <= Date.now()) {
         window.sessionStorage.removeItem(AUTH_STORAGE_KEY);
+        return;
       }
+
+      window.sessionStorage.setItem(
+        AUTH_STORAGE_KEY,
+        JSON.stringify({
+          isAuthenticated: authState.isAuthenticated,
+          user: authState.user,
+          expiresAt: authState.expiresAt,
+        }),
+      );
+    } else {
+      window.sessionStorage.removeItem(AUTH_STORAGE_KEY);
     }
   }, [authState]);
 
   const login = useCallback((userData) => {
-    setAuthState({ isAuthenticated: true, user: userData });
+    setAuthState({
+      isAuthenticated: true,
+      user: userData,
+      expiresAt: Date.now() + SESSION_DURATION_MS,
+    });
   }, []);
 
   const logout = useCallback(() => {
-    setAuthState({ isAuthenticated: false, user: null });
+    setAuthState(createDefaultAuthState());
     setScreen('home');
     setFormacion(null);
     setSimulacro(null);
     setPreventivo(null);
   }, []);
+
+  useEffect(() => {
+    if (
+      typeof window === "undefined" ||
+      !authState.isAuthenticated ||
+      !authState.expiresAt
+    ) {
+      return;
+    }
+
+    const remainingTime = authState.expiresAt - Date.now();
+
+    if (remainingTime <= 0) {
+      logout();
+      return;
+    }
+
+    const timeoutId = window.setTimeout(() => {
+      logout();
+    }, remainingTime);
+
+    return () => {
+      window.clearTimeout(timeoutId);
+    };
+  }, [authState.isAuthenticated, authState.expiresAt, logout]);
 
   const authValue = useMemo(() => ({
     ...authState,
