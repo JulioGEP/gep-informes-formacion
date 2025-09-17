@@ -253,36 +253,38 @@ export default function SendEmailModal({
                   )}
                 </div>
 
-                <div className="mb-3">
-                  <label className="form-label">CC (opcional)</label>
-                  <textarea
-                    className="form-control"
-                    rows={2}
-                    value={cc}
-                    onChange={(event) => setCc(event.target.value)}
-                    placeholder="equipo@empresa.com"
-                  />
-                  {parsedCc.invalid.length > 0 && (
-                    <div className="form-text text-danger">
-                      Correos no válidos: {parsedCc.invalid.join(', ')}
-                    </div>
-                  )}
-                </div>
+                <div className="row g-3 mb-3">
+                  <div className="col-12 col-md-6">
+                    <label className="form-label">CC (opcional)</label>
+                    <textarea
+                      className="form-control"
+                      rows={2}
+                      value={cc}
+                      onChange={(event) => setCc(event.target.value)}
+                      placeholder="equipo@empresa.com"
+                    />
+                    {parsedCc.invalid.length > 0 && (
+                      <div className="form-text text-danger">
+                        Correos no válidos: {parsedCc.invalid.join(', ')}
+                      </div>
+                    )}
+                  </div>
 
-                <div className="mb-3">
-                  <label className="form-label">CCO (opcional)</label>
-                  <textarea
-                    className="form-control"
-                    rows={2}
-                    value={bcc}
-                    onChange={(event) => setBcc(event.target.value)}
-                    placeholder="direccion@empresa.com"
-                  />
-                  {parsedBcc.invalid.length > 0 && (
-                    <div className="form-text text-danger">
-                      Correos no válidos: {parsedBcc.invalid.join(', ')}
-                    </div>
-                  )}
+                  <div className="col-12 col-md-6">
+                    <label className="form-label">CCO (opcional)</label>
+                    <textarea
+                      className="form-control"
+                      rows={2}
+                      value={bcc}
+                      onChange={(event) => setBcc(event.target.value)}
+                      placeholder="direccion@empresa.com"
+                    />
+                    {parsedBcc.invalid.length > 0 && (
+                      <div className="form-text text-danger">
+                        Correos no válidos: {parsedBcc.invalid.join(', ')}
+                      </div>
+                    )}
+                  </div>
                 </div>
 
                 <div className="mb-3">
