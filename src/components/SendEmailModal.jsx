@@ -274,21 +274,26 @@ export default function SendEmailModal({
 
   return (
     <>
-      <div className="modal fade show" style={{ display: 'block' }}>
-        <div className="modal-dialog modal-lg modal-dialog-scrollable">
-          <div className="modal-content">
-            <form onSubmit={handleSubmit}>
-              <div className="modal-header">
-                <h5 className="modal-title">Enviar informe por email</h5>
-                <button
-                  type="button"
-                  className="btn-close"
-                  aria-label="Cerrar"
-                  onClick={onClose}
-                  disabled={sending}
-                />
-              </div>
-              <div className="modal-body">
+      <div
+        className="modal fade show"
+        style={{ display: 'block' }}
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="send-email-modal-title"
+      >
+        <div className="modal-dialog modal-lg modal-dialog-scrollable" role="document">
+          <form className="modal-content" onSubmit={handleSubmit}>
+            <div className="modal-header">
+              <h5 className="modal-title" id="send-email-modal-title">Enviar informe por email</h5>
+              <button
+                type="button"
+                className="btn-close"
+                aria-label="Cerrar"
+                onClick={onClose}
+                disabled={sending}
+              />
+            </div>
+            <div className="modal-body">
                 <div className="mb-3">
                   <label className="form-label">Para</label>
                   <textarea
@@ -380,21 +385,20 @@ export default function SendEmailModal({
                   </div>
                 )}
               </div>
-              <div className="modal-footer">
-                <button
-                  type="button"
-                  className="btn btn-outline-secondary"
-                  onClick={onClose}
-                  disabled={sending}
-                >
-                  Cancelar
-                </button>
-                <button type="submit" className="btn btn-primary" disabled={!canSubmit}>
-                  {sending ? 'Enviando…' : 'Enviar informe'}
-                </button>
-              </div>
-            </form>
-          </div>
+            <div className="modal-footer">
+              <button
+                type="button"
+                className="btn btn-outline-secondary"
+                onClick={onClose}
+                disabled={sending}
+              >
+                Cancelar
+              </button>
+              <button type="submit" className="btn btn-primary" disabled={!canSubmit}>
+                {sending ? 'Enviando…' : 'Enviar informe'}
+              </button>
+            </div>
+          </form>
         </div>
       </div>
       <div className="modal-backdrop fade show" />
