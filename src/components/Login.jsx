@@ -19,6 +19,12 @@ const parseCredentials = (rawValue) => {
     return true;
   };
 
+  const warn = (message) => {
+    if (import.meta.env.DEV) {
+      console.warn(`[Login] ${message}`);
+    }
+  };
+
   const raw =
     typeof rawValue === "string"
       ? rawValue
@@ -28,6 +34,7 @@ const parseCredentials = (rawValue) => {
   const trimmed = raw.trim();
 
   if (!trimmed) {
+    warn("No se encontraron credenciales definidas en VITE_AUTHORIZED_USERS.");
     return { credentials, detectedEntries };
   }
 
@@ -77,7 +84,12 @@ const parseCredentials = (rawValue) => {
     }
   }
 
-  if (Object.keys(credentials).length > 0 || (parsedFromJson && detectedEntries > 0)) {
+  if (Object.keys(credentials).length > 0) {
+    return { credentials, detectedEntries };
+  }
+
+  if (parsedFromJson && detectedEntries > 0) {
+    warn("No se encontraron credenciales válidas en VITE_AUTHORIZED_USERS.");
     return { credentials, detectedEntries };
   }
 
@@ -109,6 +121,10 @@ const parseCredentials = (rawValue) => {
     detectedEntries += 1;
     registerCredential("*", entry);
   });
+
+  if (detectedEntries > 0) {
+    warn("No se encontraron credenciales válidas en VITE_AUTHORIZED_USERS.");
+  }
 
   return { credentials, detectedEntries };
 };
