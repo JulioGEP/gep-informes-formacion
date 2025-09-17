@@ -396,6 +396,12 @@ export default function Form({ initial, onNext, title = 'Informe de Formación',
         </div>
       </div>
 
+      <div className="d-flex justify-content-end mb-2">
+        <button type="button" className="btn btn-secondary" onClick={onChooseAnother}>
+          Elegir otro informe
+        </button>
+      </div>
+
       {/* ===== Cliente + Formador en 2 columnas ===== */}
       <div className="row g-3 align-items-stretch">
         {/* DATOS DEL CLIENTE */}
