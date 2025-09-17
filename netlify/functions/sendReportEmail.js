@@ -190,7 +190,7 @@ exports.handler = async (event) => {
 
     const pdfBase64 = resolvePdfBase64(body.pdf)
 
-    const from = process.env.REPORTS_EMAIL_FROM || process.env.RESEND_FROM || 'informes@gepservices.es'
+    const from = 'julio@gepgroup.es'
     const replyTo = body.replyTo || process.env.REPORTS_EMAIL_REPLY_TO || ''
 
     const textMessage = typeof body.message === 'string' ? body.message : ''
