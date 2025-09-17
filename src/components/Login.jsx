@@ -49,7 +49,7 @@ export default function Login() {
     const normalizedToken = token.trim();
 
     if (!normalizedEmail || !normalizedToken) {
-      setError("Introduce tu correo corporativo y token de acceso.");
+      setError("Introduce tu correo y contraseña.");
       return;
     }
 
@@ -72,7 +72,7 @@ export default function Login() {
         <div className="card-body">
           <h1 className="h4 mb-3 text-center">Accede a los informes</h1>
           <p className="text-muted small text-center mb-4">
-            Introduce tu correo corporativo y el token facilitado por el área de Sistemas.
+            Introduce tu correo y la contraseña facilitada por el área de Sistemas.
           </p>
           {error && (
             <div className="alert alert-danger" role="alert">
@@ -87,7 +87,7 @@ export default function Login() {
           <form className="d-grid gap-3" onSubmit={handleSubmit}>
             <div className="d-grid gap-2">
               <label className="form-label" htmlFor="login-email">
-                Correo corporativo
+                Correo
               </label>
               <input
                 id="login-email"
@@ -101,7 +101,7 @@ export default function Login() {
             </div>
             <div className="d-grid gap-2">
               <label className="form-label" htmlFor="login-token">
-                Token de acceso
+                Contraseña
               </label>
               <div className="input-group">
                 <input
@@ -118,22 +118,26 @@ export default function Login() {
                   className="btn btn-outline-secondary"
                   onClick={() => setIsTokenVisible((value) => !value)}
                   aria-label={
-                    isTokenVisible ? "Ocultar token de acceso" : "Mostrar token de acceso"
+                    isTokenVisible
+                      ? "Ocultar contraseña"
+                      : "Mostrar contraseña"
                   }
                   aria-pressed={isTokenVisible}
-                  title={isTokenVisible ? "Ocultar token" : "Mostrar token"}
+                  title={
+                    isTokenVisible ? "Ocultar contraseña" : "Mostrar contraseña"
+                  }
                 >
                   <i
                     className={`bi ${isTokenVisible ? "bi-eye-slash" : "bi-eye"}`}
                     aria-hidden="true"
                   ></i>
                   <span className="visually-hidden">
-                    {isTokenVisible ? "Ocultar token" : "Mostrar token"}
+                    {isTokenVisible ? "Ocultar contraseña" : "Mostrar contraseña"}
                   </span>
                 </button>
               </div>
               <div className="form-text">
-                El token distingue mayúsculas y minúsculas. No lo compartas públicamente.
+                La contraseña distingue mayúsculas y minúsculas. No la compartas públicamente.
               </div>
             </div>
             <button className="btn btn-primary" type="submit" disabled={!isConfigured}>
