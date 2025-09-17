@@ -16,7 +16,9 @@ La aplicación utiliza un flujo de autenticación basado en tokens corporativos.
 
    - Se admiten comas, punto y coma o saltos de línea como separadores entre credenciales.
    - Los correos no distinguen mayúsculas/minúsculas, pero los tokens sí.
+   - Si prefieres una única contraseña compartida, puedes definir solo el token (por ejemplo `token-unico`), asociarlo a `*` (`*:token-unico`) o incluso dejar en blanco la parte del correo (`:token-unico`). En todos los casos se aceptará para cualquier correo corporativo.
 4. Guarda los cambios y despliega nuevamente el sitio para que Vite recompile con los nuevos valores. Un _trigger_ manual de deploy desde **Deploys → Trigger deploy → Deploy site** es suficiente.
+   - Mientras migras la configuración, la aplicación seguirá aceptando la variable histórica `VITE_ACCESS_TOKEN`, pero se recomienda unificar todo en `VITE_AUTHORIZED_USERS`.
 5. Comunica el token asignado a cada persona por un canal seguro.
 
 ### Revocación de tokens
