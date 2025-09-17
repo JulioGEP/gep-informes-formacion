@@ -1,4 +1,5 @@
-import React, { useEffect, useMemo, useState } from 'react'
+import React, { useContext, useEffect, useMemo, useState } from 'react'
+import { AuthContext } from '../App'
 
 let warnedMissingReportsToken = false
 const getReportsAuthHeaders = () => {
@@ -99,6 +100,7 @@ export default function SendEmailModal({
   draft,
   title,
 }) {
+  const { user } = useContext(AuthContext)
   const [to, setTo] = useState('')
   const [cc, setCc] = useState('')
   const [bcc, setBcc] = useState('')
@@ -111,6 +113,17 @@ export default function SendEmailModal({
   const cliente = draft?.datos?.cliente || ''
   const fecha = draft?.datos?.fecha || ''
   const contacto = draft?.datos?.contacto || ''
+  const comercial = draft?.datos?.comercial || ''
+
+  const defaultTo = useMemo(() => {
+    const email = 'jaime@gepgroup.es'
+    if (comercial.trim()) {
+      return `${comercial.trim()} <${email}>`
+    }
+    return email
+  }, [comercial])
+
+  const defaultCc = useMemo(() => user?.email || '', [user?.email])
 
   const formattedDate = useMemo(() => {
     if (!fecha) return ''
@@ -152,11 +165,13 @@ export default function SendEmailModal({
 
   useEffect(() => {
     if (show) {
+      setTo(defaultTo)
+      setCc(defaultCc)
       setSubject(defaultSubject)
       setMessage(defaultMessage)
       setError(null)
     }
-  }, [show, defaultSubject, defaultMessage])
+  }, [show, defaultSubject, defaultMessage, defaultTo, defaultCc])
 
   useEffect(() => {
     if (!show) {
