@@ -5,6 +5,9 @@
 
 [build.environment]
   NODE_VERSION = "18"
+  REPORTS_API_TOKEN = ""
+  VITE_REPORTS_API_TOKEN = ""
+  REPORTS_ALLOWED_ORIGIN = "https://www.gepservices.es"
 
 [[redirects]]
   from = "/*"

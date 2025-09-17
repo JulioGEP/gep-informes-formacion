@@ -4,6 +4,19 @@ import logoImg from '../assets/logo-nuevo.png'
 import { generateReportPdfmake } from '../pdf/reportPdfmake'
 import { triesKey, htmlKey } from '../utils/keys'
 
+let warnedMissingReportsToken = false
+const getReportsAuthHeaders = () => {
+  const token = import.meta.env.VITE_REPORTS_API_TOKEN
+  if (!token) {
+    if (!warnedMissingReportsToken) {
+      console.warn('VITE_REPORTS_API_TOKEN no está configurado; las peticiones a Netlify serán rechazadas.')
+      warnedMissingReportsToken = true
+    }
+    return {}
+  }
+  return { Authorization: `Bearer ${token}` }
+}
+
 const maxTries = 3
 
 const preventivoHeadings = {
@@ -268,7 +281,7 @@ export default function Preview(props) {
     try {
       const r = await fetch('/.netlify/functions/generateReport', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: { 'Content-Type': 'application/json', ...getReportsAuthHeaders() },
         body: JSON.stringify({ formador, datos }),
       })
       const raw = await r.text()
