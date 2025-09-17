@@ -226,6 +226,7 @@ export default function Preview(props) {
   const [aiHtml, setAiHtml] = useState(null)
   const [aiBusy, setAiBusy] = useState(false)
   const [tries, setTries] = useState(0)
+  const [pdfForModal, setPdfForModal] = useState(null)
 
   // Cargar contador + HTML guardado
   useEffect(() => {
@@ -239,7 +240,7 @@ export default function Preview(props) {
         if (savedHtml) setAiHtml(savedHtml)
       } catch {}
     } else {
-      setTries(0); setAiHtml(null)
+      setTries(0); setAiHtml(null); setPdfForModal(null)
     }
   }, [dealId])
 
@@ -248,7 +249,7 @@ export default function Preview(props) {
       localStorage.removeItem(triesKey(dealId))
       sessionStorage.removeItem(htmlKey(dealId))
     } catch {}
-    setTries(0); setAiHtml(null)
+    setTries(0); setAiHtml(null); setPdfForModal(null)
   }
 
   const tieneContenido = useMemo(() => {
@@ -332,7 +333,9 @@ export default function Preview(props) {
 
   const descargarPDF = async () => {
     try {
-      await generateReportPdfmake({ dealId, datos, formador, imagenes, type })
+      const result = await generateReportPdfmake({ dealId, datos, formador, imagenes, type })
+      setPdfForModal(result)
+      return result
     } catch (e) {
       console.error('Error generando PDF (pdfmake):', e)
       alert('No se ha podido generar el PDF.')

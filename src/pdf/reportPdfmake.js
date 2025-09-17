@@ -675,5 +675,47 @@ export async function generateReportPdfmake(draft) {
   const titulo = baseTitulo.replace(/[^\w\s\-._]/g, '').trim()
   const nombre = `GEP Group – ${dealId || 'SinPresu'} – ${cliente} – ${titulo} – ${fecha || 'fecha'}.pdf`
 
-  pdfMake.createPdf(docDefinition).download(nombre)
+  const pdf = pdfMake.createPdf(docDefinition)
+  pdf.download(nombre)
+
+  return new Promise((resolve, reject) => {
+    try {
+      pdf.getBlob((blob) => {
+        if (!blob) {
+          reject(new Error('No se pudo generar el PDF como Blob.'))
+          return
+        }
+
+        const result = { blob, fileName: nombre }
+        const tasks = []
+
+        if (typeof blob.arrayBuffer === 'function') {
+          tasks.push(
+            blob.arrayBuffer()
+              .then((buffer) => { result.arrayBuffer = buffer })
+              .catch((error) => {
+                console.warn('No se pudo convertir el PDF a ArrayBuffer.', error)
+              }),
+          )
+        }
+
+        if (typeof pdf.getBase64 === 'function') {
+          tasks.push(new Promise((res) => {
+            pdf.getBase64((base64) => {
+              result.base64 = base64
+              result.dataUrl = `data:application/pdf;base64,${base64}`
+              res()
+            })
+          }))
+        }
+
+        const waitFor = tasks.length ? Promise.all(tasks) : Promise.resolve()
+        waitFor
+          .then(() => resolve(result))
+          .catch(reject)
+      })
+    } catch (error) {
+      reject(error)
+    }
+  })
 }
