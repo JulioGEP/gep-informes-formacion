@@ -3,10 +3,15 @@ import { AuthContext } from "../App";
 
 const parseCredentials = (rawValue) => {
   if (!rawValue || typeof rawValue !== "string") {
+    if (import.meta.env.DEV) {
+      console.warn(
+        "[Login] No se encontraron credenciales definidas en VITE_AUTHORIZED_USERS.",
+      );
+    }
     return {};
   }
 
-  return rawValue
+  const parsed = rawValue
     .split(/[,\n;]/)
     .map((entry) => entry.trim())
     .filter(Boolean)
@@ -25,6 +30,14 @@ const parseCredentials = (rawValue) => {
 
       return accumulator;
     }, {});
+
+  if (import.meta.env.DEV && Object.keys(parsed).length === 0) {
+    console.warn(
+      "[Login] No se encontraron credenciales válidas en VITE_AUTHORIZED_USERS.",
+    );
+  }
+
+  return parsed;
 };
 
 export default function Login() {
@@ -63,7 +76,7 @@ export default function Login() {
       return;
     }
 
-    setError("Credenciales no válidas. Revisa la información proporcionada.");
+    setError("Si has olvidado la contraseña ponte en contacto con Jaime para que la den.");
   };
 
   return (
@@ -81,7 +94,7 @@ export default function Login() {
           )}
           {!isConfigured && (
             <div className="alert alert-warning" role="alert">
-              No hay credenciales configuradas en el entorno. Contacta con la persona administradora.
+              No hay credenciales configuradas en el entorno. Si necesitas acceso, ponte en contacto con Jaime.
             </div>
           )}
           <form className="d-grid gap-3" onSubmit={handleSubmit}>
