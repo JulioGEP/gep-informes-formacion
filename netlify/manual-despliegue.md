@@ -4,6 +4,13 @@
 
 La aplicación utiliza un flujo de autenticación basado en tokens corporativos. Las credenciales válidas se definen mediante una variable de entorno que Netlify inyecta en el build (`VITE_AUTHORIZED_USERS`). Cada par `correo:token` habilita el acceso a una persona usuaria.
 
+Además, las funciones serverless encargadas de consultar Pipedrive y generar informes (`/.netlify/functions/getDeal` y `/.netlify/functions/generateReport`) validan las peticiones mediante un **token compartido**. Para que el backend y el frontend permanezcan sincronizados hay que configurar dos variables con el mismo valor:
+
+- `REPORTS_API_TOKEN`: se lee en el entorno del _runtime_ de Netlify y protege las funciones serverless.
+- `VITE_REPORTS_API_TOKEN`: se inyecta en el bundle del frontend para que las peticiones incluyan la cabecera `Authorization`.
+
+> ⚠️ **Importante:** ambos valores deben ser idénticos. Si se actualiza uno hay que actualizar el otro y volver a desplegar el sitio para que Vite reconstruya el frontend con el token nuevo.
+
 ### Alta o edición de usuarios autorizados
 
 1. Accede a Netlify y selecciona el sitio correspondiente.
@@ -20,6 +27,19 @@ La aplicación utiliza un flujo de autenticación basado en tokens corporativos.
 4. Guarda los cambios y despliega nuevamente el sitio para que Vite recompile con los nuevos valores. Un _trigger_ manual de deploy desde **Deploys → Trigger deploy → Deploy site** es suficiente.
    - Mientras migras la configuración, la aplicación seguirá aceptando la variable histórica `VITE_ACCESS_TOKEN`, pero se recomienda unificar todo en `VITE_AUTHORIZED_USERS`.
 5. Comunica el token asignado a cada persona por un canal seguro.
+
+### Token compartido para informes
+
+1. Accede a **Site settings → Build & deploy → Environment → Environment variables**.
+2. Crea o edita `REPORTS_API_TOKEN` con un valor aleatorio y seguro. Este token solo debe compartirse con quienes necesiten
+   consumir las funciones de informes.
+3. Crea o edita `VITE_REPORTS_API_TOKEN` reutilizando **exactamente** el mismo valor que en el paso anterior para que el
+   frontend pueda firmar las peticiones.
+4. Guarda los cambios y lanza un nuevo despliegue (por ejemplo desde **Deploys → Trigger deploy → Deploy site**) para que el
+   bundle de Vite incluya el token actualizado.
+5. Una vez completado el deploy, verifica que la función responde con éxito realizando una petición `POST` a
+   `/.netlify/functions/getDeal` con un `dealId` válido y la cabecera `Authorization: Bearer <token>`. El endpoint debe
+   devolver `200` y los datos del negocio consultado.
 
 ### Revocación de tokens
 
