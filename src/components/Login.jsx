@@ -1,5 +1,6 @@
 import React, { useContext, useMemo, useState } from "react";
 import { AuthContext } from "../App";
+import logoNuevo from "../assets/logo-nuevo.png";
 
 const parseCredentials = (rawValue) => {
   if (!rawValue || typeof rawValue !== "string") {
@@ -108,6 +109,14 @@ export default function Login() {
     <div className="d-flex flex-column align-items-center py-5">
       <div className="card shadow-sm w-100" style={{ maxWidth: 420 }}>
         <div className="card-body">
+          <div className="d-flex justify-content-center mb-3">
+            <img
+              src={logoNuevo}
+              alt="Logotipo de GEP Group"
+              className="img-fluid"
+              style={{ maxWidth: 160 }}
+            />
+          </div>
           <h1 className="h4 mb-3 text-center">Accede a los informes</h1>
           <p className="text-muted small text-center mb-4">
             Introduce tu correo y la contraseña facilitada por el área de Sistemas.
