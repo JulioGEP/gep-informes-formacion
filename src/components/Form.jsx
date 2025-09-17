@@ -260,6 +260,7 @@ export default function Form({ initial, onNext, title = 'Informe de Formación',
                   preventivo: { ...d.preventivo, trabajos: e.target.value },
                 }))}
               />
+              <div className="form-text">Describe el trabajo que nos han pedido realizar.</div>
             </div>
             <div>
               <label className="form-label">Tareas</label>
@@ -273,6 +274,7 @@ export default function Form({ initial, onNext, title = 'Informe de Formación',
                   preventivo: { ...d.preventivo, tareas: e.target.value },
                 }))}
               />
+              <div className="form-text">Describe las tareas realizadas en función de los trabajos que teníamos que hacer.</div>
             </div>
             <div>
               <label className="form-label">Observaciones</label>
