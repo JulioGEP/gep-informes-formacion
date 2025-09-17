@@ -40,6 +40,18 @@ const stripHtml = (html) =>
     .replace(/\s+/g, ' ')
     .trim()
 
+const sanitizeTagValue = (value) => {
+  if (value === undefined || value === null) return null
+  const normalized = String(value)
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .replace(/[^A-Za-z0-9_-]+/g, '_')
+    .replace(/_{2,}/g, '_')
+    .replace(/^_|_$/g, '')
+    .slice(0, 64)
+  return normalized ? normalized : null
+}
+
 const resolvePdfBase64 = (pdf = {}) => {
   if (pdf.base64 && typeof pdf.base64 === 'string') {
     return pdf.base64.trim()
@@ -90,9 +102,12 @@ const buildPayload = ({
   }
 
   const tags = []
-  if (metadata?.dealId) tags.push({ name: 'deal_id', value: String(metadata.dealId) })
-  if (metadata?.type) tags.push({ name: 'informe_tipo', value: String(metadata.type) })
-  if (metadata?.cliente) tags.push({ name: 'cliente', value: String(metadata.cliente).slice(0, 64) })
+  const dealIdTag = sanitizeTagValue(metadata?.dealId)
+  if (dealIdTag) tags.push({ name: 'deal_id', value: dealIdTag })
+  const typeTag = sanitizeTagValue(metadata?.type)
+  if (typeTag) tags.push({ name: 'informe_tipo', value: typeTag })
+  const clienteTag = sanitizeTagValue(metadata?.cliente)
+  if (clienteTag) tags.push({ name: 'cliente', value: clienteTag })
   if (tags.length) payload.tags = tags
 
   return payload
