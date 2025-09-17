@@ -15,22 +15,52 @@ const getReportsAuthHeaders = () => {
 
 const collectEmails = (value) => {
   if (!value) return { valid: [], invalid: [] }
+
   const items = Array.isArray(value)
     ? value
     : String(value)
-        .split(/[\s,;]+/)
+        .split(/[\n,;]+/)
         .map((item) => item.trim())
         .filter(Boolean)
 
   const valid = []
   const invalid = []
+  const seen = new Set()
   const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
+  const emailFinderRegex = /[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,}/gi
 
-  items.forEach((item) => {
-    if (emailRegex.test(item)) {
-      if (!valid.includes(item)) valid.push(item)
-    } else if (!invalid.includes(item)) {
-      invalid.push(item)
+  items.forEach((rawItem) => {
+    const trimmed = rawItem.trim()
+    if (!trimmed) return
+
+    const matches = Array.from(trimmed.matchAll(emailFinderRegex)).map((match) =>
+      match[0].replace(/^['"<]+|['">]+$/g, '').trim()
+    )
+
+    if (matches.length > 0) {
+      matches.forEach((email) => {
+        if (!email) return
+        const dedupeKey = email.toLowerCase()
+        if (emailRegex.test(email) && !seen.has(dedupeKey)) {
+          seen.add(dedupeKey)
+          valid.push(email)
+        }
+      })
+      return
+    }
+
+    const candidate = trimmed.replace(/^['"<]+|['">]+$/g, '')
+    if (emailRegex.test(candidate)) {
+      const dedupeKey = candidate.toLowerCase()
+      if (!seen.has(dedupeKey)) {
+        seen.add(dedupeKey)
+        valid.push(candidate)
+      }
+      return
+    }
+
+    if (!invalid.includes(trimmed)) {
+      invalid.push(trimmed)
     }
   })
 
