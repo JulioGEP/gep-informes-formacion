@@ -131,16 +131,21 @@ export default function Login() {
               No hay credenciales configuradas en el entorno. Si necesitas acceso, ponte en contacto con Jaime.
             </div>
           )}
-          <form className="d-grid gap-3" onSubmit={handleSubmit}>
+          <form
+            className="d-grid gap-3"
+            onSubmit={handleSubmit}
+            autoComplete="on"
+          >
             <div className="d-grid gap-2">
               <label className="form-label" htmlFor="login-email">
                 Correo
               </label>
               <input
                 id="login-email"
+                name="email"
                 type="email"
                 className="form-control"
-                autoComplete="email"
+                autoComplete="username"
                 value={email}
                 onChange={(event) => setEmail(event.target.value)}
                 required
@@ -153,6 +158,7 @@ export default function Login() {
               <div className="input-group">
                 <input
                   id="login-token"
+                  name="password"
                   type={isTokenVisible ? "text" : "password"}
                   className="form-control"
                   autoComplete="current-password"
