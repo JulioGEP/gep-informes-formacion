@@ -10,7 +10,7 @@ const cors = {
 
 const GMAIL_SCOPES = ['https://www.googleapis.com/auth/gmail.send']
 
-const DEFAULT_SENDER_EMAIL = 'formacion@gepgroup.es'
+const DEFAULT_SENDER_EMAIL = 'julio@gepgroup.es'
 const ENV_SENDER_EMAIL =
   typeof process.env.GMAIL_SENDER === 'string' ? process.env.GMAIL_SENDER.trim() : ''
 const SENDER_EMAIL = ENV_SENDER_EMAIL || DEFAULT_SENDER_EMAIL
