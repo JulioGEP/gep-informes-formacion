@@ -352,9 +352,11 @@ export default function Preview(props) {
       alert('No se ha podido generar el PDF.')
     }
   }
-  const handleOpenEmailModal = () => {
-    if (!pdfForModal) return
-    setShowEmailModal(true)
+  const descargarPDFyEnviar = async () => {
+    const pdf = await descargarPDF()
+    if (pdf) {
+      setShowEmailModal(true)
+    }
   }
 
   const handleEmailSuccess = (info) => {
@@ -401,13 +403,8 @@ export default function Preview(props) {
             </button>
           )}
           {aiHtml && (
-            <button className="btn btn-success" onClick={descargarPDF} disabled={!tieneContenido}>
-              Descargar PDF
-            </button>
-          )}
-          {pdfForModal && (
-            <button className="btn btn-primary" onClick={handleOpenEmailModal} disabled={!tieneContenido}>
-              Enviar por email
+            <button className="btn btn-success" onClick={descargarPDFyEnviar} disabled={!tieneContenido}>
+              Descargar PDF y Enviar
             </button>
           )}
         </div>
@@ -616,13 +613,8 @@ export default function Preview(props) {
           </button>
         )}
         {aiHtml && (
-          <button className="btn btn-success" onClick={descargarPDF} disabled={!tieneContenido}>
-            Descargar PDF
-          </button>
-        )}
-        {pdfForModal && (
-          <button className="btn btn-primary" onClick={handleOpenEmailModal} disabled={!tieneContenido}>
-            Enviar por email
+          <button className="btn btn-success" onClick={descargarPDFyEnviar} disabled={!tieneContenido}>
+            Descargar PDF y Enviar
           </button>
         )}
       </div>
