@@ -189,8 +189,6 @@ export default function SendEmailModal({
 
   const formadorNombre = (draft?.datos?.formadorNombre || draft?.formador?.nombre || '').trim()
   const tipoInforme = (draft?.type || draft?.datos?.tipo || '').toLowerCase()
-  const pdfFileName = pdf?.fileName || 'informe.pdf'
-
   const defaultMessage = useMemo(() => {
     let responsableFallback = 'el formador'
     if (tipoInforme === 'simulacro') responsableFallback = 'el auditor'
@@ -211,12 +209,10 @@ export default function SendEmailModal({
       'Muchas gracias',
       '',
       'GEP Group — Formación y Servicios',
-      '',
-      pdfFileName,
     ]
 
     return lines.join('\n')
-  }, [cliente, contacto, dealId, formadorNombre, pdfFileName, tipoInforme])
+  }, [cliente, contacto, dealId, formadorNombre, tipoInforme])
 
   useEffect(() => {
     if (show) {
