@@ -1,4 +1,5 @@
-import React, { useEffect, useMemo, useState } from 'react'
+import React, { useContext, useEffect, useMemo, useState } from 'react'
+import { AuthContext } from '../App'
 
 let warnedMissingReportsToken = false
 const getReportsAuthHeaders = () => {
@@ -115,7 +116,7 @@ const resolveComercialEmail = (comercial) => {
     case 'jero riera':
       return 'jero@gepgroup.es'
     case 'julio garcia':
-      return 'julio@gepgroup.es'
+      return 'elsa@gepgroup.es'
     default:
       return 'sales@gepgroup.es'
   }
@@ -137,6 +138,8 @@ export default function SendEmailModal({
   const [sending, setSending] = useState(false)
   const [error, setError] = useState(null)
 
+  const { user } = useContext(AuthContext)
+
   const dealId = draft?.dealId || ''
   const cliente = draft?.datos?.cliente || ''
   const fecha = draft?.datos?.fecha || ''
@@ -145,12 +148,23 @@ export default function SendEmailModal({
 
   const defaultTo = 'jaime@gepgroup.es'
 
+  const loggedUserEmail = useMemo(() => String(user?.email || '').trim(), [user])
+  const comercialEmail = useMemo(() => resolveComercialEmail(comercial), [comercial])
+
   const defaultCc = useMemo(() => {
-    const email = resolveComercialEmail(comercial)
-    const displayName = comercial.trim()
-    if (!displayName) return email
-    return `${displayName} <${email}>`
-  }, [comercial])
+    const recipients = []
+
+    if (comercialEmail) {
+      const displayName = String(comercial || '').trim()
+      recipients.push(displayName ? `${displayName} <${comercialEmail}>` : comercialEmail)
+    }
+
+    if (loggedUserEmail) {
+      recipients.push(loggedUserEmail)
+    }
+
+    return recipients.join('\n')
+  }, [comercial, comercialEmail, loggedUserEmail])
 
   const formattedDate = useMemo(() => {
     if (!fecha) return ''
