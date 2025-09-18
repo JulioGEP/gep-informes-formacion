@@ -217,30 +217,45 @@ const buildMimeMessage = (payload) => {
 
 const isLikelyBase64 = (value) => /^[A-Za-z0-9+/=\s]+$/.test(value)
 
+const extractPrivateKeyFromJson = (value) => {
+  if (!value) return ''
+
+  try {
+    const parsed = typeof value === 'string' ? JSON.parse(value) : value
+    if (parsed && typeof parsed === 'object') {
+      const key =
+        parsed.private_key ||
+        parsed.privateKey ||
+        parsed.credentials?.private_key ||
+        parsed.credentials?.privateKey ||
+        ''
+      return typeof key === 'string' ? key.trim() : ''
+    }
+  } catch (error) {
+    console.error('[sendReportEmail] Failed to parse private key JSON:', error)
+  }
+
+  return ''
+}
+
 const resolvePrivateKey = (rawValue) => {
   if (!rawValue) return ''
 
   let candidate = String(rawValue).trim()
   if (!candidate) return ''
 
-  if (candidate.startsWith('{') && candidate.endsWith('}')) {
-    try {
-      const parsed = JSON.parse(candidate)
-      candidate = String(parsed.private_key || parsed.privateKey || '').trim()
-    } catch (error) {
-      console.error('[sendReportEmail] Failed to parse private key JSON:', error)
-      return ''
-    }
+  const extractedFromJson = extractPrivateKeyFromJson(candidate)
+  if (extractedFromJson) {
+    candidate = extractedFromJson
   }
 
   if (!candidate) return ''
 
   if (!candidate.includes('PRIVATE KEY') && isLikelyBase64(candidate)) {
     try {
-      const decoded = Buffer.from(candidate.replace(/\s+/g, ''), 'base64').toString('utf8')
-      if (decoded.includes('PRIVATE KEY')) {
-        candidate = decoded.trim()
-      }
+      const decoded = Buffer.from(candidate.replace(/\s+/g, ''), 'base64').toString('utf8').trim()
+      const decodedFromJson = extractPrivateKeyFromJson(decoded)
+      candidate = decodedFromJson || decoded
     } catch (error) {
       console.error('[sendReportEmail] Failed to decode base64 private key:', error)
     }
