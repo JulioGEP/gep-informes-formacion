@@ -1,3 +1,4 @@
+import { createPrivateKey } from 'crypto'
 import { google } from 'googleapis'
 
 const ALLOWED_ORIGIN = process.env.REPORTS_ALLOWED_ORIGIN || 'https://www.gepservices.es'
@@ -238,10 +239,69 @@ const extractPrivateKeyFromJson = (value) => {
   return ''
 }
 
+const chunkString = (value, size = 64) => {
+  const result = []
+  for (let index = 0; index < value.length; index += size) {
+    result.push(value.slice(index, index + size))
+  }
+  return result.join('\n')
+}
+
+const normalizePrivateKeyPem = (value) => {
+  if (!value) return ''
+
+  const trimmed = String(value)
+    .trim()
+    .replace(/\r/g, '')
+    .replace(/\\n/g, '\n')
+
+  if (!trimmed.includes('PRIVATE KEY')) return ''
+
+  const headerMatch = trimmed.match(/-----BEGIN ([^-]+)-----/)
+  const footerMatch = trimmed.match(/-----END ([^-]+)-----/)
+
+  if (!headerMatch || !footerMatch) return ''
+
+  const header = headerMatch[0]
+  const footer = footerMatch[0]
+
+  if (headerMatch[1] !== footerMatch[1]) return ''
+
+  const start = trimmed.indexOf(header) + header.length
+  const end = trimmed.indexOf(footer)
+
+  if (start < 0 || end <= start) return ''
+
+  const body = trimmed
+    .slice(start, end)
+    .replace(/[^A-Za-z0-9+/=]+/g, '')
+
+  if (!body) return ''
+
+  const normalizedBody = chunkString(body, 64)
+
+  return `${header}\n${normalizedBody}\n${footer}\n`
+}
+
+const validatePrivateKey = (value) => {
+  if (!value) return ''
+
+  try {
+    createPrivateKey({ key: value, format: 'pem' })
+    return value
+  } catch (error) {
+    console.error('[sendReportEmail] Provided private key is invalid or unsupported:', error)
+    return ''
+  }
+}
+
 const resolvePrivateKey = (rawValue) => {
   if (!rawValue) return ''
 
   let candidate = String(rawValue).trim()
+  if ((candidate.startsWith('"') && candidate.endsWith('"')) || (candidate.startsWith("'") && candidate.endsWith("'"))) {
+    candidate = candidate.slice(1, -1)
+  }
   if (!candidate) return ''
 
   const extractedFromJson = extractPrivateKeyFromJson(candidate)
@@ -253,7 +313,9 @@ const resolvePrivateKey = (rawValue) => {
 
   if (!candidate.includes('PRIVATE KEY') && isLikelyBase64(candidate)) {
     try {
-      const decoded = Buffer.from(candidate.replace(/\s+/g, ''), 'base64').toString('utf8').trim()
+      const decoded = Buffer.from(candidate.replace(/\s+/g, ''), 'base64')
+        .toString('utf8')
+        .trim()
       const decodedFromJson = extractPrivateKeyFromJson(decoded)
       candidate = decodedFromJson || decoded
     } catch (error) {
@@ -261,9 +323,9 @@ const resolvePrivateKey = (rawValue) => {
     }
   }
 
-  candidate = candidate.replace(/\\n/g, '\n').replace(/\r\n/g, '\n')
+  const normalizedPem = normalizePrivateKeyPem(candidate)
 
-  return candidate.includes('PRIVATE KEY') ? candidate : ''
+  return validatePrivateKey(normalizedPem)
 }
 
 const encodeBase64Url = (input) =>
