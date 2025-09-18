@@ -215,6 +215,42 @@ const buildMimeMessage = (payload) => {
   return lines.join('\r\n')
 }
 
+const isLikelyBase64 = (value) => /^[A-Za-z0-9+/=\s]+$/.test(value)
+
+const resolvePrivateKey = (rawValue) => {
+  if (!rawValue) return ''
+
+  let candidate = String(rawValue).trim()
+  if (!candidate) return ''
+
+  if (candidate.startsWith('{') && candidate.endsWith('}')) {
+    try {
+      const parsed = JSON.parse(candidate)
+      candidate = String(parsed.private_key || parsed.privateKey || '').trim()
+    } catch (error) {
+      console.error('[sendReportEmail] Failed to parse private key JSON:', error)
+      return ''
+    }
+  }
+
+  if (!candidate) return ''
+
+  if (!candidate.includes('PRIVATE KEY') && isLikelyBase64(candidate)) {
+    try {
+      const decoded = Buffer.from(candidate.replace(/\s+/g, ''), 'base64').toString('utf8')
+      if (decoded.includes('PRIVATE KEY')) {
+        candidate = decoded.trim()
+      }
+    } catch (error) {
+      console.error('[sendReportEmail] Failed to decode base64 private key:', error)
+    }
+  }
+
+  candidate = candidate.replace(/\\n/g, '\n').replace(/\r\n/g, '\n')
+
+  return candidate.includes('PRIVATE KEY') ? candidate : ''
+}
+
 const encodeBase64Url = (input) =>
   Buffer.from(input, 'utf8')
     .toString('base64')
@@ -224,14 +260,22 @@ const encodeBase64Url = (input) =>
 
 const sendViaGmail = async (payload) => {
   const clientEmail = process.env.GMAIL_CLIENT_EMAIL || ''
-  const privateKeyRaw = process.env.GMAIL_PRIVATE_KEY || ''
+  const privateKeyRaw =
+    process.env.GMAIL_PRIVATE_KEY ||
+    process.env.GMAIL_PRIVATE_KEY_JSON ||
+    process.env.GMAIL_PRIVATE_KEY_BASE64 ||
+    ''
   const sender = SENDER_EMAIL
 
   if (!clientEmail || !privateKeyRaw || !sender) {
     throw new Error('Gmail API not configured')
   }
 
-  const privateKey = privateKeyRaw.replace(/\\n/g, '\n')
+  const privateKey = resolvePrivateKey(privateKeyRaw)
+
+  if (!privateKey) {
+    throw new Error('Gmail API private key inválida o no configurada')
+  }
 
   const auth = new google.auth.JWT({
     email: clientEmail,
