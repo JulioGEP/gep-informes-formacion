@@ -10,6 +10,11 @@ const cors = {
 
 const GMAIL_SCOPES = ['https://www.googleapis.com/auth/gmail.send']
 
+const DEFAULT_SENDER_EMAIL = 'formacion@gepgroup.es'
+const ENV_SENDER_EMAIL =
+  typeof process.env.GMAIL_SENDER === 'string' ? process.env.GMAIL_SENDER.trim() : ''
+const SENDER_EMAIL = ENV_SENDER_EMAIL || DEFAULT_SENDER_EMAIL
+
 const parseList = (value) => {
   if (!value) return []
   const items = Array.isArray(value) ? value : String(value).split(/[\s,;]+/)
@@ -220,7 +225,7 @@ const encodeBase64Url = (input) =>
 const sendViaGmail = async (payload) => {
   const clientEmail = process.env.GMAIL_CLIENT_EMAIL || ''
   const privateKeyRaw = process.env.GMAIL_PRIVATE_KEY || ''
-  const sender = process.env.GMAIL_SENDER || ''
+  const sender = SENDER_EMAIL
 
   if (!clientEmail || !privateKeyRaw || !sender) {
     throw new Error('Gmail API not configured')
@@ -290,8 +295,12 @@ export const handler = async (event) => {
 
     const pdfBase64 = resolvePdfBase64(body.pdf)
 
-    const from = process.env.GMAIL_SENDER || ''
-    const replyTo = body.replyTo || process.env.GMAIL_REPLY_TO || process.env.REPORTS_EMAIL_REPLY_TO || ''
+    const from = SENDER_EMAIL
+    const replyTo =
+      body.replyTo ||
+      process.env.GMAIL_REPLY_TO ||
+      process.env.REPORTS_EMAIL_REPLY_TO ||
+      SENDER_EMAIL
 
     const textMessage = typeof body.message === 'string' ? body.message : ''
     const htmlMessage = typeof body.html === 'string' ? body.html : ''
