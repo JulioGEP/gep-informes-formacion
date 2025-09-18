@@ -173,22 +173,36 @@ export default function SendEmailModal({
     return pieces.join(' · ') || 'Informe GEP'
   }, [title, cliente, formattedDate, dealId])
 
+  const formadorNombre = (draft?.datos?.formadorNombre || draft?.formador?.nombre || '').trim()
+  const tipoInforme = (draft?.type || draft?.datos?.tipo || '').toLowerCase()
+  const pdfFileName = pdf?.fileName || 'informe.pdf'
+
   const defaultMessage = useMemo(() => {
-    const greeting = contacto ? `Hola ${contacto},` : 'Hola,'
-    const mainLine = dealId
-      ? `Adjuntamos el informe correspondiente al presupuesto ${dealId}.`
-      : 'Adjuntamos el informe correspondiente.'
+    let responsableFallback = 'el formador'
+    if (tipoInforme === 'simulacro') responsableFallback = 'el auditor'
+    else if (tipoInforme === 'preventivo') responsableFallback = 'el bombero'
+
+    const responsable = formadorNombre || responsableFallback
+    const presupuesto = dealId || 'N/A'
+    const destinatario = contacto || 'N/A'
+    const empresa = cliente || 'N/A'
+
     const lines = [
-      greeting,
+      'Hola',
       '',
-      mainLine,
-      'Si necesitas cualquier aclaración o modificación, indícanoslo.',
+      `Informe realizado por ${responsable}`,
+      `Adjunto Informe referente al presupuesto ${presupuesto}`,
+      `Hazlo llegar a ${destinatario} de la empresa ${empresa}`,
       '',
-      'Un saludo,',
+      'Muchas gracias',
+      '',
       'GEP Group — Formación y Servicios',
+      '',
+      pdfFileName,
     ]
+
     return lines.join('\n')
-  }, [contacto, dealId])
+  }, [cliente, contacto, dealId, formadorNombre, pdfFileName, tipoInforme])
 
   useEffect(() => {
     if (show) {
