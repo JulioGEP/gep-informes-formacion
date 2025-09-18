@@ -16,6 +16,13 @@ const ENV_SENDER_EMAIL =
   typeof process.env.GMAIL_SENDER === 'string' ? process.env.GMAIL_SENDER.trim() : ''
 const SENDER_EMAIL = ENV_SENDER_EMAIL || DEFAULT_SENDER_EMAIL
 
+const DEFAULT_SENDER_NAME = 'Informes GEPCO'
+const ENV_SENDER_NAME =
+  typeof process.env.GMAIL_SENDER_NAME === 'string'
+    ? process.env.GMAIL_SENDER_NAME.trim()
+    : ''
+const SENDER_NAME = ENV_SENDER_NAME || DEFAULT_SENDER_NAME
+
 const parseList = (value) => {
   if (!value) return []
   const items = Array.isArray(value) ? value : String(value).split(/[\s,;]+/)
@@ -147,6 +154,16 @@ const encodeHeaderValue = (value) => {
   return /[\u007f-\uffff]/.test(safe)
     ? `=?UTF-8?B?${Buffer.from(safe, 'utf8').toString('base64')}?=`
     : safe
+}
+
+const formatEmailAddress = (email, name) => {
+  const normalizedEmail = String(email || '').trim()
+  if (!normalizedEmail) return ''
+
+  const normalizedName = typeof name === 'string' ? name.trim() : ''
+  if (!normalizedName) return normalizedEmail
+
+  return `${encodeHeaderValue(normalizedName)} <${normalizedEmail}>`
 }
 
 const buildMimeMessage = (payload) => {
@@ -416,12 +433,20 @@ export const handler = async (event) => {
 
     const pdfBase64 = resolvePdfBase64(body.pdf)
 
-    const from = SENDER_EMAIL
-    const replyTo =
+    const from = formatEmailAddress(SENDER_EMAIL, SENDER_NAME)
+    const replyToRaw =
       body.replyTo ||
       process.env.GMAIL_REPLY_TO ||
       process.env.REPORTS_EMAIL_REPLY_TO ||
       SENDER_EMAIL
+    const normalizedReplyTo = String(replyToRaw || '').trim()
+    const shouldFormatReplyTo =
+      Boolean(normalizedReplyTo) &&
+      !normalizedReplyTo.includes('<') &&
+      normalizedReplyTo.toLowerCase() === SENDER_EMAIL.toLowerCase()
+    const replyTo = shouldFormatReplyTo
+      ? formatEmailAddress(SENDER_EMAIL, SENDER_NAME)
+      : replyToRaw
 
     const textMessage = typeof body.message === 'string' ? body.message : ''
     const htmlMessage = typeof body.html === 'string' ? body.html : ''
