@@ -246,9 +246,6 @@ const buildDocDefinition = ({
 }) => {
   const teorica = bullet(datos?.contenidoTeorica)
   const practica = bullet(datos?.contenidoPractica)
-
-  const crono = (datos?.cronologia || []).map(c => `${c.hora || ''} ${c.texto || ''}`.trim())
-
   const imageRows = chunk(imagenes || [], 2).map((row) => ({
     columns: row.map((img) => ({
       stack: [
@@ -319,10 +316,6 @@ const buildDocDefinition = ({
           margin:[0,8,0,0],
         },
         { text:'DESARROLLO Y ANÁLISIS', style:'h2' },
-        { text:'Desarrollo', style:'h3' },
-        { text: datos?.desarrollo || '—', margin:[0,0,0,6] },
-        { text:'Cronología', style:'h3' },
-        ...(crono.length ? [{ ol: crono }] : [{ text:'—' }]),
         ...(aiContent ? [{ id:'informeTecnico', stack:Array.isArray(aiContent)?aiContent:[aiContent] }] : []),
         { text:'Evaluación Cualitativa', style:'h2', color:'#000', margin:[0,14,0,6] },
         {
@@ -357,8 +350,6 @@ const buildDocDefinition = ({
     const idioma = (datos?.idioma || formador?.idioma || 'ES').toUpperCase()
     const labels = preventivoPdfLabels[idioma] || preventivoPdfLabels.ES
     const idiomaTexto = idioma === 'CA' ? 'Català' : idioma === 'EN' ? 'English' : 'Castellano'
-    const prev = datos?.preventivo || {}
-
     return {
       pageSize: 'A4',
       pageMargins: [58,110,58,90],
@@ -424,14 +415,6 @@ const buildDocDefinition = ({
           layout:{ hLineWidth:()=>0, vLineWidth:()=>0, paddingTop:()=>0, paddingBottom:()=>0, paddingLeft:()=>0, paddingRight:()=>0 },
           margin:[0,8,0,0],
         },
-        { text: labels.trabajos, style:'h2' },
-        { text: prev.trabajos || '—', margin:[0,0,0,6] },
-        { text: labels.tareas, style:'h2' },
-        { text: prev.tareas || '—', margin:[0,0,0,6] },
-        { text: labels.observaciones, style:'h2' },
-        { text: prev.observaciones || '—', margin:[0,0,0,6] },
-        { text: labels.incidencias, style:'h2' },
-        { text: prev.incidencias || '—', margin:[0,0,0,12] },
         ...(aiContent ? [{ id:'informeTecnico', stack:Array.isArray(aiContent)?aiContent:[aiContent] }] : []),
         { text:'Atentamente,', margin:[0,18,0,2] },
         { text:'Jaime Martret', style:'k' },
