@@ -181,7 +181,6 @@ const preventivoPdfLabels = {
     firma: 'Firma',
     anexos: 'Anexo de imágenes',
     bombero: 'Bombero/a',
-    idioma: 'Idioma',
     presupuesto: 'Nº Presupuesto',
     cliente: 'Cliente',
     cif: 'CIF',
@@ -202,7 +201,6 @@ const preventivoPdfLabels = {
     firma: 'Signatura',
     anexos: "Annex d'imatges",
     bombero: 'Bomber/a',
-    idioma: 'Idioma',
     presupuesto: 'Núm. de pressupost',
     cliente: 'Client',
     cif: 'NIF/CIF',
@@ -223,7 +221,6 @@ const preventivoPdfLabels = {
     firma: 'Signature',
     anexos: 'Image annex',
     bombero: 'Firefighter',
-    idioma: 'Language',
     presupuesto: 'Budget ID',
     cliente: 'Customer',
     cif: 'Tax ID',
@@ -356,7 +353,6 @@ const buildDocDefinition = ({
   if (datos?.tipo === 'preventivo') {
     const idioma = (datos?.idioma || formador?.idioma || 'ES').toUpperCase()
     const labels = preventivoPdfLabels[idioma] || preventivoPdfLabels.ES
-    const idiomaTexto = idioma === 'CA' ? 'Català' : idioma === 'EN' ? 'English' : 'Castellano'
     const prev = datos?.preventivo || {}
 
     return {
@@ -407,7 +403,6 @@ const buildDocDefinition = ({
                       stack: [
                         { text: labels.registro, style:'h4', margin:[0,0,0,4] },
                         { columns: kv(labels.bombero, formador?.nombre) },
-                        { columns: kv(labels.idioma, idiomaTexto) },
                         { columns: kv(labels.fecha, datos?.fecha) },
                         { columns: kv(labels.contacto, datos?.contacto) },
                         { columns: kv(labels.comercial, datos?.comercial) },

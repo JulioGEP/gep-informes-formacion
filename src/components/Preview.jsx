@@ -215,7 +215,6 @@ export default function Preview(props) {
   const isSimulacro = type === 'simulacro'
   const isPreventivo = type === 'preventivo'
   const idioma = (datos?.idioma || formador?.idioma || 'ES').toUpperCase()
-  const idiomaLabel = idioma === 'CA' ? 'Català' : idioma === 'EN' ? 'English' : 'Castellano'
   const preventivoLabels = preventivoHeadings[idioma] || preventivoHeadings.ES
   const preventivoCard = preventivoCardLabels[idioma] || preventivoCardLabels.ES
   const direccionSedeLabel = isPreventivo
@@ -452,9 +451,6 @@ export default function Preview(props) {
                   </div>
                   <div className="col-12">
                     <strong>{isPreventivo ? preventivoCard.fecha : 'Fecha'}:</strong> {datos?.fecha || '—'}
-                  </div>
-                  <div className="col-12">
-                    <strong>Idioma:</strong> {idiomaLabel}
                   </div>
                   {!isPreventivo && (
                     <>
