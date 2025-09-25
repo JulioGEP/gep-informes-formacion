@@ -39,8 +39,19 @@ export async function handler(event) {
 
   try {
     if (!TOKEN) throw new Error('Missing PIPEDRIVE_API_TOKEN');
-    const { dealId } = JSON.parse(event.body || '{}');
-    if (!dealId) throw new Error('dealId is required');
+    const payload = JSON.parse(event.body || '{}');
+    const rawDealId = payload?.dealId;
+    const normalizedDealId =
+      typeof rawDealId === 'number'
+        ? String(rawDealId)
+        : typeof rawDealId === 'string'
+          ? rawDealId.trim()
+          : '';
+
+    if (!normalizedDealId) throw new Error('dealId is required');
+    if (!/^\d+$/.test(normalizedDealId)) throw new Error('dealId must be numeric');
+
+    const dealId = normalizedDealId;
 
     // Deal
     const dealRes = await fetch(`${BASE}/deals/${encodeURIComponent(dealId)}?api_token=${TOKEN}`);
