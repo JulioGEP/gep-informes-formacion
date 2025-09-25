@@ -105,7 +105,11 @@ export default function Form({ initial, onNext, title = 'Informe de Formación',
     try {
       const r = await fetch('/.netlify/functions/getDeal', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json', ...getReportsAuthHeaders() },
+        headers: {
+          'Content-Type': 'application/json',
+          'X-Reports-Intent': 'deal-autocomplete',
+          ...getReportsAuthHeaders(),
+        },
         body: JSON.stringify({ dealId }),
       })
       const data = await r.json()

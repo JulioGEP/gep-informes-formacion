@@ -6,12 +6,28 @@ const DEAL_DIRECCION_INCOMPANY = '8b2a7570f5ba8aa4754f061cd9dc92fd778376a7';
 const ORG_CIF = '6d39d015a33921753410c1bab0b067ca93b8cf2c';
 
 const ALLOWED_ORIGIN = process.env.REPORTS_ALLOWED_ORIGIN || 'https://www.gepservices.es';
+const INTENT_HEADER = 'x-reports-intent';
+const EXPECTED_INTENT = 'deal-autocomplete';
 
 const cors = {
   'Access-Control-Allow-Origin': ALLOWED_ORIGIN,
-  'Access-Control-Allow-Headers': 'authorization,content-type',
+  'Access-Control-Allow-Headers': 'authorization,content-type,x-reports-intent',
   'Access-Control-Expose-Headers': 'content-type',
+  'Access-Control-Allow-Methods': 'POST,OPTIONS',
 };
+
+const getHeader = (headers, name) => {
+  if (!headers || !name) return '';
+  const target = String(name).toLowerCase();
+  for (const [key, value] of Object.entries(headers)) {
+    if (typeof key === 'string' && key.toLowerCase() === target) {
+      return value || '';
+    }
+  }
+  return '';
+};
+
+const normalizeIntent = (value) => String(value || '').trim().toLowerCase();
 
 export async function handler(event) {
   if (event.httpMethod === 'OPTIONS') return { statusCode: 204, headers: cors };
@@ -27,13 +43,22 @@ export async function handler(event) {
     };
   }
 
-  const authHeader = event.headers?.authorization || event.headers?.Authorization || '';
+  const authHeader = getHeader(event.headers, 'authorization');
   const expectedHeader = `Bearer ${sharedSecret}`;
   if (authHeader !== expectedHeader) {
     return {
       statusCode: 401,
       headers: { 'Content-Type': 'application/json', ...cors },
       body: JSON.stringify({ error: 'Unauthorized' }),
+    };
+  }
+
+  const intentHeader = normalizeIntent(getHeader(event.headers, INTENT_HEADER));
+  if (intentHeader !== EXPECTED_INTENT) {
+    return {
+      statusCode: 400,
+      headers: { 'Content-Type': 'application/json', ...cors },
+      body: JSON.stringify({ error: 'Invalid request intent' }),
     };
   }
 
