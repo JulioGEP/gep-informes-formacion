@@ -25,6 +25,30 @@ const fileToDataURL = (file) =>
     reader.readAsDataURL(file)
   })
 
+const preventivoImageKeys = ['trabajos', 'tareas', 'observaciones', 'incidencias']
+const createEmptyPreventivoImagenes = () => ({
+  trabajos: [],
+  tareas: [],
+  observaciones: [],
+  incidencias: [],
+})
+const normalizePreventivoImagenes = (value) => {
+  const base = createEmptyPreventivoImagenes()
+  if (!value) return base
+  preventivoImageKeys.forEach((key) => {
+    if (Array.isArray(value?.[key])) {
+      base[key] = value[key].map((img) => ({ ...img }))
+    }
+  })
+  return base
+}
+const flattenPreventivoImagenes = (imagenesPorSeccion) => {
+  if (!imagenesPorSeccion) return []
+  return preventivoImageKeys.flatMap((key) =>
+    Array.isArray(imagenesPorSeccion?.[key]) ? imagenesPorSeccion[key].map((img) => ({ ...img })) : []
+  )
+}
+
 export default function Form({ initial, onNext, title = 'Informe de Formación', onChooseAnother, type = 'formacion' }) {
   const formRef = useRef(null)
 
@@ -42,12 +66,29 @@ export default function Form({ initial, onNext, title = 'Informe de Formación',
   const prevDealIdRef = useRef(dealId)
 
   const defaultComentarios = initial?.datos?.comentarios || { c11: '', c12: '', c13: '', c14: '', c15: '', c16: '', c17: '' }
-  const defaultPreventivo = initial?.datos?.preventivo || {
-    trabajos: initial?.datos?.comentarios?.c11 || '',
-    tareas: initial?.datos?.comentarios?.c12 || '',
-    observaciones: initial?.datos?.comentarios?.c13 || '',
-    incidencias: initial?.datos?.comentarios?.c14 || '',
+  let preventivoImagenesIniciales = createEmptyPreventivoImagenes()
+  if (isPreventivoEbro) {
+    preventivoImagenesIniciales = normalizePreventivoImagenes(initial?.datos?.preventivo?.imagenes)
+    const tieneImagenesIniciales = flattenPreventivoImagenes(preventivoImagenesIniciales).length > 0
+    if (!tieneImagenesIniciales && Array.isArray(initial?.imagenes) && initial.imagenes.length > 0) {
+      preventivoImagenesIniciales = {
+        ...preventivoImagenesIniciales,
+        trabajos: initial.imagenes.map((img) => ({ ...img })),
+      }
+    }
   }
+  const defaultPreventivo = initial?.datos?.preventivo
+    ? {
+        ...initial.datos.preventivo,
+        ...(isPreventivoEbro ? { imagenes: preventivoImagenesIniciales } : {}),
+      }
+    : {
+        trabajos: initial?.datos?.comentarios?.c11 || '',
+        tareas: initial?.datos?.comentarios?.c12 || '',
+        observaciones: initial?.datos?.comentarios?.c13 || '',
+        incidencias: initial?.datos?.comentarios?.c14 || '',
+        ...(isPreventivoEbro ? { imagenes: preventivoImagenesIniciales } : {}),
+      }
 
   const [datos, setDatos] = useState(() => ({
     cliente: initial?.datos?.cliente || '',
@@ -72,7 +113,9 @@ export default function Form({ initial, onNext, title = 'Informe de Formación',
     preventivo: defaultPreventivo,
   }))
 
-  const [imagenes, setImagenes] = useState(initial?.imagenes || [])
+  const [imagenes, setImagenes] = useState(() =>
+    isPreventivoEbro ? flattenPreventivoImagenes(preventivoImagenesIniciales) : (initial?.imagenes || [])
+  )
   const [selTitulo, setSelTitulo] = useState(isFormacion ? (datos.formacionTitulo || '') : '')
   const [loadingDeal, setLoadingDeal] = useState(false)
   const autoPrefillDoneRef = useRef(Boolean(initial?.dealId))
@@ -156,6 +199,65 @@ export default function Form({ initial, onNext, title = 'Informe de Formación',
     try { sessionStorage.setItem('tmpImages', JSON.stringify(list)) } catch {}
   }
 
+  const addPreventivoImagenes = (section) => async (e) => {
+    if (!isPreventivoEbro || !preventivoImageKeys.includes(section)) return
+    const files = Array.from(e.target.files || [])
+    if (!files.length) return
+    const nuevos = []
+    for (const f of files) nuevos.push({ name: f.name, dataUrl: await fileToDataURL(f) })
+    let nextImagenesPorSeccion
+    setDatos((d) => {
+      const prevImagenes = normalizePreventivoImagenes(d.preventivo?.imagenes)
+      nextImagenesPorSeccion = {
+        ...prevImagenes,
+        [section]: [...prevImagenes[section], ...nuevos],
+      }
+      return {
+        ...d,
+        preventivo: {
+          ...d.preventivo,
+          imagenes: nextImagenesPorSeccion,
+        },
+      }
+    })
+    if (nextImagenesPorSeccion) {
+      const flatten = flattenPreventivoImagenes(nextImagenesPorSeccion)
+      setImagenes(flatten)
+      try { sessionStorage.setItem('tmpImages', JSON.stringify(flatten)) } catch {}
+    }
+    e.target.value = ''
+  }
+
+  const removePreventivoImagen = (section, idx) => {
+    if (!isPreventivoEbro || !preventivoImageKeys.includes(section)) return
+    let nextImagenesPorSeccion
+    setDatos((d) => {
+      const prevImagenes = normalizePreventivoImagenes(d.preventivo?.imagenes)
+      nextImagenesPorSeccion = {
+        ...prevImagenes,
+        [section]: prevImagenes[section].filter((_, i) => i !== idx),
+      }
+      return {
+        ...d,
+        preventivo: {
+          ...d.preventivo,
+          imagenes: nextImagenesPorSeccion,
+        },
+      }
+    })
+    if (nextImagenesPorSeccion) {
+      const flatten = flattenPreventivoImagenes(nextImagenesPorSeccion)
+      setImagenes(flatten)
+      try { sessionStorage.setItem('tmpImages', JSON.stringify(flatten)) } catch {}
+    }
+  }
+
+  const getPreventivoImagenes = (section) => {
+    if (!preventivoImageKeys.includes(section)) return []
+    const arr = datos?.preventivo?.imagenes?.[section]
+    return Array.isArray(arr) ? arr : []
+  }
+
   // Cronología para simulacros
   const addCrono = () => {
     const now = new Date()
@@ -226,7 +328,10 @@ export default function Form({ initial, onNext, title = 'Informe de Formación',
         : datos.comentarios,
     }
 
-    onNext({ type, dealId, formador: { nombre: datos.formadorNombre, idioma: datos.idioma }, datos: nextDatos, imagenes })
+    const finalImagenes = isPreventivoEbro
+      ? flattenPreventivoImagenes(nextDatos.preventivo?.imagenes)
+      : imagenes
+    onNext({ type, dealId, formador: { nombre: datos.formadorNombre, idioma: datos.idioma }, datos: nextDatos, imagenes: finalImagenes })
   }
 
   const addTeorica = () => setDatos(d => ({ ...d, contenidoTeorica: [...(d.contenidoTeorica||[]), '' ] }))
@@ -278,6 +383,10 @@ export default function Form({ initial, onNext, title = 'Informe de Formación',
       </>
     )
   } else if (isPreventivo) {
+    const trabajosImagenes = getPreventivoImagenes('trabajos')
+    const tareasImagenes = getPreventivoImagenes('tareas')
+    const observacionesImagenes = getPreventivoImagenes('observaciones')
+    const incidenciasImagenes = getPreventivoImagenes('incidencias')
     mainSection = (
       <div>
         <h2 className="h5">Informe de preventivos</h2>
@@ -296,6 +405,38 @@ export default function Form({ initial, onNext, title = 'Informe de Formación',
                 }))}
               />
               <div className="form-text">Describe el trabajo que nos han pedido realizar.</div>
+              {isPreventivoEbro && (
+                <div className="mt-3">
+                  <label className="form-label">Imágenes de apoyo (opcional)</label>
+                  <input
+                    type="file"
+                    accept="image/*"
+                    multiple
+                    className="form-control"
+                    onChange={addPreventivoImagenes('trabajos')}
+                  />
+                  {trabajosImagenes.length > 0 && (
+                    <div className="mt-2 d-flex flex-wrap gap-2">
+                      {trabajosImagenes.map((img, idx) => (
+                        <div key={idx} className="border rounded p-1" style={{ width: 120 }}>
+                          <img src={img.dataUrl} alt={img.name} className="img-fluid rounded" />
+                          <div className="d-flex justify-content-between align-items-center mt-1">
+                            <small className="text-truncate" style={{ maxWidth: 80 }} title={img.name}>{img.name}</small>
+                            <button
+                              type="button"
+                              className="btn btn-sm btn-outline-danger"
+                              onClick={() => removePreventivoImagen('trabajos', idx)}
+                            >
+                              x
+                            </button>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                  <div className="form-text">Se añadirán al informe justo después de esta sección.</div>
+                </div>
+              )}
             </div>
             <div>
               <label className="form-label">Tareas</label>
@@ -310,6 +451,38 @@ export default function Form({ initial, onNext, title = 'Informe de Formación',
                 }))}
               />
               <div className="form-text">Describe las tareas realizadas en función de los trabajos que teníamos que hacer.</div>
+              {isPreventivoEbro && (
+                <div className="mt-3">
+                  <label className="form-label">Imágenes de apoyo (opcional)</label>
+                  <input
+                    type="file"
+                    accept="image/*"
+                    multiple
+                    className="form-control"
+                    onChange={addPreventivoImagenes('tareas')}
+                  />
+                  {tareasImagenes.length > 0 && (
+                    <div className="mt-2 d-flex flex-wrap gap-2">
+                      {tareasImagenes.map((img, idx) => (
+                        <div key={idx} className="border rounded p-1" style={{ width: 120 }}>
+                          <img src={img.dataUrl} alt={img.name} className="img-fluid rounded" />
+                          <div className="d-flex justify-content-between align-items-center mt-1">
+                            <small className="text-truncate" style={{ maxWidth: 80 }} title={img.name}>{img.name}</small>
+                            <button
+                              type="button"
+                              className="btn btn-sm btn-outline-danger"
+                              onClick={() => removePreventivoImagen('tareas', idx)}
+                            >
+                              x
+                            </button>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                  <div className="form-text">Se añadirán al informe justo después de esta sección.</div>
+                </div>
+              )}
             </div>
             <div>
               <label className="form-label">Observaciones</label>
@@ -323,6 +496,38 @@ export default function Form({ initial, onNext, title = 'Informe de Formación',
                   preventivo: { ...d.preventivo, observaciones: e.target.value },
                 }))}
               />
+              {isPreventivoEbro && (
+                <div className="mt-3">
+                  <label className="form-label">Imágenes de apoyo (opcional)</label>
+                  <input
+                    type="file"
+                    accept="image/*"
+                    multiple
+                    className="form-control"
+                    onChange={addPreventivoImagenes('observaciones')}
+                  />
+                  {observacionesImagenes.length > 0 && (
+                    <div className="mt-2 d-flex flex-wrap gap-2">
+                      {observacionesImagenes.map((img, idx) => (
+                        <div key={idx} className="border rounded p-1" style={{ width: 120 }}>
+                          <img src={img.dataUrl} alt={img.name} className="img-fluid rounded" />
+                          <div className="d-flex justify-content-between align-items-center mt-1">
+                            <small className="text-truncate" style={{ maxWidth: 80 }} title={img.name}>{img.name}</small>
+                            <button
+                              type="button"
+                              className="btn btn-sm btn-outline-danger"
+                              onClick={() => removePreventivoImagen('observaciones', idx)}
+                            >
+                              x
+                            </button>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                  <div className="form-text">Se añadirán al informe justo después de esta sección.</div>
+                </div>
+              )}
             </div>
             <div>
               <label className="form-label">Incidencias</label>
@@ -336,25 +541,59 @@ export default function Form({ initial, onNext, title = 'Informe de Formación',
                   preventivo: { ...d.preventivo, incidencias: e.target.value },
                 }))}
               />
-            </div>
-            <div>
-              <label className="form-label">Imágenes de apoyo (opcional)</label>
-              <input type="file" accept="image/*" multiple className="form-control" onChange={addImagenes} />
-              {imagenes.length > 0 && (
-                <div className="mt-2 d-flex flex-wrap gap-2">
-                  {imagenes.map((img, idx) => (
-                    <div key={idx} className="border rounded p-1" style={{ width: 120 }}>
-                      <img src={img.dataUrl} alt={img.name} className="img-fluid rounded" />
-                      <div className="d-flex justify-content-between align-items-center mt-1">
-                        <small className="text-truncate" style={{ maxWidth: 80 }} title={img.name}>{img.name}</small>
-                        <button type="button" className="btn btn-sm btn-outline-danger" onClick={()=>removeImagen(idx)}>x</button>
-                      </div>
+              {isPreventivoEbro && (
+                <div className="mt-3">
+                  <label className="form-label">Imágenes de apoyo (opcional)</label>
+                  <input
+                    type="file"
+                    accept="image/*"
+                    multiple
+                    className="form-control"
+                    onChange={addPreventivoImagenes('incidencias')}
+                  />
+                  {incidenciasImagenes.length > 0 && (
+                    <div className="mt-2 d-flex flex-wrap gap-2">
+                      {incidenciasImagenes.map((img, idx) => (
+                        <div key={idx} className="border rounded p-1" style={{ width: 120 }}>
+                          <img src={img.dataUrl} alt={img.name} className="img-fluid rounded" />
+                          <div className="d-flex justify-content-between align-items-center mt-1">
+                            <small className="text-truncate" style={{ maxWidth: 80 }} title={img.name}>{img.name}</small>
+                            <button
+                              type="button"
+                              className="btn btn-sm btn-outline-danger"
+                              onClick={() => removePreventivoImagen('incidencias', idx)}
+                            >
+                              x
+                            </button>
+                          </div>
+                        </div>
+                      ))}
                     </div>
-                  ))}
+                  )}
+                  <div className="form-text">Se añadirán al informe justo después de esta sección.</div>
                 </div>
               )}
-              <div className="form-text">Se añadirán al final del informe bajo “Imágenes de apoyo”.</div>
             </div>
+            {!isPreventivoEbro && (
+              <div>
+                <label className="form-label">Imágenes de apoyo (opcional)</label>
+                <input type="file" accept="image/*" multiple className="form-control" onChange={addImagenes} />
+                {imagenes.length > 0 && (
+                  <div className="mt-2 d-flex flex-wrap gap-2">
+                    {imagenes.map((img, idx) => (
+                      <div key={idx} className="border rounded p-1" style={{ width: 120 }}>
+                        <img src={img.dataUrl} alt={img.name} className="img-fluid rounded" />
+                        <div className="d-flex justify-content-between align-items-center mt-1">
+                          <small className="text-truncate" style={{ maxWidth: 80 }} title={img.name}>{img.name}</small>
+                          <button type="button" className="btn btn-sm btn-outline-danger" onClick={()=>removeImagen(idx)}>x</button>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                )}
+                <div className="form-text">Se añadirán al final del informe bajo “Imágenes de apoyo”.</div>
+              </div>
+            )}
           </div>
         </div>
       </div>
@@ -693,24 +932,26 @@ export default function Form({ initial, onNext, title = 'Informe de Formación',
             )}
 
             {/* Imágenes (opcional) */}
-            <div className="col-12">
-              <label className="form-label">Imágenes de apoyo (opcional)</label>
-              <input type="file" accept="image/*" multiple className="form-control" onChange={addImagenes} />
-              {imagenes.length > 0 && (
-                <div className="mt-2 d-flex flex-wrap gap-2">
-                  {imagenes.map((img, idx) => (
-                    <div key={idx} className="border rounded p-1" style={{ width: 120 }}>
-                      <img src={img.dataUrl} alt={img.name} className="img-fluid rounded" />
-                      <div className="d-flex justify-content-between align-items-center mt-1">
-                        <small className="text-truncate" style={{ maxWidth: 80 }} title={img.name}>{img.name}</small>
-                        <button type="button" className="btn btn-sm btn-outline-danger" onClick={()=>removeImagen(idx)}>x</button>
+            {!isPreventivoEbro && (
+              <div className="col-12">
+                <label className="form-label">Imágenes de apoyo (opcional)</label>
+                <input type="file" accept="image/*" multiple className="form-control" onChange={addImagenes} />
+                {imagenes.length > 0 && (
+                  <div className="mt-2 d-flex flex-wrap gap-2">
+                    {imagenes.map((img, idx) => (
+                      <div key={idx} className="border rounded p-1" style={{ width: 120 }}>
+                        <img src={img.dataUrl} alt={img.name} className="img-fluid rounded" />
+                        <div className="d-flex justify-content-between align-items-center mt-1">
+                          <small className="text-truncate" style={{ maxWidth: 80 }} title={img.name}>{img.name}</small>
+                          <button type="button" className="btn btn-sm btn-outline-danger" onClick={()=>removeImagen(idx)}>x</button>
+                        </div>
                       </div>
-                    </div>
-                  ))}
-                </div>
-              )}
-              <div className="form-text">Se añadirán al final del informe bajo “Imágenes de apoyo”.</div>
-            </div>
+                    ))}
+                  </div>
+                )}
+                <div className="form-text">Se añadirán al final del informe bajo “Imágenes de apoyo”.</div>
+              </div>
+            )}
           </div>
         </div></div>
         </div>
