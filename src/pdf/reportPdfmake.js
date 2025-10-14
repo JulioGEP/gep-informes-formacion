@@ -114,6 +114,25 @@ const stripHtml = (html) =>
     .replace(/&nbsp;/g, ' ')
     .trim()
 
+const multilineToParagraphs = (value) => {
+  const raw = String(value ?? '').trim()
+  if (!raw) return [{ text: '—', color: '#666' }]
+
+  const paragraphs = raw
+    .split(/\r?\n\s*\r?\n/)
+    .map((paragraph) => paragraph.replace(/\r?\n/g, '\n').trim())
+    .filter(Boolean)
+
+  if (!paragraphs.length) {
+    return [{ text: raw.replace(/\r?\n/g, '\n'), margin: [0, 0, 0, 0] }]
+  }
+
+  return paragraphs.map((paragraph, index) => ({
+    text: paragraph,
+    margin: [0, 0, 0, index === paragraphs.length - 1 ? 0 : 6],
+  }))
+}
+
 const footerSimulacro = () => ({
   margin: [58, 0, 58, 18],
   stack: [
@@ -231,6 +250,27 @@ const preventivoPdfLabels = {
     direccionSimulacro: 'Preventive address',
     contacto: 'Contact person',
     comercial: 'Account manager',
+  },
+}
+
+const preventivoSectionDescriptions = {
+  ES: {
+    trabajos: 'Resumen amplio de los trabajos solicitados y el alcance del servicio preventivo.',
+    tareas: 'Detalle paso a paso de las tareas efectuadas por el equipo durante la jornada.',
+    observaciones: 'Observaciones relevantes sobre seguridad, coordinación y estado de las instalaciones.',
+    incidencias: 'Incidencias detectadas, medidas correctoras aplicadas y comunicación con el cliente.',
+  },
+  CA: {
+    trabajos: 'Resum ampli dels treballs sol·licitats i l’abast del servei preventiu.',
+    tareas: 'Detall pas a pas de les tasques efectuades per l’equip durant la jornada.',
+    observaciones: 'Observacions rellevants sobre seguretat, coordinació i estat de les instal·lacions.',
+    incidencias: 'Incidències detectades, mesures correctores aplicades i comunicació amb el client.',
+  },
+  EN: {
+    trabajos: 'Comprehensive summary of the works requested and the scope of the preventive service.',
+    tareas: 'Step-by-step detail of the tasks carried out by the crew during the shift.',
+    observaciones: 'Relevant observations about safety, coordination and the condition of the facilities.',
+    incidencias: 'Incidents detected, corrective measures taken and communication with the client.',
   },
 }
 
@@ -368,6 +408,7 @@ const buildDocDefinition = ({
     const labels = isPreventivoEbro
       ? { ...baseLabels, titulo: preventivoPdfEbroTitles[idioma] || preventivoPdfEbroTitles.ES }
       : baseLabels
+    const descriptions = preventivoSectionDescriptions[idioma] || preventivoSectionDescriptions.ES
     const leftStack = [
       !isPreventivoEbro && { columns: kv(labels.presupuesto, dealId) },
       { columns: kv(labels.cliente, datos?.cliente) },
@@ -382,6 +423,32 @@ const buildDocDefinition = ({
       { columns: kv(labels.contacto, datos?.contacto) },
       !isPreventivoEbro && { columns: kv(labels.comercial, datos?.comercial) },
     ].filter(Boolean)
+    const preventivoFields = {
+      trabajos: 'c11',
+      tareas: 'c12',
+      observaciones: 'c13',
+      incidencias: 'c14',
+    }
+    const preventivoSectionOrder = [
+      { key: 'trabajos', label: labels.trabajos },
+      { key: 'tareas', label: labels.tareas },
+      { key: 'observaciones', label: labels.observaciones },
+      { key: 'incidencias', label: labels.incidencias },
+    ]
+    const preventivoBody = preventivoSectionOrder.flatMap(({ key, label }, index, arr) => {
+      const fallbackKey = preventivoFields[key]
+      const value = datos?.preventivo?.[key] ?? (fallbackKey ? datos?.comentarios?.[fallbackKey] : '')
+      const paragraphs = multilineToParagraphs(value)
+      const nodes = [
+        { text: label, style: 'h2' },
+      ]
+      const description = descriptions?.[key]
+      if (description) {
+        nodes.push({ text: description, style: 'small', color: '#555', margin: [0, -6, 0, 6] })
+      }
+      nodes.push({ stack: paragraphs, margin: [0, 0, 0, index === arr.length - 1 ? 0 : 12] })
+      return nodes
+    })
     return {
       pageSize: 'A4',
       pageMargins: [58,110,58,90],
@@ -434,6 +501,7 @@ const buildDocDefinition = ({
           layout:{ hLineWidth:()=>0, vLineWidth:()=>0, paddingTop:()=>0, paddingBottom:()=>0, paddingLeft:()=>0, paddingRight:()=>0 },
           margin:[0,8,0,0],
         },
+        ...preventivoBody,
         ...(aiContent ? [{ id:'informeTecnico', stack:Array.isArray(aiContent)?aiContent:[aiContent] }] : []),
         ...signatureBlock,
         ...(Array.isArray(imagenes) && imagenes.length
