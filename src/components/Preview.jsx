@@ -213,7 +213,7 @@ export default function Preview(props) {
   const { datos, imagenes, formador, dealId, type: draftType } = draft
   const type = propType || draftType || 'formacion'
   const isSimulacro = type === 'simulacro'
-  const isPreventivo = type === 'preventivo'
+  const isPreventivo = type === 'preventivo' || type === 'preventivo-ebro'
   const idioma = (datos?.idioma || formador?.idioma || 'ES').toUpperCase()
   const idiomaLabel = idioma === 'CA' ? 'Català' : idioma === 'EN' ? 'English' : 'Castellano'
   const preventivoLabels = preventivoHeadings[idioma] || preventivoHeadings.ES

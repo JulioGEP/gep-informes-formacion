@@ -424,7 +424,7 @@ export async function handler(event) {
       };
     }
 
-    if (tipo === 'preventivo') {
+    if (tipo === 'preventivo' || tipo === 'preventivo-ebro') {
       const texto = await generarInformePreventivo({ apiKey: API_KEY, baseUrl: BASE_URL, idioma, datos, formador });
       return {
         statusCode: 200,

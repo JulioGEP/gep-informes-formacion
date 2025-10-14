@@ -234,6 +234,12 @@ const preventivoPdfLabels = {
   },
 }
 
+const preventivoPdfEbroTitles = {
+  ES: 'INFORME RECURSO PREVENTIVO EBRO',
+  CA: 'INFORME RECURS PREVENTIU EBRO',
+  EN: 'EBRO PREVENTIVE RESOURCE REPORT',
+}
+
 // ---------- docDefinition ----------
 const buildDocDefinition = ({
   dealId,
@@ -346,9 +352,13 @@ const buildDocDefinition = ({
     }
   }
 
-  if (datos?.tipo === 'preventivo') {
+  if (datos?.tipo === 'preventivo' || datos?.tipo === 'preventivo-ebro') {
     const idioma = (datos?.idioma || formador?.idioma || 'ES').toUpperCase()
-    const labels = preventivoPdfLabels[idioma] || preventivoPdfLabels.ES
+    const baseLabels = preventivoPdfLabels[idioma] || preventivoPdfLabels.ES
+    const isPreventivoEbro = datos?.tipo === 'preventivo-ebro'
+    const labels = isPreventivoEbro
+      ? { ...baseLabels, titulo: preventivoPdfEbroTitles[idioma] || preventivoPdfEbroTitles.ES }
+      : baseLabels
     const idiomaTexto = idioma === 'CA' ? 'Català' : idioma === 'EN' ? 'English' : 'Castellano'
     return {
       pageSize: 'A4',
@@ -650,11 +660,13 @@ export async function generateReportPdfmake(draft) {
   const fecha = (datos?.fecha || '').slice(0, 10)
   const cliente = (datos?.cliente || '').replace(/[^\w\s\-._]/g, '').trim() || 'Cliente'
   const rawTipo = datos?.tipo || type
-  const baseTitulo = rawTipo === 'preventivo'
-    ? 'Preventivo'
-    : rawTipo === 'simulacro'
-      ? 'Simulacro'
-      : (datos?.formacionTitulo || 'Formación')
+  const baseTitulo = rawTipo === 'preventivo-ebro'
+    ? 'Preventivo EBRO'
+    : rawTipo === 'preventivo'
+      ? 'Preventivo'
+      : rawTipo === 'simulacro'
+        ? 'Simulacro'
+        : (datos?.formacionTitulo || 'Formación')
   const titulo = baseTitulo.replace(/[^\w\s\-._]/g, '').trim()
   const nombre = `GEP Group – ${dealId || 'SinPresu'} – ${cliente} – ${titulo} – ${fecha || 'fecha'}.pdf`
 
