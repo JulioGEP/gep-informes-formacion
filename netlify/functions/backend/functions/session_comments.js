@@ -2,10 +2,9 @@ const ALLOWED_ORIGIN = process.env.REPORTS_ALLOWED_ORIGIN || 'https://www.gepser
 const INTENT_HEADER = 'x-reports-intent'
 const EXPECTED_INTENT = 'session-comment'
 
-const SERVICE_URL =
-  process.env.SESSION_COMMENTS_SERVICE_URL || process.env.SESSION_COMMENTS_URL || process.env.SESSION_COMMENTS_ENDPOINT
-
 const DEFAULT_AUTHOR = 'Informes GEP'
+const DEFAULT_SERVICE_ORIGIN = 'https://www.gepservices.es'
+const SERVICE_PATH = '/backend/functions/session_comments'
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': ALLOWED_ORIGIN,
@@ -60,12 +59,30 @@ const normalizeAuthor = (value) => {
   return safe.slice(0, 120)
 }
 
-const ensureServiceUrl = () => {
-  if (!SERVICE_URL) throw new Error('Missing SESSION_COMMENTS_SERVICE_URL environment variable')
+const resolveServiceUrl = (event) => {
+  const rawUrl = typeof event?.rawUrl === 'string' ? event.rawUrl : ''
+  if (rawUrl) {
+    try {
+      const parsed = new URL(rawUrl)
+      parsed.pathname = SERVICE_PATH
+      parsed.search = ''
+      parsed.hash = ''
+      return parsed.toString()
+    } catch (error) {
+      console.warn('[session_comments] rawUrl parse error, falling back to default', error)
+    }
+  }
+
+  const origin = normalizeHeader(event?.headers, 'origin') || DEFAULT_SERVICE_ORIGIN
   try {
-    return new URL(SERVICE_URL).toString()
+    const parsed = new URL(origin)
+    parsed.pathname = SERVICE_PATH
+    parsed.search = ''
+    parsed.hash = ''
+    return parsed.toString()
   } catch (error) {
-    throw new Error('Invalid SESSION_COMMENTS_SERVICE_URL value')
+    console.warn('[session_comments] origin parse error, using hardcoded fallback', error)
+    return `${DEFAULT_SERVICE_ORIGIN}${SERVICE_PATH}`
   }
 }
 
@@ -126,7 +143,7 @@ export async function handler(event) {
   }
 
   const author = normalizeAuthor(payload?.author)
-  const serviceUrl = ensureServiceUrl()
+  const serviceUrl = resolveServiceUrl(event)
 
   try {
     const response = await fetch(serviceUrl, {
