@@ -360,6 +360,21 @@ const buildDocDefinition = ({
       ? { ...baseLabels, titulo: preventivoPdfEbroTitles[idioma] || preventivoPdfEbroTitles.ES }
       : baseLabels
     const idiomaTexto = idioma === 'CA' ? 'Català' : idioma === 'EN' ? 'English' : 'Castellano'
+    const leftStack = [
+      !isPreventivoEbro && { columns: kv(labels.presupuesto, dealId) },
+      { columns: kv(labels.cliente, datos?.cliente) },
+      { columns: kv(labels.cif, datos?.cif) },
+      !isPreventivoEbro && { columns: kv(labels.direccionFiscal, datos?.direccionOrg) },
+      { columns: kv(labels.direccionSimulacro, datos?.sede) },
+    ].filter(Boolean)
+    const rightStack = [
+      { text: labels.registro, style: 'h4', margin: [0, 0, 0, 4] },
+      { columns: kv(labels.bombero, formador?.nombre) },
+      { columns: kv(labels.idioma, idiomaTexto) },
+      { columns: kv(labels.fecha, datos?.fecha) },
+      { columns: kv(labels.contacto, datos?.contacto) },
+      !isPreventivoEbro && { columns: kv(labels.comercial, datos?.comercial) },
+    ].filter(Boolean)
     return {
       pageSize: 'A4',
       pageMargins: [58,110,58,90],
@@ -394,25 +409,12 @@ const buildDocDefinition = ({
                 {
                   columns: [
                     {
-                      width:'50%',
-                      stack: [
-                        { columns: kv(labels.presupuesto, dealId) },
-                        { columns: kv(labels.cliente, datos?.cliente) },
-                        { columns: kv(labels.cif, datos?.cif) },
-                        { columns: kv(labels.direccionFiscal, datos?.direccionOrg) },
-                        { columns: kv(labels.direccionSimulacro, datos?.sede) },
-                      ],
+                      width: '50%',
+                      stack: leftStack,
                     },
                     {
-                      width:'50%',
-                      stack: [
-                        { text: labels.registro, style:'h4', margin:[0,0,0,4] },
-                        { columns: kv(labels.bombero, formador?.nombre) },
-                        { columns: kv(labels.idioma, idiomaTexto) },
-                        { columns: kv(labels.fecha, datos?.fecha) },
-                        { columns: kv(labels.contacto, datos?.contacto) },
-                        { columns: kv(labels.comercial, datos?.comercial) },
-                      ],
+                      width: '50%',
+                      stack: rightStack,
                     },
                   ],
                   columnGap:20,

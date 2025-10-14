@@ -214,6 +214,7 @@ export default function Preview(props) {
   const type = propType || draftType || 'formacion'
   const isSimulacro = type === 'simulacro'
   const isPreventivo = type === 'preventivo' || type === 'preventivo-ebro'
+  const isPreventivoEbro = type === 'preventivo-ebro'
   const idioma = (datos?.idioma || formador?.idioma || 'ES').toUpperCase()
   const idiomaLabel = idioma === 'CA' ? 'Català' : idioma === 'EN' ? 'English' : 'Castellano'
   const preventivoLabels = preventivoHeadings[idioma] || preventivoHeadings.ES
@@ -432,13 +433,19 @@ export default function Preview(props) {
               <div className="border rounded p-3 w-100 h-100">
                 <h6 className="mb-3">Datos del cliente</h6>
                 <div className="row g-2">
-                  <div className="col-12"><strong>Nº Presupuesto:</strong> {dealId || '—'}</div>
+                  {!isPreventivoEbro && (
+                    <div className="col-12"><strong>Nº Presupuesto:</strong> {dealId || '—'}</div>
+                  )}
                   <div className="col-md-7"><strong>Cliente:</strong> {datos?.cliente || '—'}</div>
                   <div className="col-md-5"><strong>CIF:</strong> {datos?.cif || '—'}</div>
-                  <div className="col-md-6"><strong>Dirección fiscal:</strong> {datos?.direccionOrg || '—'}</div>
+                  {!isPreventivoEbro && (
+                    <div className="col-md-6"><strong>Dirección fiscal:</strong> {datos?.direccionOrg || '—'}</div>
+                  )}
                   <div className="col-md-6"><strong>{direccionSedeLabel}:</strong> {datos?.sede || '—'}</div>
                   <div className="col-md-6"><strong>Persona de contacto:</strong> {datos?.contacto || '—'}</div>
-                  <div className="col-md-6"><strong>Comercial:</strong> {datos?.comercial || '—'}</div>
+                  {!isPreventivoEbro && (
+                    <div className="col-md-6"><strong>Comercial:</strong> {datos?.comercial || '—'}</div>
+                  )}
                 </div>
               </div>
             </div>
