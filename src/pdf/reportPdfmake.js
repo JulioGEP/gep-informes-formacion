@@ -262,6 +262,24 @@ const buildDocDefinition = ({
     columnGap: 10,
     margin: [0, 6, 0, 6],
   }))
+  const tipo = datos?.tipo
+  const isPreventivoEbro = tipo === 'preventivo-ebro'
+  const bomberosRaw = (formador?.nombre || '').trim()
+  const bomberosList = bomberosRaw
+    ? bomberosRaw.split(/\s*(?:[,;]|\r?\n)+\s*/).map((line) => line.trim()).filter(Boolean)
+    : []
+  const bomberosDisplay = bomberosList.length ? bomberosList : bomberosRaw ? [bomberosRaw] : ['—']
+  const signatureBlock = isPreventivoEbro
+    ? [
+        { text: 'Atentamente:', margin: [0, 18, 0, 2] },
+        ...bomberosDisplay.map((name) => ({ text: name, style: 'k' })),
+        { text: 'Recurso preventivo GEP', color: '#E1062C', margin: [0, 2, 0, 0] },
+      ]
+    : [
+        { text: 'Atentamente,', margin: [0, 18, 0, 2] },
+        { text: 'Jaime Martret', style: 'k' },
+        { text: 'Responsable de formaciones', color: '#E1062C', margin: [0, 2, 0, 0] },
+      ]
 
   if (datos?.tipo === 'simulacro') {
     return {
@@ -339,9 +357,7 @@ const buildDocDefinition = ({
           layout:'lightHorizontalLines',
           margin:[0,0,0,8],
         },
-        { text:'Atentamente,', margin:[0,18,0,2] },
-        { text:'Jaime Martret', style:'k' },
-        { text:'Responsable de formaciones', color:'#E1062C', margin:[0,2,0,0] },
+        ...signatureBlock,
         ...(Array.isArray(imagenes) && imagenes.length
           ? [
               { text:'Anexos — Imágenes de apoyo', style:'h2', color:'#000', margin:[0,18,0,6], pageBreak:'before' },
@@ -352,10 +368,9 @@ const buildDocDefinition = ({
     }
   }
 
-  if (datos?.tipo === 'preventivo' || datos?.tipo === 'preventivo-ebro') {
+  if (tipo === 'preventivo' || tipo === 'preventivo-ebro') {
     const idioma = (datos?.idioma || formador?.idioma || 'ES').toUpperCase()
     const baseLabels = preventivoPdfLabels[idioma] || preventivoPdfLabels.ES
-    const isPreventivoEbro = datos?.tipo === 'preventivo-ebro'
     const labels = isPreventivoEbro
       ? { ...baseLabels, titulo: preventivoPdfEbroTitles[idioma] || preventivoPdfEbroTitles.ES }
       : baseLabels
@@ -426,9 +441,7 @@ const buildDocDefinition = ({
           margin:[0,8,0,0],
         },
         ...(aiContent ? [{ id:'informeTecnico', stack:Array.isArray(aiContent)?aiContent:[aiContent] }] : []),
-        { text:'Atentamente,', margin:[0,18,0,2] },
-        { text:'Jaime Martret', style:'k' },
-        { text:'Responsable de formaciones', color:'#E1062C', margin:[0,2,0,0] },
+        ...signatureBlock,
         ...(Array.isArray(imagenes) && imagenes.length
           ? [
               { text: labels.anexos, style:'h2', color:'#000', margin:[0,18,0,6], pageBreak:'before' },
@@ -602,9 +615,7 @@ const buildDocDefinition = ({
       },
 
       // ===== Firma
-      { text: 'Atentamente,', margin: [0, 18, 0, 2] },
-      { text: 'Jaime Martret', style: 'k' },
-      { text: 'Responsable de formaciones', color: '#E1062C', margin: [0, 2, 0, 0] },
+      ...signatureBlock,
 
       // ===== Anexos (imágenes)
       ...(Array.isArray(imagenes) && imagenes.length

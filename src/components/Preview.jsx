@@ -224,6 +224,11 @@ export default function Preview(props) {
     : isSimulacro
       ? 'Dirección del simulacro'
       : 'Dirección de la formación'
+  const bomberosRaw = (formador?.nombre || '').trim()
+  const bomberosList = bomberosRaw
+    ? bomberosRaw.split(/\s*(?:[,;]|\r?\n)+\s*/).map((name) => name.trim()).filter(Boolean)
+    : []
+  const bomberosDisplay = bomberosList.length ? bomberosList : bomberosRaw ? [bomberosRaw] : ['—']
 
   const [aiHtml, setAiHtml] = useState(null)
   const [aiBusy, setAiBusy] = useState(false)
@@ -590,9 +595,21 @@ export default function Preview(props) {
 
           <hr className="my-4" />
           <div>
-            <p className="mb-1">Atentamente,</p>
-            <strong>Jaime Martret</strong>
-            <div className="text-danger">Responsable de formaciones</div>
+            {isPreventivoEbro ? (
+              <>
+                <p className="mb-1">Atentamente:</p>
+                {bomberosDisplay.map((name, idx) => (
+                  <div key={`${name}-${idx}`}><strong>{name}</strong></div>
+                ))}
+                <div className="text-danger">Recurso preventivo GEP</div>
+              </>
+            ) : (
+              <>
+                <p className="mb-1">Atentamente,</p>
+                <strong>Jaime Martret</strong>
+                <div className="text-danger">Responsable de formaciones</div>
+              </>
+            )}
           </div>
 
           {Array.isArray(imagenes) && imagenes.length > 0 && (
