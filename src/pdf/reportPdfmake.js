@@ -269,6 +269,7 @@ const buildDocDefinition = ({
     ? bomberosRaw.split(/\s*(?:[,;]|\r?\n)+\s*/).map((line) => line.trim()).filter(Boolean)
     : []
   const bomberosDisplay = bomberosList.length ? bomberosList : bomberosRaw ? [bomberosRaw] : ['—']
+  const signatureName = (formador?.nombre || datos?.formadorNombre || '').trim()
   const signatureBlock = isPreventivoEbro
     ? [
         { text: 'Atentamente:', margin: [0, 18, 0, 2] },
@@ -276,9 +277,10 @@ const buildDocDefinition = ({
         { text: 'Recurso preventivo GEP', color: '#E1062C', margin: [0, 2, 0, 0] },
       ]
     : [
-        { text: 'Atentamente,', margin: [0, 18, 0, 2] },
-        { text: 'Jaime Martret', style: 'k' },
-        { text: 'Responsable de formaciones', color: '#E1062C', margin: [0, 2, 0, 0] },
+        { text: 'Firma:', margin: [0, 18, 0, 2] },
+        signatureName
+          ? { text: signatureName, style: 'k' }
+          : { text: '________________________', margin: [0, 2, 0, 0], color: '#666' },
       ]
 
   if (datos?.tipo === 'simulacro') {

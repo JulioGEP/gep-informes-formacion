@@ -128,7 +128,7 @@ const buildPreventivoSystem = (idioma) => {
       'Always write in first-person plural (we) with a formal PRL/PCI emergency tone: precise, direct and without embellishment.',
       'Do not invent information. Correct grammar and spelling. Output plain text only, no HTML.',
       'Use exactly the headings provided, one per line, and keep the sections “Works performed”, “Tasks”, “Observations” and “Incidents” between 350 and 450 words each.',
-      'Close with the corporate signature “Jaime Martret. Head of Training” and mention the image annex after the signature.',
+      'In the “Signature” section state that the report remains pending manual signature, without mentioning personal names or titles.',
     ].join('\n');
   }
   if (lang === 'CA') {
@@ -137,7 +137,7 @@ const buildPreventivoSystem = (idioma) => {
       'Escriu sempre en primera persona del plural (nosaltres) amb to formal tècnic PRL/PCI: precís, directe i sense floritures.',
       'No inventis dades. Corregeix ortografia i gramàtica. Respon només amb text pla, sense HTML.',
       'Fes servir exactament els encapçalaments indicats, un per línia, i mantén les seccions “Treballs”, “Tasques”, “Observacions” i “Incidències” entre 350 i 450 paraules cadascuna.',
-      'Tanca amb la signatura corporativa “Jaime Martret. Responsable de formacions” i cita l’annex d’imatges després de la signatura.',
+      'A la secció “Signatura” indica que l’informe resta pendent de signatura manual, sense incloure noms propis ni càrrecs.',
     ].join('\n');
   }
   return [
@@ -145,7 +145,7 @@ const buildPreventivoSystem = (idioma) => {
     'Escribe siempre en primera persona del plural (nosotros) con un tono formal técnico PRL/PCI: preciso, directo y sin florituras.',
     'No inventes datos. Corrige ortografía y gramática. Devuelve únicamente texto plano, sin HTML.',
     'Utiliza exactamente los encabezados indicados, uno por línea, y mantén las secciones “Trabajos”, “Tareas”, “Observaciones” e “Incidencias” entre 350 y 450 palabras cada una.',
-    'Cierra con la firma corporativa “Jaime Martret. Responsable de formaciones” y menciona el anexo de imágenes después de la firma.',
+    'En la sección “Firma” deja constancia de que el informe queda pendiente de firma manual, sin incluir nombres propios ni cargos.',
   ].join('\n');
 };
 
@@ -341,8 +341,8 @@ Indicaciones:
 - En "${headings.registro}" contextualiza el servicio prestado por nuestro equipo, la fecha de realización y, si procede, sintetiza en una frase los datos generales sin repetirlos literalmente.
 - Reescribe "${headings.trabajos}", "${headings.tareas}", "${headings.observaciones}" e "${headings.incidencias}" con una extensión de entre 350 y 450 palabras cada sección, interpretando profesionalmente el material original.
 - Si falta información relevante en alguna sección, explica cómo afecta al análisis sin inventar datos.
-- En "${headings.firma}" cierra con la fórmula corporativa “Jaime Martret. Responsable de formaciones”.
-- En "${headings.anexos}" indica que las imágenes quedan adjuntas como anexo posterior a la firma.
+- En "${headings.firma}" indica que el informe queda pendiente de firma manual, sin mencionar nombres propios ni cargos.
+- En "${headings.anexos}" señala que las imágenes quedan adjuntas como anexo adicional.
 
 Contexto disponible:
 ${contexto}
