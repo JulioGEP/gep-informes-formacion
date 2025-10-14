@@ -29,7 +29,7 @@ export default function Form({ initial, onNext, title = 'Informe de Formación',
   const formRef = useRef(null)
 
   const isSimulacro = type === 'simulacro'
-  const isPreventivo = type === 'preventivo'
+  const isPreventivo = type === 'preventivo' || type === 'preventivo-ebro'
   const isFormacion = type === 'formacion'
   const direccionSedeLabel = isPreventivo
     ? 'Dirección del Preventivo'

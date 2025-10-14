@@ -192,7 +192,7 @@ export default function SendEmailModal({
   const defaultMessage = useMemo(() => {
     let responsableFallback = 'el formador'
     if (tipoInforme === 'simulacro') responsableFallback = 'el auditor'
-    else if (tipoInforme === 'preventivo') responsableFallback = 'el bombero'
+    else if (tipoInforme === 'preventivo' || tipoInforme === 'preventivo-ebro') responsableFallback = 'el bombero'
 
     const responsable = formadorNombre || responsableFallback
     const presupuesto = dealId || 'N/A'

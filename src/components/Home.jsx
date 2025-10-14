@@ -24,6 +24,7 @@ export default function Home({ onSelect }) {
         <button className="btn btn-primary" onClick={() => onSelect('formacion')}>Informe de Formación</button>
         <button className="btn btn-primary" onClick={() => onSelect('simulacro')}>Informe de Simulacro</button>
         <button className="btn btn-primary" onClick={() => onSelect('preventivo')}>Informe de Preventivos</button>
+        <button className="btn btn-primary" onClick={() => onSelect('preventivo-ebro')}>Informe Recurso Preventivo EBRO</button>
       </div>
     </div>
   )

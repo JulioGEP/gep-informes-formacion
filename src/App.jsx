@@ -62,6 +62,7 @@ export default function App() {
   const [formacion, setFormacion] = useState(null);
   const [simulacro, setSimulacro] = useState(null);
   const [preventivo, setPreventivo] = useState(null);
+  const [preventivoEbro, setPreventivoEbro] = useState(null);
 
   useEffect(() => {
     if (typeof window === "undefined") {
@@ -101,6 +102,7 @@ export default function App() {
     setFormacion(null);
     setSimulacro(null);
     setPreventivo(null);
+    setPreventivoEbro(null);
   }, []);
 
   useEffect(() => {
@@ -208,6 +210,26 @@ export default function App() {
                 title="Informe de Preventivos"
                 type="preventivo"
                 onBack={() => setScreen('preventivo-form')}
+              />
+            )}
+            {screen === 'preventivo-ebro-form' && (
+              <Form
+                initial={preventivoEbro}
+                title="Informe Recurso Preventivo EBRO"
+                type="preventivo-ebro"
+                onChooseAnother={() => setScreen('home')}
+                onNext={(data) => {
+                  setPreventivoEbro(data);
+                  setScreen('preventivo-ebro-preview');
+                }}
+              />
+            )}
+            {screen === 'preventivo-ebro-preview' && (
+              <Preview
+                data={preventivoEbro}
+                title="Informe Recurso Preventivo EBRO"
+                type="preventivo-ebro"
+                onBack={() => setScreen('preventivo-ebro-form')}
               />
             )}
           </>
