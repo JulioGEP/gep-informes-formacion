@@ -28,8 +28,15 @@ const normalizeIntent = (value) => String(value || '').trim().toLowerCase()
 
 const normalizeDealId = (value) => {
   const raw = String(value || '').trim()
-  if (!raw) return ''
-  return /^\d+$/.test(raw) ? raw : ''
+  if (!raw) return 0
+  if (!/^\d+$/.test(raw)) return 0
+
+  const parsed = Number.parseInt(raw, 10)
+  if (!Number.isSafeInteger(parsed) || parsed <= 0) {
+    return 0
+  }
+
+  return parsed
 }
 
 const normalizeUuid = (value) => {
@@ -120,7 +127,7 @@ export async function handler(event) {
     return {
       statusCode: 400,
       headers: { 'Content-Type': 'application/json', ...corsHeaders },
-      body: JSON.stringify({ error: 'dealId must be a numeric string' }),
+      body: JSON.stringify({ error: 'dealId must be a positive integer' }),
     }
   }
 
@@ -154,7 +161,9 @@ export async function handler(event) {
       },
       body: JSON.stringify({
         dealId,
+        deal_id: dealId,
         sessionId,
+        session_id: sessionId,
         author,
         content,
       }),
