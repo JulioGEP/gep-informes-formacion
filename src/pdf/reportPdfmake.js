@@ -106,6 +106,31 @@ const chunk = (arr = [], size = 2) => {
   return out
 }
 
+const preventivoImageKeys = ['trabajos', 'tareas', 'observaciones', 'incidencias']
+const normalizePreventivoImagenes = (value) => {
+  const result = {}
+  preventivoImageKeys.forEach((key) => {
+    const list = value?.[key]
+    result[key] = Array.isArray(list) ? list.map((img) => ({ ...img })) : []
+  })
+  return result
+}
+const flattenPreventivoImagenes = (imagenesPorSeccion) =>
+  preventivoImageKeys.flatMap((key) =>
+    Array.isArray(imagenesPorSeccion?.[key]) ? imagenesPorSeccion[key] : []
+  )
+const buildImageRows = (imagenes = []) =>
+  chunk(imagenes || [], 2).map((row) => ({
+    columns: row.map((img) => ({
+      stack: [
+        { image: img.dataUrl, width: 220, margin: [0, 0, 0, 4] },
+        { text: img.name || '', style: 'caption' },
+      ],
+    })),
+    columnGap: 10,
+    margin: [0, 6, 0, 6],
+  }))
+
 const stripHtml = (html) =>
   (html || '')
     .replace(/<br\s*\/?>/gi, '\n')
@@ -292,18 +317,15 @@ const buildDocDefinition = ({
 }) => {
   const teorica = bullet(datos?.contenidoTeorica)
   const practica = bullet(datos?.contenidoPractica)
-  const imageRows = chunk(imagenes || [], 2).map((row) => ({
-    columns: row.map((img) => ({
-      stack: [
-        { image: img.dataUrl, width: 220, margin: [0, 0, 0, 4] },
-        { text: img.name || '', style: 'caption' },
-      ],
-    })),
-    columnGap: 10,
-    margin: [0, 6, 0, 6],
-  }))
+  const rawImagenes = Array.isArray(imagenes) ? imagenes : []
   const tipo = datos?.tipo
   const isPreventivoEbro = tipo === 'preventivo-ebro'
+  const preventivoImagenesPorSeccion = isPreventivoEbro ? normalizePreventivoImagenes(datos?.preventivo?.imagenes) : null
+  const preventivoHasSectionImages = isPreventivoEbro
+    ? preventivoImageKeys.some((key) => (preventivoImagenesPorSeccion?.[key] || []).length > 0)
+    : false
+  const mergedImagenes = isPreventivoEbro ? flattenPreventivoImagenes(preventivoImagenesPorSeccion) : rawImagenes
+  const imageRows = buildImageRows(mergedImagenes)
   const bomberosRaw = (formador?.nombre || '').trim()
   const bomberosList = bomberosRaw
     ? bomberosRaw.split(/\s*(?:[,;]|\r?\n)+\s*/).map((line) => line.trim()).filter(Boolean)
@@ -392,7 +414,7 @@ const buildDocDefinition = ({
           margin:[0,0,0,8],
         },
         ...signatureBlock,
-        ...(Array.isArray(imagenes) && imagenes.length
+        ...(mergedImagenes.length
           ? [
               { text:'Anexos — Imágenes de apoyo', style:'h2', color:'#000', margin:[0,18,0,6], pageBreak:'before' },
               ...imageRows,
@@ -447,6 +469,12 @@ const buildDocDefinition = ({
         nodes.push({ text: description, style: 'small', color: '#555', margin: [0, -6, 0, 6] })
       }
       nodes.push({ stack: paragraphs, margin: [0, 0, 0, index === arr.length - 1 ? 0 : 12] })
+      if (isPreventivoEbro) {
+        const sectionRows = buildImageRows(preventivoImagenesPorSeccion?.[key] || [])
+        if (sectionRows.length) {
+          nodes.push(...sectionRows)
+        }
+      }
       return nodes
     })
     return {
@@ -504,7 +532,7 @@ const buildDocDefinition = ({
         ...preventivoBody,
         ...(aiContent ? [{ id:'informeTecnico', stack:Array.isArray(aiContent)?aiContent:[aiContent] }] : []),
         ...signatureBlock,
-        ...(Array.isArray(imagenes) && imagenes.length
+        ...(mergedImagenes.length && (!isPreventivoEbro || !preventivoHasSectionImages)
           ? [
               { text: labels.anexos, style:'h2', color:'#000', margin:[0,18,0,6], pageBreak:'before' },
               ...imageRows,
@@ -680,7 +708,7 @@ const buildDocDefinition = ({
       ...signatureBlock,
 
       // ===== Anexos (imágenes)
-      ...(Array.isArray(imagenes) && imagenes.length
+      ...(mergedImagenes.length
         ? [{ text: 'Anexos — Imágenes de apoyo', style: 'h2', margin: [0, 18, 0, 6], pageBreak: 'before' }, ...imageRows]
         : []),
     ],

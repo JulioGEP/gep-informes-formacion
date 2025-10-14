@@ -59,6 +59,8 @@ const preventivoCardLabels = {
   EN: { registro: 'Logbook', bombero: 'Firefighter', fecha: 'Exercise date' },
 }
 
+const preventivoSectionKeys = ['trabajos', 'tareas', 'observaciones', 'incidencias']
+
 const normalizeText = (value = '') =>
   value
     .normalize('NFD')
@@ -219,6 +221,15 @@ export default function Preview(props) {
   const idiomaLabel = idioma === 'CA' ? 'Català' : idioma === 'EN' ? 'English' : 'Castellano'
   const preventivoLabels = preventivoHeadings[idioma] || preventivoHeadings.ES
   const preventivoCard = preventivoCardLabels[idioma] || preventivoCardLabels.ES
+  const preventivoSectionData = preventivoSectionKeys.map((key) => ({
+    key,
+    label: preventivoLabels[key],
+    texto: datos?.preventivo?.[key] || '',
+    imagenes: Array.isArray(datos?.preventivo?.imagenes?.[key]) ? datos.preventivo.imagenes[key] : [],
+  }))
+  const hasPreventivoSectionImages = preventivoSectionData.some(({ imagenes }) => imagenes.length > 0)
+  const showLegacyPreventivoImages = isPreventivoEbro && !hasPreventivoSectionImages
+  const globalImagesAvailable = Array.isArray(imagenes) && imagenes.length > 0 && (!isPreventivoEbro || showLegacyPreventivoImages)
   const direccionSedeLabel = isPreventivo
     ? 'Dirección del Preventivo'
     : isSimulacro
@@ -280,8 +291,17 @@ export default function Preview(props) {
     }
     if (isPreventivo) {
       const secciones = datos?.preventivo || {}
+      const hasText = preventivoSectionKeys.some((key) => {
+        const value = secciones?.[key]
+        return typeof value === 'string' && value.trim() !== ''
+      })
+      const imagenesPorSeccion = secciones?.imagenes || {}
+      const hasSectionImages = preventivoSectionKeys.some(
+        (key) => Array.isArray(imagenesPorSeccion?.[key]) && imagenesPorSeccion[key].length > 0
+      )
       return (
-        Object.values(secciones).some(v => (v || '').trim() !== '') ||
+        hasText ||
+        hasSectionImages ||
         (Array.isArray(imagenes) && imagenes.length > 0)
       )
     }
@@ -521,25 +541,52 @@ export default function Preview(props) {
             <>
               <hr className="my-4" />
               {aiHtml ? (
-                <EditableHtml dealId={dealId} initialHtml={aiHtml} onChange={setAiHtml} />
+                <>
+                  <EditableHtml dealId={dealId} initialHtml={aiHtml} onChange={setAiHtml} />
+                  {isPreventivoEbro && hasPreventivoSectionImages && (
+                    <div className="d-grid gap-3 mt-4">
+                      {preventivoSectionData.map(({ key, label, imagenes }) => (
+                        imagenes.length > 0 ? (
+                          <div key={`imgs-${key}`}>
+                            <div className="small text-muted mb-1">{label} — Imágenes de apoyo</div>
+                            <div className="d-flex flex-wrap gap-2">
+                              {imagenes.map((img, idx) => (
+                                <div key={`${key}-ai-${idx}`} className="border rounded p-1" style={{ width: 120 }}>
+                                  <img src={img.dataUrl} alt={img.name} className="img-fluid rounded" />
+                                  <div className="small text-truncate" title={img.name}>{img.name}</div>
+                                </div>
+                              ))}
+                            </div>
+                          </div>
+                        ) : null
+                      ))}
+                    </div>
+                  )}
+                </>
               ) : (
                 <div className="d-grid gap-3">
-                  <div>
-                    <h5 className="card-title mb-2">{preventivoLabels.trabajos}</h5>
-                    <p style={{ whiteSpace: 'pre-wrap' }}>{datos?.preventivo?.trabajos || '—'}</p>
-                  </div>
-                  <div>
-                    <h5 className="card-title mb-2">{preventivoLabels.tareas}</h5>
-                    <p style={{ whiteSpace: 'pre-wrap' }}>{datos?.preventivo?.tareas || '—'}</p>
-                  </div>
-                  <div>
-                    <h5 className="card-title mb-2">{preventivoLabels.observaciones}</h5>
-                    <p style={{ whiteSpace: 'pre-wrap' }}>{datos?.preventivo?.observaciones || '—'}</p>
-                  </div>
-                  <div>
-                    <h5 className="card-title mb-2">{preventivoLabels.incidencias}</h5>
-                    <p style={{ whiteSpace: 'pre-wrap' }}>{datos?.preventivo?.incidencias || '—'}</p>
-                  </div>
+                  {preventivoSectionData.map(({ key, label, texto, imagenes }) => {
+                    const tieneTexto = (texto || '').trim() !== ''
+                    return (
+                      <div key={key}>
+                        <h5 className="card-title mb-2">{label}</h5>
+                        <p style={{ whiteSpace: 'pre-wrap' }}>{tieneTexto ? texto : '—'}</p>
+                        {isPreventivoEbro && imagenes.length > 0 && (
+                          <div className="mt-2">
+                            <div className="small text-muted mb-1">Imágenes de apoyo</div>
+                            <div className="d-flex flex-wrap gap-2">
+                              {imagenes.map((img, idx) => (
+                                <div key={`${key}-img-${idx}`} className="border rounded p-1" style={{ width: 120 }}>
+                                  <img src={img.dataUrl} alt={img.name} className="img-fluid rounded" />
+                                  <div className="small text-truncate" title={img.name}>{img.name}</div>
+                                </div>
+                              ))}
+                            </div>
+                          </div>
+                        )}
+                      </div>
+                    )
+                  })}
                 </div>
               )}
             </>
@@ -602,7 +649,7 @@ export default function Preview(props) {
             <div className="text-danger">Recurso preventivo GEP</div>
           </div>
 
-          {Array.isArray(imagenes) && imagenes.length > 0 && (
+          {globalImagesAvailable && (
             <>
               <hr className="my-4" />
               <h5 className="card-title mb-3">Anexos — Imágenes de apoyo</h5>
