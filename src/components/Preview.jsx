@@ -2,7 +2,7 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react'
 import logoImg from '../assets/logo-nuevo.png'
 import { generateReportPdfmake } from '../pdf/reportPdfmake'
-import { triesKey, htmlKey } from '../utils/keys'
+import { triesKey, htmlKey, commentDraftKey } from '../utils/keys'
 import SendEmailModal from './SendEmailModal'
 
 let warnedMissingReportsToken = false
@@ -77,6 +77,16 @@ const preventivoCardLabels = {
 }
 
 const preventivoSectionKeys = ['trabajos', 'tareas', 'observaciones', 'incidencias']
+
+const SESSION_COMMENT_INTENT = 'session-comment'
+
+const generateCommentSessionId = () => {
+  if (typeof crypto !== 'undefined' && typeof crypto.randomUUID === 'function') {
+    try { return crypto.randomUUID() } catch (error) { console.warn('No se pudo generar UUID con crypto.randomUUID', error) }
+  }
+  const random = Math.random().toString(16).slice(2)
+  return `comment-${Date.now().toString(36)}-${random}`
+}
 
 const normalizeText = (value = '') =>
   value
@@ -225,6 +235,165 @@ function EditableHtml({ dealId, initialHtml, onChange }) {
   )
 }
 
+function DealContextModal({
+  show,
+  onClose,
+  dealId,
+  datos,
+  formador,
+  direccionSedeLabel,
+  isPreventivoEbro,
+  commentPopupOpen,
+  onOpenComment,
+  onCloseComment,
+  commentDraft,
+  onCommentDraftChange,
+  commentAuthor,
+  onCommentAuthorChange,
+  onSubmitComment,
+  commentSaving,
+  commentStatus,
+}) {
+  if (!show) return null
+
+  const alertClass = commentStatus?.type === 'error' ? 'alert-danger' : 'alert-success'
+
+  return (
+    <>
+      <div
+        className="modal fade show"
+        style={{ display: 'block' }}
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="deal-context-modal-title"
+      >
+        <div className="modal-dialog modal-lg modal-dialog-scrollable" role="document">
+          <div className="modal-content">
+            <div className="modal-header">
+              <h5 className="modal-title" id="deal-context-modal-title">Información del presupuesto</h5>
+              <button type="button" className="btn-close" aria-label="Cerrar" onClick={onClose} />
+            </div>
+
+            <div className="modal-body">
+              <div className="mb-3">
+                <dl className="row mb-0">
+                  {!isPreventivoEbro && (
+                    <>
+                      <dt className="col-sm-4">Nº Presupuesto</dt>
+                      <dd className="col-sm-8">{dealId || '—'}</dd>
+                    </>
+                  )}
+                  <dt className="col-sm-4">Cliente</dt>
+                  <dd className="col-sm-8">{datos?.cliente || '—'}</dd>
+                  <dt className="col-sm-4">CIF</dt>
+                  <dd className="col-sm-8">{datos?.cif || '—'}</dd>
+                  {!isPreventivoEbro && (
+                    <>
+                      <dt className="col-sm-4">Dirección fiscal</dt>
+                      <dd className="col-sm-8">{datos?.direccionOrg || '—'}</dd>
+                      <dt className="col-sm-4">Comercial</dt>
+                      <dd className="col-sm-8">{datos?.comercial || '—'}</dd>
+                    </>
+                  )}
+                  <dt className="col-sm-4">{direccionSedeLabel}</dt>
+                  <dd className="col-sm-8">{datos?.sede || '—'}</dd>
+                  <dt className="col-sm-4">Persona de contacto</dt>
+                  <dd className="col-sm-8">{datos?.contacto || '—'}</dd>
+                  <dt className="col-sm-4">Responsable</dt>
+                  <dd className="col-sm-8">{formador?.nombre || datos?.formadorNombre || '—'}</dd>
+                  <dt className="col-sm-4">Fecha</dt>
+                  <dd className="col-sm-8">{datos?.fecha || '—'}</dd>
+                </dl>
+              </div>
+
+              <div className="d-flex align-items-center justify-content-between">
+                <h6 className="mb-0">Comentarios internos</h6>
+                <button
+                  type="button"
+                  className="btn btn-outline-secondary btn-sm"
+                  onClick={commentPopupOpen ? onCloseComment : onOpenComment}
+                  disabled={commentSaving}
+                >
+                  {commentPopupOpen ? 'Ocultar comentario' : 'Añadir comentario'}
+                </button>
+              </div>
+
+              {commentPopupOpen && (
+                <div className="mt-3 border rounded p-3 bg-light">
+                  <div className="d-flex justify-content-between align-items-start mb-3">
+                    <div>
+                      <h6 className="mb-1">Comentario del producto</h6>
+                      <small className="text-muted">
+                        Se guardará asociado al presupuesto {dealId || '—'}.
+                      </small>
+                    </div>
+                    <button
+                      type="button"
+                      className="btn-close"
+                      aria-label="Cerrar comentario"
+                      onClick={onCloseComment}
+                      disabled={commentSaving}
+                    />
+                  </div>
+
+                  <div className="mb-3">
+                    <label className="form-label">Autor</label>
+                    <input
+                      type="text"
+                      className="form-control"
+                      value={commentAuthor}
+                      onChange={(event) => onCommentAuthorChange(event.target.value)}
+                      placeholder="Nombre de quien deja el comentario"
+                      disabled={commentSaving}
+                    />
+                  </div>
+
+                  <div className="mb-3">
+                    <label className="form-label">Comentario</label>
+                    <textarea
+                      className="form-control"
+                      rows={4}
+                      value={commentDraft}
+                      onChange={(event) => onCommentDraftChange(event.target.value)}
+                      placeholder="Añade contexto o notas internas para este presupuesto"
+                      disabled={commentSaving}
+                    />
+                  </div>
+
+                  {commentStatus && (
+                    <div className={`alert ${alertClass} py-2`} role="alert">
+                      {commentStatus.message}
+                    </div>
+                  )}
+
+                  <div className="d-flex justify-content-between align-items-center">
+                    <small className="text-muted">El comentario es visible solo para el equipo interno.</small>
+                    <button
+                      type="button"
+                      className="btn btn-primary"
+                      onClick={onSubmitComment}
+                      disabled={commentSaving}
+                    >
+                      {commentSaving ? 'Guardando…' : 'Guardar comentario'}
+                    </button>
+                  </div>
+                </div>
+              )}
+            </div>
+
+            <div className="modal-footer">
+              <button type="button" className="btn btn-secondary" onClick={onClose} disabled={commentSaving}>
+                Cerrar
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
+      <div className="modal-backdrop fade show" />
+    </>
+  )
+}
+
 // Acepta draft o data (compat con tu App)
 export default function Preview(props) {
   const { onBack, title = 'Informe de Formación', type: propType } = props
@@ -264,6 +433,19 @@ export default function Preview(props) {
   const [pdfForModal, setPdfForModal] = useState(null)
   const [showEmailModal, setShowEmailModal] = useState(false)
   const [emailStatus, setEmailStatus] = useState(null)
+  const [showDealModal, setShowDealModal] = useState(false)
+  const [commentPopupOpen, setCommentPopupOpen] = useState(false)
+  const [commentDraft, setCommentDraft] = useState('')
+  const [commentAuthor, setCommentAuthor] = useState('')
+  const [commentSaving, setCommentSaving] = useState(false)
+  const [commentStatus, setCommentStatus] = useState(null)
+  const commentSessionIdRef = useRef('')
+
+  const defaultCommentAuthor = useMemo(() => {
+    const nombreFormador = typeof formador?.nombre === 'string' ? formador.nombre.trim() : ''
+    const nombreDatos = typeof datos?.formadorNombre === 'string' ? datos.formadorNombre.trim() : ''
+    return nombreFormador || nombreDatos || ''
+  }, [formador?.nombre, datos?.formadorNombre])
 
   // Cargar contador + HTML guardado
   useEffect(() => {
@@ -287,6 +469,44 @@ export default function Preview(props) {
       setEmailStatus(null)
     }
   }, [pdfForModal])
+
+  useEffect(() => {
+    setCommentStatus(null)
+    setCommentPopupOpen(false)
+
+    if (!dealId) {
+      setCommentDraft('')
+      setCommentAuthor(defaultCommentAuthor)
+      commentSessionIdRef.current = ''
+      setShowDealModal(false)
+      return
+    }
+
+    let storedDraft = ''
+    if (typeof window !== 'undefined') {
+      try { storedDraft = sessionStorage.getItem(commentDraftKey(dealId)) || '' } catch {}
+    }
+    setCommentDraft(storedDraft)
+    setCommentAuthor(defaultCommentAuthor)
+    commentSessionIdRef.current = generateCommentSessionId()
+  }, [dealId, defaultCommentAuthor])
+
+  useEffect(() => {
+    if (!dealId || typeof window === 'undefined') return
+    try { sessionStorage.setItem(commentDraftKey(dealId), commentDraft) } catch {}
+  }, [dealId, commentDraft])
+
+  useEffect(() => {
+    if (!showDealModal) {
+      setCommentPopupOpen(false)
+    }
+  }, [showDealModal])
+
+  useEffect(() => {
+    if (!commentPopupOpen) {
+      setCommentStatus(null)
+    }
+  }, [commentPopupOpen])
 
   const resetLocalForDeal = () => {
     try {
@@ -402,6 +622,87 @@ export default function Preview(props) {
     }
   }
 
+  const handleCommentDraftChange = (value) => {
+    setCommentDraft(value)
+    setCommentStatus(null)
+  }
+
+  const handleCommentAuthorChange = (value) => {
+    setCommentAuthor(value)
+    setCommentStatus(null)
+  }
+
+  const openDealModal = () => {
+    if (!dealId) return
+    setShowDealModal(true)
+  }
+
+  const closeDealModal = () => {
+    setShowDealModal(false)
+    setCommentPopupOpen(false)
+  }
+
+  const openCommentPopup = () => {
+    if (!dealId) return
+    setCommentPopupOpen(true)
+  }
+
+  const closeCommentPopup = () => {
+    setCommentPopupOpen(false)
+  }
+
+  const submitComment = async () => {
+    if (!dealId) {
+      setCommentStatus({ type: 'error', message: 'Es necesario indicar el Nº de presupuesto.' })
+      return
+    }
+
+    const content = (commentDraft || '').trim()
+    if (!content) {
+      setCommentStatus({ type: 'error', message: 'El comentario no puede estar vacío.' })
+      return
+    }
+
+    const sessionId = commentSessionIdRef.current || generateCommentSessionId()
+    commentSessionIdRef.current = sessionId
+
+    setCommentSaving(true)
+    setCommentStatus(null)
+
+    try {
+      const response = await fetch('/.netlify/functions/backend/functions/session_comments', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'X-Reports-Intent': SESSION_COMMENT_INTENT,
+          ...getReportsAuthHeaders(),
+        },
+        body: JSON.stringify({
+          dealId,
+          sessionId,
+          content,
+          author: (commentAuthor || '').trim() || undefined,
+        }),
+      })
+
+      const data = await response.json().catch(() => ({}))
+      if (!response.ok) {
+        const message = data?.error || data?.message || 'No se ha podido guardar el comentario.'
+        throw new Error(message)
+      }
+
+      setCommentStatus({ type: 'success', message: 'Comentario guardado correctamente.' })
+    } catch (error) {
+      console.error('Error guardando el comentario del producto:', error)
+      setCommentStatus({
+        type: 'error',
+        message: error?.message || 'No se ha podido guardar el comentario.',
+      })
+    } finally {
+      setCommentSaving(false)
+    }
+  }
+
   const handleEmailSuccess = (info) => {
     setShowEmailModal(false)
     if (info && Array.isArray(info.to)) {
@@ -439,6 +740,11 @@ export default function Preview(props) {
       <div className="d-flex align-items-center justify-content-between">
         <h2 className="h5 mb-0">Borrador del informe</h2>
         <div className="d-flex gap-2">
+          {dealId && (
+            <button type="button" className="btn btn-outline-secondary" onClick={openDealModal}>
+              Datos del presupuesto
+            </button>
+          )}
           <button className="btn btn-secondary" onClick={onBack}>Volver al formulario</button>
           {quedanIntentos && (
             <button className="btn btn-warning" onClick={mejorarInforme} disabled={aiBusy}>
@@ -665,6 +971,11 @@ export default function Preview(props) {
       </div>
 
       <div className="d-flex gap-2 justify-content-end">
+        {dealId && (
+          <button type="button" className="btn btn-outline-secondary" onClick={openDealModal}>
+            Datos del presupuesto
+          </button>
+        )}
         <button className="btn btn-secondary" onClick={onBack}>Volver al formulario</button>
         {quedanIntentos && (
           <button className="btn btn-warning" onClick={mejorarInforme} disabled={aiBusy}>
@@ -686,6 +997,26 @@ export default function Preview(props) {
           </button>
         </div>
       )}
+
+      <DealContextModal
+        show={showDealModal}
+        onClose={closeDealModal}
+        dealId={dealId}
+        datos={datos}
+        formador={formador}
+        direccionSedeLabel={direccionSedeLabel}
+        isPreventivoEbro={isPreventivoEbro}
+        commentPopupOpen={commentPopupOpen}
+        onOpenComment={openCommentPopup}
+        onCloseComment={closeCommentPopup}
+        commentDraft={commentDraft}
+        onCommentDraftChange={handleCommentDraftChange}
+        commentAuthor={commentAuthor}
+        onCommentAuthorChange={handleCommentAuthorChange}
+        onSubmitComment={submitComment}
+        commentSaving={commentSaving}
+        commentStatus={commentStatus}
+      />
 
       <SendEmailModal
         show={showEmailModal && Boolean(pdfForModal)}
