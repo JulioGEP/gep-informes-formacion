@@ -1,5 +1,5 @@
 // src/components/Form.jsx
-import React, { useEffect, useMemo, useRef, useState } from 'react'
+import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import plantillasBase from '../utils/plantillas.json'
 import logoImg from '../assets/logo-nuevo.png'
 import { triesKey, htmlKey } from '../utils/keys'
@@ -30,6 +30,7 @@ export default function Form({ initial, onNext, title = 'Informe de Formación',
 
   const isSimulacro = type === 'simulacro'
   const isPreventivo = type === 'preventivo' || type === 'preventivo-ebro'
+  const isPreventivoEbro = type === 'preventivo-ebro'
   const isFormacion = type === 'formacion'
   const direccionSedeLabel = isPreventivo
     ? 'Dirección del Preventivo'
@@ -37,7 +38,7 @@ export default function Form({ initial, onNext, title = 'Informe de Formación',
       ? 'Dirección del Simulacro'
       : 'Dirección de la formación'
 
-  const [dealId, setDealId] = useState(initial?.dealId || '')
+  const [dealId, setDealId] = useState(() => initial?.dealId || (isPreventivoEbro ? '7331' : ''))
   const prevDealIdRef = useRef(dealId)
 
   const defaultComentarios = initial?.datos?.comentarios || { c11: '', c12: '', c13: '', c14: '', c15: '', c16: '', c17: '' }
@@ -74,6 +75,7 @@ export default function Form({ initial, onNext, title = 'Informe de Formación',
   const [imagenes, setImagenes] = useState(initial?.imagenes || [])
   const [selTitulo, setSelTitulo] = useState(isFormacion ? (datos.formacionTitulo || '') : '')
   const [loadingDeal, setLoadingDeal] = useState(false)
+  const autoPrefillDoneRef = useRef(Boolean(initial?.dealId))
 
   // Reset de intentos/HTML si cambia el dealId
   useEffect(() => {
@@ -99,7 +101,7 @@ export default function Form({ initial, onNext, title = 'Informe de Formación',
   }, [selTitulo, isFormacion])
 
   // Pipedrive
-  const rellenarDesdePipedrive = async () => {
+  const rellenarDesdePipedrive = useCallback(async () => {
     if (!dealId) { alert('Introduce el Nº Presupuesto'); return }
     setLoadingDeal(true)
     try {
@@ -125,8 +127,18 @@ export default function Form({ initial, onNext, title = 'Informe de Formación',
       }))
     } catch (e) {
       console.error(e); alert('No se ha podido autocompletar desde Pipedrive.')
-    } finally { setLoadingDeal(false) }
-  }
+    } finally {
+      setLoadingDeal(false)
+    }
+  }, [dealId])
+
+  useEffect(() => {
+    if (!isPreventivoEbro) return
+    if (!dealId) return
+    if (autoPrefillDoneRef.current) return
+    autoPrefillDoneRef.current = true
+    rellenarDesdePipedrive()
+  }, [dealId, isPreventivoEbro, rellenarDesdePipedrive])
 
   // Imágenes (opcional)
   const addImagenes = async (e) => {
@@ -167,6 +179,11 @@ export default function Form({ initial, onNext, title = 'Informe de Formación',
     e.preventDefault()
     // Deja que el navegador valide los `required`, `min`, etc.
     if (formRef.current && !formRef.current.reportValidity()) return
+
+    if (!dealId) {
+      alert('El Nº de presupuesto es obligatorio.')
+      return
+    }
 
     // Validación extra saneando números (por si acaso)
     const numOk = (v) => {
@@ -430,17 +447,21 @@ export default function Form({ initial, onNext, title = 'Informe de Formación',
             <div className="card-body">
               <h2 className="h6">Datos del cliente</h2>
 
-              <div className="row g-3 align-items-end">
-                <div className="col-7 col-md-6">
-                  <label className="form-label">Nº Presupuesto</label>
-                  <input className="form-control" value={dealId} required onChange={(e)=>setDealId(e.target.value)} />
+              {isPreventivoEbro ? (
+                <input type="hidden" value={dealId} readOnly />
+              ) : (
+                <div className="row g-3 align-items-end">
+                  <div className="col-7 col-md-6">
+                    <label className="form-label">Nº Presupuesto</label>
+                    <input className="form-control" value={dealId} required onChange={(e)=>setDealId(e.target.value)} />
+                  </div>
+                  <div className="col-5 col-md-6">
+                    <button type="button" className="btn btn-outline-primary w-100" onClick={rellenarDesdePipedrive} disabled={loadingDeal}>
+                      {loadingDeal ? 'Rellenando…' : 'Rellenar'}
+                    </button>
+                  </div>
                 </div>
-                <div className="col-5 col-md-6">
-                  <button type="button" className="btn btn-outline-primary w-100" onClick={rellenarDesdePipedrive} disabled={loadingDeal}>
-                    {loadingDeal ? 'Rellenando…' : 'Rellenar'}
-                  </button>
-                </div>
-              </div>
+              )}
 
               <div className="row g-3 mt-1">
                 <div className="col-md-7">
@@ -451,18 +472,22 @@ export default function Form({ initial, onNext, title = 'Informe de Formación',
                   <label className="form-label">CIF</label>
                   <input className="form-control" value={datos.cif} required onChange={(e)=>setDatos(d=>({...d, cif:e.target.value}))} />
                 </div>
-                <div className="col-md-6">
-                  <label className="form-label">Comercial</label>
-                  <input className="form-control" value={datos.comercial} required onChange={(e)=>setDatos(d=>({...d, comercial:e.target.value}))} />
-                </div>
+                {!isPreventivoEbro && (
+                  <div className="col-md-6">
+                    <label className="form-label">Comercial</label>
+                    <input className="form-control" value={datos.comercial} required onChange={(e)=>setDatos(d=>({...d, comercial:e.target.value}))} />
+                  </div>
+                )}
                 <div className="col-md-6">
                   <label className="form-label">Persona de contacto</label>
                   <input className="form-control" value={datos.contacto} required onChange={(e)=>setDatos(d=>({...d, contacto:e.target.value}))} />
                 </div>
-                <div className="col-md-6">
-                  <label className="form-label">Dirección fiscal</label>
-                  <input className="form-control" value={datos.direccionOrg} required onChange={(e)=>setDatos(d=>({...d, direccionOrg:e.target.value}))} />
-                </div>
+                {!isPreventivoEbro && (
+                  <div className="col-md-6">
+                    <label className="form-label">Dirección fiscal</label>
+                    <input className="form-control" value={datos.direccionOrg} required onChange={(e)=>setDatos(d=>({...d, direccionOrg:e.target.value}))} />
+                  </div>
+                )}
                 <div className="col-md-6">
                   <label className="form-label">{direccionSedeLabel}</label>
                   <input className="form-control" value={datos.sede} required onChange={(e)=>setDatos(d=>({...d, sede:e.target.value}))} />
