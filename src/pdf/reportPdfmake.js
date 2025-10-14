@@ -359,7 +359,6 @@ const buildDocDefinition = ({
     const labels = isPreventivoEbro
       ? { ...baseLabels, titulo: preventivoPdfEbroTitles[idioma] || preventivoPdfEbroTitles.ES }
       : baseLabels
-    const idiomaTexto = idioma === 'CA' ? 'Català' : idioma === 'EN' ? 'English' : 'Castellano'
     const leftStack = [
       !isPreventivoEbro && { columns: kv(labels.presupuesto, dealId) },
       { columns: kv(labels.cliente, datos?.cliente) },
@@ -370,7 +369,6 @@ const buildDocDefinition = ({
     const rightStack = [
       { text: labels.registro, style: 'h4', margin: [0, 0, 0, 4] },
       { columns: kv(labels.bombero, formador?.nombre) },
-      { columns: kv(labels.idioma, idiomaTexto) },
       { columns: kv(labels.fecha, datos?.fecha) },
       { columns: kv(labels.contacto, datos?.contacto) },
       !isPreventivoEbro && { columns: kv(labels.comercial, datos?.comercial) },
