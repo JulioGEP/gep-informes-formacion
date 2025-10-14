@@ -288,7 +288,7 @@ export default function Preview(props) {
   }, [datos, imagenes, isPreventivo, isSimulacro])
 
   const mejorarInforme = async () => {
-    if (dealId && tries >= maxTries) return
+    if (dealId && !isPreventivoEbro && tries >= maxTries) return
     setAiBusy(true)
     try {
       const r = await fetch('/.netlify/functions/generateReport', {
@@ -322,7 +322,7 @@ export default function Preview(props) {
       setAiHtml(html)
       if (dealId) {
         try { sessionStorage.setItem(htmlKey(dealId), html) } catch {}
-        const next = Math.min(tries + 1, maxTries)
+        const next = isPreventivoEbro ? tries + 1 : Math.min(tries + 1, maxTries)
         setTries(next)
         try { localStorage.setItem(triesKey(dealId), String(next)) } catch {}
       }
@@ -373,8 +373,8 @@ export default function Preview(props) {
       setEmailStatus(null)
     }
   }
-  const triesLabel = `${dealId ? tries : 0}/${maxTries}`
-  const quedanIntentos = dealId ? tries < maxTries : true
+  const triesLabel = isPreventivoEbro ? null : `${dealId ? tries : 0}/${maxTries}`
+  const quedanIntentos = !dealId || isPreventivoEbro || tries < maxTries
 
   return (
     <div className="d-grid gap-4">
@@ -400,7 +400,7 @@ export default function Preview(props) {
           <button className="btn btn-secondary" onClick={onBack}>Volver al formulario</button>
           {quedanIntentos && (
             <button className="btn btn-warning" onClick={mejorarInforme} disabled={aiBusy}>
-              {aiBusy ? 'Mejorando…' : `Mejorar informe (${triesLabel})`}
+              {aiBusy ? 'Mejorando…' : triesLabel ? `Mejorar informe (${triesLabel})` : 'Mejorar informe'}
             </button>
           )}
           {aiHtml && (
@@ -616,7 +616,7 @@ export default function Preview(props) {
         <button className="btn btn-secondary" onClick={onBack}>Volver al formulario</button>
         {quedanIntentos && (
           <button className="btn btn-warning" onClick={mejorarInforme} disabled={aiBusy}>
-            {aiBusy ? 'Mejorando…' : `Mejorar informe (${triesLabel})`}
+            {aiBusy ? 'Mejorando…' : triesLabel ? `Mejorar informe (${triesLabel})` : 'Mejorar informe'}
           </button>
         )}
         {aiHtml && (
@@ -626,7 +626,7 @@ export default function Preview(props) {
         )}
       </div>
 
-      {dealId && tries >= maxTries && (
+      {dealId && !isPreventivoEbro && tries >= maxTries && (
         <div className="text-muted small">
           Has agotado las 3 mejoras para este presupuesto.{' '}
           <button className="btn btn-link p-0 align-baseline" onClick={resetLocalForDeal}>
