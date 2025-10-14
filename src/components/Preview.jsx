@@ -20,6 +20,23 @@ const getReportsAuthHeaders = () => {
 
 const maxTries = 3
 
+const stripImagesFromDatos = (value) => {
+  if (Array.isArray(value)) {
+    return value.map(stripImagesFromDatos)
+  }
+  if (value && typeof value === 'object') {
+    const proto = Object.getPrototypeOf(value)
+    if (proto === Object.prototype || proto === null) {
+      return Object.keys(value).reduce((acc, key) => {
+        if (key === 'imagenes') return acc
+        acc[key] = stripImagesFromDatos(value[key])
+        return acc
+      }, {})
+    }
+  }
+  return value
+}
+
 const preventivoHeadings = {
   ES: {
     generales: 'Datos generales',
@@ -319,7 +336,7 @@ export default function Preview(props) {
       const r = await fetch('/.netlify/functions/generateReport', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', ...getReportsAuthHeaders() },
-        body: JSON.stringify({ formador, datos }),
+        body: JSON.stringify({ formador, datos: stripImagesFromDatos(datos) }),
       })
       const raw = await r.text()
       let data = null
@@ -543,25 +560,6 @@ export default function Preview(props) {
               {aiHtml ? (
                 <>
                   <EditableHtml dealId={dealId} initialHtml={aiHtml} onChange={setAiHtml} />
-                  {isPreventivoEbro && hasPreventivoSectionImages && (
-                    <div className="d-grid gap-3 mt-4">
-                      {preventivoSectionData.map(({ key, label, imagenes }) => (
-                        imagenes.length > 0 ? (
-                          <div key={`imgs-${key}`}>
-                            <div className="small text-muted mb-1">{label} — Imágenes de apoyo</div>
-                            <div className="d-flex flex-wrap gap-2">
-                              {imagenes.map((img, idx) => (
-                                <div key={`${key}-ai-${idx}`} className="border rounded p-1" style={{ width: 120 }}>
-                                  <img src={img.dataUrl} alt={img.name} className="img-fluid rounded" />
-                                  <div className="small text-truncate" title={img.name}>{img.name}</div>
-                                </div>
-                              ))}
-                            </div>
-                          </div>
-                        ) : null
-                      ))}
-                    </div>
-                  )}
                 </>
               ) : (
                 <div className="d-grid gap-3">
