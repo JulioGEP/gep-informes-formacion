@@ -470,7 +470,11 @@ const buildDocDefinition = ({
           const value = datos?.preventivo?.[key] ?? (fallbackKey ? datos?.comentarios?.[fallbackKey] : '')
           const paragraphs = multilineToParagraphs(value)
           const nodes = [
-            { text: label, style: 'h2' },
+            {
+              text: label,
+              style: 'h2',
+              ...(index === 0 ? { margin: [0, 8, 0, 6] } : {}),
+            },
           ]
           const description = descriptions?.[key]
           if (description) {
