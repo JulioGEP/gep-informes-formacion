@@ -638,15 +638,6 @@ export default function Preview(props) {
             </>
           )}
 
-          <hr className="my-4" />
-          <div>
-            <p className="mb-1">Atentamente:</p>
-            {bomberosDisplay.map((name, idx) => (
-              <div key={`${name}-${idx}`}><strong>{name}</strong></div>
-            ))}
-            <div className="text-danger">Recurso preventivo GEP</div>
-          </div>
-
           {globalImagesAvailable && (
             <>
               <hr className="my-4" />
